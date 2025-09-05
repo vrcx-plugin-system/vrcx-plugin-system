@@ -1,122 +1,152 @@
 # VRCX Custom Modules
 
-This directory contains the modular JavaScript files for VRCX custom functionality. The main `custom.js` file now acts as a module loader that dynamically loads these individual modules from GitHub. All modules are self-initializing and register themselves in the global `window.customjs.*` namespace.
+A comprehensive modular JavaScript system for VRCX that provides enhanced functionality through dynamically loaded modules. The system features automatic module loading from GitHub, self-initializing components, and a clean global namespace architecture.
 
-## File Structure
+## 🚀 Features
 
-### Core Files
+- **Modular Architecture**: Clean separation of concerns with individual feature modules
+- **GitHub-Based Loading**: Modules are automatically loaded from the GitHub repository
+- **Self-Initializing**: All modules register themselves automatically
+- **Base64 Support**: Automatic decoding of base64-encoded Steam credentials
+- **Custom Tags**: Load and manage user tags from external JSON sources
+- **Bio Automation**: Automatic bio updates with dynamic content
+- **Registry Management**: VRChat registry settings with event-based triggers
+- **Context Menus**: Enhanced context menu functionality
+- **Auto-Invite System**: Automatic user invitation management
+- **Instance Monitoring**: Real-time instance and player monitoring
+- **Debug Tools**: Comprehensive debugging and logging utilities
 
-- **`config.js`** - Configuration management using user settings from main custom.js
-- **`utils.js`** - Utility classes and helper functions (Utils, global variables)
-- **`api-helpers.js`** - API wrapper functions, logging, and location management
+## 📁 Project Structure
+
+```
+vrcx-custom/
+├── custom.js              # Main module loader and configuration
+├── custom.css             # Custom styling
+├── update.ps1             # PowerShell update script
+├── js/                    # Modular JavaScript files
+│   ├── config.js          # Configuration management
+│   ├── utils.js           # Utility functions and helpers
+│   ├── api-helpers.js     # API wrappers and logging
+│   ├── context-menu.js    # Context menu enhancements
+│   ├── registry-overrides.js # VRChat registry management
+│   ├── tag-manager.js     # Custom user tags system
+│   ├── bio-updater.js     # Automatic bio updates
+│   ├── auto-invite.js     # Auto-invite functionality
+│   └── managers.js        # Core management classes
+└── README.md              # This file
+```
+
+## 🛠️ Core Modules
+
+### Configuration & Utilities
+
+- **`config.js`** - Centralized configuration management
+- **`utils.js`** - Utility functions, time formatting, Steam API integration with base64 support
+- **`api-helpers.js`** - API wrappers, logging, and location management
 
 ### Feature Modules
 
-- **`context-menu.js`** - CustomContextMenu class for managing context menu items
-- **`registry-overrides.js`** - RegistryOverrides class for managing VRChat registry settings
-- **`tag-manager.js`** - CustomTagManager class for loading and managing custom user tags
-- **`bio-updater.js`** - BioUpdater class for automatic bio updating
-- **`auto-invite.js`** - AutoInviteManager class for automatic user invitations
-- **`managers.js`** - Management classes (InstanceMonitor, NotificationHandler, DebugTools)
+- **`context-menu.js`** - Enhanced context menu system with custom items
+- **`registry-overrides.js`** - VRChat registry settings with event-based application
+- **`tag-manager.js`** - Custom user tags loaded from external JSON sources
+- **`bio-updater.js`** - Automatic bio updates with dynamic content templates
+- **`auto-invite.js`** - Automatic user invitation system
+- **`managers.js`** - Instance monitoring, notifications, and debug tools
 
-## Module Loading
+## ⚙️ Configuration
 
-The main `custom.js` file uses a `ModuleLoader` class that:
-
-1. **Loads modules from GitHub** using the raw file URLs
-2. **Handles loading errors** gracefully with timeout protection
-3. **Creates global namespace** `window.customjs.*` for all functionality
-4. **Auto-initializes modules** - each module registers itself automatically
-5. **Loads in dependency order** - base modules first, then dependent modules
-
-### GitHub Module URLs
-
-All modules are loaded from the GitHub repository:
-
-```javascript
-const MODULE_CONFIG = {
-  modules: [
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/registry-overrides.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/tag-manager.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/bio-updater.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/auto-invite.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/managers.js",
-  ],
-  loadTimeout: 10000,
-};
-```
-
-## Module Dependencies
-
-Each module includes a `dependencies` array in its SCRIPT metadata that specifies which other modules it depends on:
-
-```javascript
-const SCRIPT = {
-  name: "API Helpers Module",
-  description:
-    "API wrapper functions, logging, and location management for VRCX custom modules",
-  author: "Bluscream",
-  version: "1.0.0",
-  dependencies: [
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
-  ],
-};
-```
-
-### Dependency Chain
-
-- **Base modules** (no dependencies): `config.js`, `utils.js`, `context-menu.js`
-- **Level 1 dependencies**: `api-helpers.js` (depends on `utils.js`), `registry-overrides.js` (depends on `config.js`)
-- **Level 2 dependencies**: `managers.js` (depends on `api-helpers.js`, `utils.js`)
-- **Level 3 dependencies**: `auto-invite.js` (depends on `api-helpers.js`, `context-menu.js`, `utils.js`), `bio-updater.js` (depends on `config.js`, `api-helpers.js`, `utils.js`), `tag-manager.js` (depends on `config.js`, `api-helpers.js`, `utils.js`)
-
-## Global Namespace
-
-All functionality is available through the `window.customjs.*` namespace:
-
-```javascript
-// Access modules
-window.customjs.config; // Configuration manager
-window.customjs.utils; // Utility functions
-window.customjs.api; // API helpers
-window.customjs.logger; // Logging functions
-window.customjs.location; // Location management
-window.customjs.contextMenu; // Context menu instance
-window.customjs.registryOverrides; // Registry overrides instance
-window.customjs.tagManager; // Tag manager instance
-window.customjs.autoInviteManager; // Auto invite manager instance
-window.customjs.bioUpdater; // Bio updater instance
-window.customjs.instanceMonitor; // Instance monitor instance
-window.customjs.notificationHandler; // Notification handler instance
-window.customjs.debugTools; // Debug tools instance
-window.customjs.debug; // Debug functions
-window.customjs.clearProcessedMenus; // Utility function
-
-// Access script metadata
-window.customjs.script.config; // Config module metadata
-window.customjs.script.utils; // Utils module metadata
-// ... etc for each module
-```
-
-## User Configuration
-
-User-configurable settings are in the main `custom.js` file under `USER_CONFIG`:
+All configuration is centralized in the `USER_CONFIG` object in `custom.js`:
 
 ```javascript
 const USER_CONFIG = {
-  url: "https://gist.github.com/Bluscream/7842ad23efb6cbb73f6a1bb17008deed",
   steam: {
-    id: "", // TODO: Remove
-    key: "",
+    id: "{env:STEAM_ID64}", // Steam ID (supports base64 encoding)
+    key: "{env:STEAM_API_KEY}", // Steam API key (supports base64 encoding)
   },
   bio: {
     updateInterval: 7200000, // 2 hours
     initialDelay: 20000, // 20 seconds
-    template: `
+    template: `...`, // Bio template with placeholders
+  },
+  registry: {
+    VRC_ALLOW_UNTRUSTED_URL: {
+      value: 0,
+      events: [
+        "VRCX_START",
+        "GAME_START",
+        "INSTANCE_SWITCH_PUBLIC",
+        "INSTANCE_SWITCH_PRIVATE",
+      ],
+    },
+  },
+  tags: {
+    urls: [
+      "https://github.com/Bluscream/FewTags/raw/refs/heads/main/usertags.json",
+    ],
+    updateInterval: 3600000, // 1 hour
+    initialDelay: 5000, // 5 seconds
+  },
+};
+```
+
+### Environment Variables
+
+The system supports environment variable substitution:
+
+- `{env:STEAM_ID64}` - Your Steam ID64
+- `{env:STEAM_API_KEY}` - Your Steam Web API key
+
+### Base64 Encoding
+
+Steam credentials can be base64 encoded for additional security:
+
+```javascript
+steam: {
+    id: "MTIzNDU2Nzg5MA==",      // Base64 encoded Steam ID
+    key: "YWJjZGVmZ2hpams="      // Base64 encoded API key
+}
+```
+
+## 🏷️ Custom Tags System
+
+The tag manager supports multiple JSON formats and automatically loads tags from external sources:
+
+### Supported Formats
+
+**FewTags Format:**
+
+```json
+{
+  "usr_c4f62fc6-24ce-4806-8c8e-fd1857f79b66": {
+    "id": -231,
+    "active": true,
+    "malicious": false,
+    "tags": ["FewTags Owner", "Custom Tag 1"],
+    "tag": "FewTags Owner",
+    "foreground_color": "#ff0000",
+    "sources": ["ExternalTags.json"]
+  }
+}
+```
+
+**Direct Array Format:**
+
+```json
+[
+  {
+    "UserId": "usr_12345678-1234-1234-1234-123456789012",
+    "Tag": "Friend",
+    "TagColour": "#00FF00"
+  }
+]
+```
+
+## 📝 Bio Template System
+
+The bio updater supports dynamic placeholders:
+
+```javascript
+template: `
 -
 Relationship: {partners} <3
 Auto Accept: {autojoin}
@@ -131,92 +161,161 @@ Tags loaded: {tags_loaded}
 
 User ID: {userId}
 Steam ID: {steamId}
-Oculus ID: {oculusId}`,
-  },
-  registry: {
-    // Registry settings to apply/override
-    VRC_ALLOW_UNTRUSTED_URL: {
-      value: 0,
-      events: [
-        "VRCX_START",
-        "GAME_START",
-        "INSTANCE_SWITCH_PUBLIC",
-        "INSTANCE_SWITCH_PRIVATE",
-      ],
-    },
-    VRC_ALLOW_INSECURE_CONTENT: {
-      value: "yes",
-      events: ["VRCX_START", "GAME_START"],
-    },
-  },
-  tags: {
-    urls: [
-      "https://github.com/Bluscream/FewTags/raw/refs/heads/main/usertags.json",
-    ],
-    updateInterval: 3600000, // 1 hour
-    initialDelay: 5000, // 5 seconds
-  },
-};
+Oculus ID: {oculusId}`;
 ```
 
-## Module Metadata
+## 🔧 Registry Management
 
-Each module includes metadata in a `SCRIPT` constant:
+Registry settings can be applied based on specific events:
 
 ```javascript
-const SCRIPT = {
-  name: "Module Name",
-  description: "Module description",
-  author: "Bluscream",
-  version: "1.0.0",
-  dependencies: [
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/dependency.js",
-  ],
-};
+registry: {
+    "VRC_ALLOW_UNTRUSTED_URL": {
+        value: 0,
+        events: ["VRCX_START", "GAME_START", "INSTANCE_SWITCH_PUBLIC"]
+    },
+    "VRC_SIMPLE_SETTING": 42,  // Applied on all events
+    "VRC_STRING_SETTING": "value"
+}
 ```
 
-## Self-Initialization
+## 🌐 Global Namespace
 
-Each module automatically:
-
-1. **Registers itself** in `window.customjs.*`
-2. **Stores metadata** in `window.customjs.script.*`
-3. **Maintains backward compatibility** by also registering globally
-4. **Logs loading status** with module name, version, and author
-
-## Benefits of GitHub-Based Loading
-
-1. **Centralized Updates** - All modules are loaded from the GitHub repository
-2. **No Local Dependencies** - Users don't need to maintain local copies of JS modules
-3. **Version Consistency** - Everyone gets the same version from the main branch
-4. **Easier Maintenance** - Updates can be pushed to GitHub and are immediately available
-5. **Dependency Management** - Each module declares its dependencies with full URLs
-6. **Self-Initializing** - Modules automatically register themselves
-7. **Global Namespace** - Organized access via `window.customjs.*`
-8. **Script Metadata** - Each module has name, description, author, version, dependencies
-9. **Backward Compatibility** - Old global variables still work
-10. **Error Isolation** - Failed modules don't break the entire system
-
-## Usage
-
-The new system maintains full backward compatibility while providing organized access:
+All functionality is available through the `window.customjs.*` namespace:
 
 ```javascript
-// New namespace access
-window.customjs.tagManager.addTag("usr_123", "Friend", "#00FF00");
+// Core modules
+window.customjs.config; // Configuration manager
+window.customjs.utils; // Utility functions
+window.customjs.api; // API helpers
+window.customjs.logger; // Logging functions
+window.customjs.location; // Location management
+
+// Feature modules
+window.customjs.contextMenu; // Context menu instance
+window.customjs.registryOverrides; // Registry overrides instance
+window.customjs.tagManager; // Tag manager instance
+window.customjs.bioUpdater; // Bio updater instance
+window.customjs.autoInviteManager; // Auto invite manager instance
+
+// Management classes
+window.customjs.instanceMonitor; // Instance monitor instance
+window.customjs.notificationHandler; // Notification handler instance
+window.customjs.debugTools; // Debug tools instance
+window.customjs.debug; // Debug functions
+
+// Utility functions
+window.customjs.clearProcessedMenus; // Clear processed menus registry
+```
+
+## 📦 Installation
+
+1. **Copy `custom.js`** to your VRCX AppData directory
+2. **Configure `USER_CONFIG`** with your settings
+3. **Set environment variables** (optional):
+   ```powershell
+   $env:STEAM_ID64 = "your_steam_id"
+   $env:STEAM_API_KEY = "your_api_key"
+   ```
+4. **Restart VRCX** - modules will be automatically loaded from GitHub
+5. **Check console** for loading status and any errors
+
+## 🔄 Updates
+
+The system includes an automated update mechanism:
+
+```powershell
+# Run the update script
+.\update.ps1
+```
+
+The update script will:
+
+- Backup your current configuration
+- Download the latest modules from GitHub
+- Preserve your custom settings
+- Restart VRCX automatically
+
+## 🐛 Debugging
+
+### Console Logs
+
+Check the browser console for detailed loading information:
+
+```
+Module loading complete. Loaded: 9, Failed: 0
+Available modules: (16) ['utils', 'config', 'tagManager', ...]
+✓ Loaded Tag Manager Module v1.0.0 by Bluscream
+```
+
+### Debug Tools
+
+Access debug functionality through:
+
+```javascript
+window.customjs.debugTools; // Debug tools instance
+window.customjs.debug; // Debug functions
+window.customjs.clearProcessedMenus; // Clear processed menus
+```
+
+### Common Issues
+
+- **"No tag URLs configured"** - Check your `tags.urls` configuration
+- **Steam API errors** - Verify your Steam ID and API key
+- **Module loading failures** - Check internet connection and GitHub access
+
+## 🔒 Security Features
+
+- **Base64 Encoding**: Steam credentials can be base64 encoded
+- **Environment Variables**: Sensitive data can be stored in environment variables
+- **Error Isolation**: Failed modules don't break the entire system
+- **Timeout Protection**: Module loading has built-in timeout protection
+
+## 🚀 Performance
+
+- **Lazy Loading**: Modules are loaded only when needed
+- **Caching**: Built-in cache busting for fresh module updates
+- **Error Recovery**: Graceful handling of network and loading errors
+- **Memory Management**: Proper cleanup and resource management
+
+## 📚 API Reference
+
+### Utils Module
+
+```javascript
+// Time formatting
+Utils.timeToText(ms); // Convert milliseconds to readable text
+Utils.getTimestamp(); // Get formatted timestamp
+Utils.formatDateTime(); // Get formatted date/time
+
+// Steam integration
+Utils.getSteamPlaytime(steamId, apiKey); // Get VRChat playtime from Steam
+Utils.tryDecodeBase64(str); // Decode base64 strings
+
+// Utility functions
+Utils.isEmpty(v); // Check if value is empty
+Utils.clearProcessedMenus(); // Clear processed menus registry
+```
+
+### Tag Manager
+
+```javascript
+// Manual tag management
+window.customjs.tagManager.addTag(userId, tag, color);
+window.customjs.tagManager.refreshTags();
+window.customjs.tagManager.getLoadedTagsCount();
+window.customjs.tagManager.getUserTags(userId);
+```
+
+### Registry Overrides
+
+```javascript
+// Trigger registry updates
 window.customjs.registryOverrides.triggerEvent("GAME_START");
-
-// Old global access still works
-customTagManager.addTag("usr_123", "Friend", "#00FF00");
-registryOverrides.triggerEvent("GAME_START");
-
-// Access module metadata
-console.log(window.customjs.script.tagManager.name); // "Tag Manager Module"
-console.log(window.customjs.script.tagManager.version); // "1.0.0"
-console.log(window.customjs.script.tagManager.dependencies); // Array of dependency URLs
+window.customjs.registryOverrides.triggerEvent("INSTANCE_SWITCH_PUBLIC");
 ```
 
-## Development
+## 🤝 Contributing
 
 When adding new features:
 
@@ -224,27 +323,27 @@ When adding new features:
 2. **Add SCRIPT metadata** with name, description, author, version, and dependencies
 3. **Add it to the modules array** in `custom.js` in the correct dependency order
 4. **Make the module self-initializing** with auto-registration
-5. **Register in window.customjs.\* namespace**
+5. **Register in `window.customjs.*` namespace**
 6. **Update this README** with documentation
-7. **Commit and push to GitHub** - changes are immediately available to all users
+7. **Test thoroughly** before committing
+8. **Commit and push to GitHub** - changes are immediately available to all users
 
-## Installation
+## 📄 License
 
-To use this system:
+This project is part of the VRCX ecosystem. Please refer to the main VRCX repository for licensing information.
 
-1. **Copy `custom.js`** to your VRCX AppData directory
-2. **Configure USER_CONFIG** in `custom.js` with your settings
-3. **Restart VRCX** - modules will be automatically loaded from GitHub
-4. **Check console** for loading status and any errors
+## 🆘 Support
 
-## Troubleshooting
+For issues and support:
 
-- **Check console logs** for module loading status
-- **Verify internet connection** - modules are loaded from GitHub
-- **Check GitHub repository** - ensure the repository is accessible
-- **Verify module URLs** - ensure the GitHub URLs are correct
-- **Check dependencies** - ensure all required modules are loaded in the correct order
+1. Check the console logs for error messages
+2. Verify your configuration settings
+3. Ensure all environment variables are set correctly
+4. Check the GitHub repository for updates
+5. Review this README for configuration examples
 
-## Backup
+---
 
-The original monolithic `custom.js` file has been backed up as `custom.js.backup` in the AppData directory.
+**Version**: 2.0  
+**Author**: Bluscream  
+**Last Updated**: 2024
