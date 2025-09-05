@@ -88,7 +88,7 @@ class ModuleLoader {
         
         // Load GitHub modules
         for (const module of MODULE_CONFIG.modules) {
-            await this.loadModule(module, 'github');
+            await this.loadModule(module);
         }
         
         console.log(`Module loading complete. Loaded: ${this.loadedModules.size}, Failed: ${this.failedModules.size}`);
@@ -97,11 +97,11 @@ class ModuleLoader {
         this.initializeSystems();
     }
 
-    async loadModule(modulePath, type = 'github') {
+    async loadModule(modulePath) {
         try {
             // Add cache-busting parameter to force fresh fetch
             const url = modulePath + '?v=' + Date.now();
-            console.log(`Loading ${type} module: ${modulePath}`);
+            console.log(`Loading module: ${modulePath}`);
             
             // Fetch the module content first to handle MIME type issues
             const response = await fetch(url);
