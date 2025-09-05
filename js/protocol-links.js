@@ -44,12 +44,15 @@ class VRCXProtocolLinks {
     }
 
     setupContextMenuItems() {
+        console.log('Setting up protocol links context menu items...');
+        
         // User dialog items
-        this.contextMenu.addUserItem('copy-user-link', {
+        const userLinkResult = this.contextMenu.addUserItem('copy-user-link', {
             text: 'Copy User Link',
             icon: 'el-icon-link',
             onClick: (userData) => this.copyUserLink(userData)
         });
+        console.log('User link item result:', userLinkResult);
 
         this.contextMenu.addUserItem('copy-user-import', {
             text: 'Copy User Import Link',
@@ -90,12 +93,8 @@ class VRCXProtocolLinks {
             onClick: (groupData) => this.copyGroupLink(groupData)
         });
 
-        // Instance context items (for current instance)
-        this.contextMenu.addInstanceItem('copy-instance-link', {
-            text: 'Copy Instance Link',
-            icon: 'el-icon-link',
-            onClick: (instanceData) => this.copyInstanceLink(instanceData)
-        });
+        // Note: Instance context items removed as they don't have a proper context menu in VRCX
+        // Instance links should be handled through world dialogs instead
 
         console.log('VRCX Protocol Links context menu items added');
     }
@@ -171,23 +170,7 @@ class VRCXProtocolLinks {
         this.copyToClipboard(link, 'Group link');
     }
 
-    copyInstanceLink(instanceData) {
-        if (!instanceData || !instanceData.worldId) {
-            this.showError('No instance data available');
-            return;
-        }
-
-        let link;
-        if (instanceData.instanceId) {
-            // Include instance ID if available
-            link = `vrcx://world/${instanceData.worldId}:${instanceData.instanceId}`;
-        } else {
-            // Just world ID
-            link = `vrcx://world/${instanceData.worldId}`;
-        }
-
-        this.copyToClipboard(link, 'Instance link');
-    }
+    // Instance link functionality removed - use world dialog instead
 
     // Utility functions
     async copyToClipboard(text, description) {

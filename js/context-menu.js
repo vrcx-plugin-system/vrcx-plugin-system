@@ -149,11 +149,21 @@ class CustomContextMenu {
         
         const dialogElement = menuContainer.closest('.x-dialog');
         if (!dialogElement) {
-            // If no dialog element found, check if this could be an instance menu
-            const isInUserDialog = menuContainer.closest('.x-user-dialog') || 
+            // If no dialog element found, this is likely a dropdown menu that's positioned outside the dialog
+            // We need to be more careful about detecting instance menus
+            // Only consider it an instance menu if it's clearly not part of any dialog
+            const isInAnyDialog = menuContainer.closest('.x-user-dialog') || 
+                                 menuContainer.closest('.x-world-dialog') ||
+                                 menuContainer.closest('.x-avatar-dialog') ||
+                                 menuContainer.closest('.x-group-dialog') ||
                                  menuContainer.querySelector('.x-user-dialog') ||
-                                 menuContainer.closest('[class*="user"]');
-            return isInUserDialog ? null : 'instance';
+                                 menuContainer.querySelector('.x-world-dialog') ||
+                                 menuContainer.querySelector('.x-avatar-dialog') ||
+                                 menuContainer.querySelector('.x-group-dialog');
+            
+            // Only return 'instance' if we're sure this is not part of any dialog
+            // For now, let's be conservative and not add instance items to unknown menus
+            return null;
         }
 
         // Check for dialog-specific classes or IDs
@@ -194,6 +204,13 @@ class CustomContextMenu {
 
     renderItems(menuType, menuContainer) {
         if (!menuContainer) return;
+
+        console.log(`Rendering ${menuType} items:`, {
+            menuType: menuType,
+            menuContainer: menuContainer,
+            itemCount: this.items.get(menuType).size,
+            existingItems: menuContainer.querySelectorAll(`[data-custom-${menuType}-item]`).length
+        });
 
         const existingItems = menuContainer.querySelectorAll(`[data-custom-${menuType}-item]`);
         existingItems.forEach(item => item.remove());
@@ -237,7 +254,15 @@ class CustomContextMenu {
                 this.handleItemClick(menuType, item, event);
             };
 
-            menuContainer.appendChild(menuItem);
+            // Insert before the arrow element if it exists, otherwise append to end
+            const arrowElement = menuContainer.querySelector('.popper__arrow');
+            if (arrowElement) {
+                menuContainer.insertBefore(menuItem, arrowElement);
+                console.log(`Added ${item.text} before arrow element`);
+            } else {
+                menuContainer.appendChild(menuItem);
+                console.log(`Added ${item.text} to end of menu`);
+            }
         });
     }
 
