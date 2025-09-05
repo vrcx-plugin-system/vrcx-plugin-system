@@ -38,6 +38,7 @@ class VRCXProtocolLinks {
             clearInterval(checkInterval);
             if (!this.contextMenu) {
                 console.error(`Failed to initialize ${VRCXProtocolLinks.SCRIPT.name}: Context menu module not found`);
+                console.error('Available modules:', Object.keys(window.customjs || {}));
             }
         }, 10000);
     }

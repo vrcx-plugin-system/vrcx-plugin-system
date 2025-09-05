@@ -44,14 +44,6 @@ class CustomTagManager {
     async loadAllTags() {
         const tagConfig = window.customjs?.config?.tags;
         
-        // Debug logging to help troubleshoot configuration issues
-        console.log('Tag Manager Debug Info:');
-        console.log('- window.customjs exists:', !!window.customjs);
-        console.log('- window.customjs.config exists:', !!window.customjs?.config);
-        console.log('- tagConfig exists:', !!tagConfig);
-        console.log('- tagConfig.urls exists:', !!tagConfig?.urls);
-        console.log('- tagConfig.urls length:', tagConfig?.urls?.length || 0);
-        console.log('- Full config object:', window.customjs?.config);
         
         if (!tagConfig?.urls || tagConfig.urls.length === 0) {
             console.log('No tag URLs configured');
