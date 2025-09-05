@@ -38,7 +38,9 @@ class Managers {
                 if (args.json.invisiblePlayers > 0) {
                     args.json.displayName = `${args.json.displayName??args.json.name} (${args.json.invisiblePlayers} invisible)`
                     setTimeout(async () => { 
-                        Logger.log(`Found ${args.json.invisiblePlayers} potentially invisible players in instance "${args.json.instanceId}" in world "${args.json.worldName}"`, true, true, true);
+                        if (window.Logger?.log) {
+                            window.Logger.log(`Found ${args.json.invisiblePlayers} potentially invisible players in instance "${args.json.instanceId}" in world "${args.json.worldName}"`, true, true, true, 'warning');
+                        }
                     }, 1000);
                 }
                 return args;
@@ -130,7 +132,9 @@ class Managers {
                 // Notify with playerName and each tag on a new line
                 const lines = [playerName, ...playerTags.map(tag => tag.text)];
                 const notification = lines.join('\n');
-                Logger.log(notification, true, true, true);
+                if (window.Logger?.log) {
+                    window.Logger.log(notification, true, true, true, 'info');
+                }
             }
         } catch (error) {
             console.error('Error handling tagged player joined:', error);

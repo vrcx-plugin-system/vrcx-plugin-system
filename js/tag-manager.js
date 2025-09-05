@@ -31,7 +31,7 @@ class CustomTagManager {
                 const timestamp = window.Utils?.getTimestamp ? window.Utils.getTimestamp() : new Date().toISOString();
                 const msg = `VRCX-Utils started at\n ${timestamp}`;
                 if (window.Logger?.log) {
-                    window.Logger.log(msg, true, true, true);
+                    window.Logger.log(msg, true, true, true, 'info');
                 } else {
                     console.log(msg);
                 }

@@ -64,13 +64,23 @@ class ApiHelpers {
     // ============================================================================
 
     static Logger = {
-        log: function(msg, _alert = true, _notify = false, _noty = false, _noty_type = 'alert') {
+        log: function(msg, _alert = true, _notify = false, _noty = false, _level = 'info') {
             console.log(msg);
             $app.store.vrcx.eventVrcxMessage({'MsgType': 'Noty', 'Data': msg });
             $app.store.vrcx.eventVrcxMessage({'MsgType': 'External', 'UserId': $app.store.user.currentUser.id, 'Data': msg });
             if (_notify) ApiHelpers.Logger.notify("VRCX Addon", msg);
             if (_noty) {
                 setTimeout(async () => { await AppApi.DesktopNotification("VRCX Addon", msg) }, 0);
+            }
+            if (_alert && window.$app && window.$app.$message) {
+                // Call the appropriate toast method based on _level
+                const toastMethod = window.$app.$message[_level];
+                if (typeof toastMethod === 'function') {
+                    toastMethod(msg);
+                } else {
+                    // Fallback to info if the method doesn't exist
+                    window.$app.$message.info(msg);
+                }
             }
         },
 
