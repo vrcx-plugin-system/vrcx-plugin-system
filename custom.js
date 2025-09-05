@@ -66,11 +66,11 @@ const MODULE_CONFIG = {
         'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js', 
         'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js',
         'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu.js',
-        'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/protocol-links.js',
         'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/registry-overrides.js',
         'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/tag-manager.js',
         'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/bio-updater.js',
         'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/auto-invite.js',
+        'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/protocol-links.js',
         'https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/managers.js'
     ],
     // Load timeout in milliseconds

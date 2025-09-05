@@ -205,12 +205,6 @@ class CustomContextMenu {
     renderItems(menuType, menuContainer) {
         if (!menuContainer) return;
 
-        console.log(`Rendering ${menuType} items:`, {
-            menuType: menuType,
-            menuContainer: menuContainer,
-            itemCount: this.items.get(menuType).size,
-            existingItems: menuContainer.querySelectorAll(`[data-custom-${menuType}-item]`).length
-        });
 
         const existingItems = menuContainer.querySelectorAll(`[data-custom-${menuType}-item]`);
         existingItems.forEach(item => item.remove());
@@ -258,10 +252,8 @@ class CustomContextMenu {
             const arrowElement = menuContainer.querySelector('.popper__arrow');
             if (arrowElement) {
                 menuContainer.insertBefore(menuItem, arrowElement);
-                console.log(`Added ${item.text} before arrow element`);
             } else {
                 menuContainer.appendChild(menuItem);
-                console.log(`Added ${item.text} to end of menu`);
             }
         });
     }
