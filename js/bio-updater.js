@@ -81,7 +81,7 @@ class BioUpdater {
     window.customjs = window.customjs || {};
     window.customjs.bioUpdater = new BioUpdater();
     window.customjs.script = window.customjs.script || {};
-    window.customjs.script.bioUpdater = SCRIPT;
+//     window.customjs.script.bioUpdater = SCRIPT;
     
     // Also make BioUpdater available globally for backward compatibility
     window.BioUpdater = BioUpdater;

@@ -92,7 +92,7 @@ function clearProcessedMenus() {
     window.customjs.utils = Utils;
     window.customjs.clearProcessedMenus = clearProcessedMenus;
     window.customjs.script = window.customjs.script || {};
-    window.customjs.script.utils = SCRIPT;
+//     window.customjs.script.utils = SCRIPT;
     
     // Also make Utils available globally for backward compatibility
     window.Utils = Utils;

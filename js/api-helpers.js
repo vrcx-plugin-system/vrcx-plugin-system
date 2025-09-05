@@ -115,7 +115,7 @@ const LocationManager = {
     window.customjs.logger = Logger;
     window.customjs.location = LocationManager;
     window.customjs.script = window.customjs.script || {};
-    window.customjs.script.apiHelpers = SCRIPT;
+//     window.customjs.script.apiHelpers = SCRIPT;
     
     // Also make objects available globally for backward compatibility
     window.bak = bak;

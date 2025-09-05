@@ -312,7 +312,7 @@ class CustomTagManager {
     window.customjs = window.customjs || {};
     window.customjs.tagManager = new CustomTagManager();
     window.customjs.script = window.customjs.script || {};
-    window.customjs.script.tagManager = SCRIPT;
+//     window.customjs.script.tagManager = SCRIPT;
     
     // Also make CustomTagManager available globally for backward compatibility
     window.CustomTagManager = CustomTagManager;

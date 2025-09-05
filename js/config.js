@@ -35,7 +35,7 @@ class ConfigManager {
         window.customjs = window.customjs || {};
         window.customjs.config = this;
         window.customjs.script = window.customjs.script || {};
-        window.customjs.script.config = SCRIPT;
+//         window.customjs.script.config = SCRIPT;
         
         // Also make CONFIG available globally for backward compatibility
         window.CONFIG = this.config;

@@ -185,7 +185,7 @@ class DebugTools {
     window.customjs.notificationHandler = new NotificationHandler();
     window.customjs.debugTools = new DebugTools();
     window.customjs.script = window.customjs.script || {};
-    window.customjs.script.managers = SCRIPT;
+//     window.customjs.script.managers = SCRIPT;
     
     // Also make classes available globally for backward compatibility
     window.InstanceMonitor = InstanceMonitor;

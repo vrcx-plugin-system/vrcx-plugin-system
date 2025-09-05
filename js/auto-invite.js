@@ -99,7 +99,7 @@ class AutoInviteManager {
     window.customjs = window.customjs || {};
     window.customjs.autoInviteManager = new AutoInviteManager();
     window.customjs.script = window.customjs.script || {};
-    window.customjs.script.autoInvite = SCRIPT;
+//     window.customjs.script.autoInvite = SCRIPT;
     
     // Also make AutoInviteManager available globally for backward compatibility
     window.AutoInviteManager = AutoInviteManager;
