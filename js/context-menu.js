@@ -205,13 +205,15 @@ class CustomContextMenu {
     renderItems(menuType, menuContainer) {
         if (!menuContainer) return;
 
-
-        const existingItems = menuContainer.querySelectorAll(`[data-custom-${menuType}-item]`);
-        existingItems.forEach(item => item.remove());
-
         const typeItems = this.items.get(menuType);
         typeItems.forEach(item => {
             if (!item.enabled) return;
+
+            // Check if this specific item already exists to avoid duplicates
+            const existingItem = menuContainer.querySelector(`[data-custom-${menuType}-item="${item.id}"]`);
+            if (existingItem) {
+                return; // Skip if already exists
+            }
 
             // Create Element UI dropdown item structure that matches Vue components
             const menuItem = document.createElement('div');
