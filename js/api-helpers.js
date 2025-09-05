@@ -73,6 +73,7 @@ class ApiHelpers {
                 setTimeout(async () => { await AppApi.DesktopNotification("VRCX Addon", msg) }, 0);
             }
             if (_alert && window.$app && window.$app.$message) {
+                console.log(`Showing toast with level: ${_level}`);
                 // Call the appropriate toast method based on _level
                 const toastMethod = window.$app.$message[_level];
                 if (typeof toastMethod === 'function') {
