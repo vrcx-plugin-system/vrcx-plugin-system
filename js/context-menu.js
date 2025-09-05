@@ -469,5 +469,5 @@ class CustomContextMenu {
     // Also make CustomContextMenu available globally for backward compatibility
     window.CustomContextMenu = CustomContextMenu;
     
-    console.log(`✓ Loaded ${CustomContextMenu.SCRIPT.name} v${CustomContextMenu.SCRIPT.version} by ${CustomContextMenu.SCRIPT.author}`);
+    console.log(`✓ Loaded ${CustomContextMenu.SCRIPT.name} v${CustomContextMenu.SCRIPT.version} by ${CustomContextMenu.SCRIPT.author}`); // t
 })();
