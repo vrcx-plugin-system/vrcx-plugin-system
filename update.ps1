@@ -1,9 +1,7 @@
 # VRCX Custom Update Script
 # This script switches to main branch, adds, commits, and pushes changes to GitHub, then copies custom files to AppData
 
-param(
-    [string]$CommitMessage = ""
-)
+# No parameters needed - script runs automatically
 
 # Set error action preference
 $ErrorActionPreference = "Stop"
@@ -63,10 +61,22 @@ else {
     # Commit changes
     Write-Host "Committing changes..." -ForegroundColor Yellow
     git commit -m $CommitMessage
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Commit failed. Stashing changes..." -ForegroundColor Red
+        git stash push -m "Auto-stash after failed commit at $timestamp"
+        Write-Host "Changes stashed successfully." -ForegroundColor Yellow
+        exit 1
+    }
     
     # Push to GitHub
     Write-Host "Pushing to GitHub..." -ForegroundColor Yellow
     git push origin main
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Push failed. Stashing changes..." -ForegroundColor Red
+        git stash push -m "Auto-stash after failed push at $timestamp"
+        Write-Host "Changes stashed successfully." -ForegroundColor Yellow
+        exit 1
+    }
     
     Write-Host "Git operations completed successfully!" -ForegroundColor Green
 }
