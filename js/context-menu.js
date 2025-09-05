@@ -41,6 +41,13 @@ class CustomContextMenu {
                             
                             // Determine menu type and process if we have items for it
                             const menuType = this.detectMenuType(node.parentElement);
+                            console.log('Context Menu Detection:', {
+                                menuId: menuId,
+                                menuType: menuType,
+                                hasItems: menuType ? this.items.get(menuType).size : 0,
+                                parentElement: node.parentElement,
+                                dialogElement: node.parentElement?.closest('.x-dialog')
+                            });
                             if (menuType && this.items.get(menuType).size > 0) {
                                 this.debouncedMenuDetection(menuId, menuType, node.parentElement);
                             }
@@ -111,6 +118,13 @@ class CustomContextMenu {
         }
         
         const dialogElement = menuContainer.closest('.x-dialog');
+        console.log('Menu Type Detection:', {
+            menuContainer: menuContainer,
+            dialogElement: dialogElement,
+            dialogClasses: dialogElement?.classList?.toString(),
+            dialogId: dialogElement?.id
+        });
+        
         if (!dialogElement) {
             // If no dialog element found, check if this could be an instance menu
             const isInUserDialog = menuContainer.closest('.x-user-dialog') || 
@@ -123,24 +137,29 @@ class CustomContextMenu {
         if (dialogElement.classList.contains('x-user-dialog') || 
             dialogElement.id === 'user-dialog' ||
             dialogElement.querySelector('.x-user-dialog')) {
+            console.log('Detected user dialog');
             return 'user';
         }
         if (dialogElement.classList.contains('x-world-dialog') || 
             dialogElement.id === 'world-dialog' ||
             dialogElement.querySelector('.x-world-dialog')) {
+            console.log('Detected world dialog');
             return 'world';
         }
         if (dialogElement.classList.contains('x-avatar-dialog') || 
             dialogElement.id === 'avatar-dialog' ||
             dialogElement.querySelector('.x-avatar-dialog')) {
+            console.log('Detected avatar dialog');
             return 'avatar';
         }
         if (dialogElement.classList.contains('x-group-dialog') || 
             dialogElement.id === 'group-dialog' ||
             dialogElement.querySelector('.x-group-dialog')) {
+            console.log('Detected group dialog');
             return 'group';
         }
         
+        console.log('No dialog type detected');
         return null;
     }
 

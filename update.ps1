@@ -148,9 +148,32 @@ if (Test-Path $sourceJs) {
     # Process environment variables
     $content = Convert-EnvironmentVariables $content
     
-    # Write processed content to target file
-    Set-Content $targetJs $content -NoNewline
-    Write-Host "✓ $CustomJs copied and processed successfully" -ForegroundColor Green
+    # Try to write to target file with error handling
+    try {
+        Set-Content $targetJs $content -NoNewline
+        Write-Host "✓ $CustomJs copied and processed successfully" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "⚠ Failed to write $CustomJs directly: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "The file may be in use by VRCX. Trying alternative approach..." -ForegroundColor Yellow
+        
+        # Try using a temporary file and then moving it
+        $tempFile = "$targetJs.tmp"
+        try {
+            Set-Content $tempFile $content -NoNewline
+            Move-Item $tempFile $targetJs -Force
+            Write-Host "✓ $CustomJs copied and processed successfully (via temp file)" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "⚠ Still unable to update $CustomJs. Please close VRCX and try again." -ForegroundColor Red
+            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+            
+            # Clean up temp file if it exists
+            if (Test-Path $tempFile) {
+                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
 }
 
 # Copy custom.css
@@ -180,9 +203,32 @@ if (Test-Path $sourceConfigJs) {
     # Process environment variables
     $content = Convert-EnvironmentVariables $content
     
-    # Write processed content to target file
-    Set-Content $targetConfigJs $content -NoNewline
-    Write-Host "✓ $ConfigJs copied and processed successfully" -ForegroundColor Green
+    # Try to write to target file with error handling
+    try {
+        Set-Content $targetConfigJs $content -NoNewline
+        Write-Host "✓ $ConfigJs copied and processed successfully" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "⚠ Failed to write $ConfigJs directly: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "The file may be in use by VRCX. Trying alternative approach..." -ForegroundColor Yellow
+        
+        # Try using a temporary file and then moving it
+        $tempFile = "$targetConfigJs.tmp"
+        try {
+            Set-Content $tempFile $content -NoNewline
+            Move-Item $tempFile $targetConfigJs -Force
+            Write-Host "✓ $ConfigJs copied and processed successfully (via temp file)" -ForegroundColor Green
+        }
+        catch {
+            Write-Host "⚠ Still unable to update $ConfigJs. Please close VRCX and try again." -ForegroundColor Red
+            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+            
+            # Clean up temp file if it exists
+            if (Test-Path $tempFile) {
+                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
 }
 
 Write-Host "File copy operations completed successfully!" -ForegroundColor Green
