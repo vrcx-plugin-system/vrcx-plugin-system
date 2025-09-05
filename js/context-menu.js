@@ -32,7 +32,7 @@ class CustomContextMenu {
                 // Handle added nodes
                 if (mutation.addedNodes.length) {
                     mutation.addedNodes.forEach((node) => {
-                        if (node.classList && node.classList.contains('el-dropdown-menu__item') && node.parentElement) {
+                        if (node.classList && (node.classList.contains('el-dropdown-menu__item') || node.classList.contains('el-dropdown-item')) && node.parentElement) {
                             const menuId = node.parentElement.id;
                             // Skip if this menu has already been processed
                             if (this.processedMenus.has(menuId)) {
@@ -51,7 +51,7 @@ class CustomContextMenu {
                 // Handle removed nodes - clean up the registry
                 if (mutation.removedNodes.length) {
                     mutation.removedNodes.forEach((node) => {
-                        if (node.classList && node.classList.contains('el-dropdown-menu__item') && node.parentElement) {
+                        if (node.classList && (node.classList.contains('el-dropdown-menu__item') || node.classList.contains('el-dropdown-item')) && node.parentElement) {
                             const menuId = node.parentElement.id;
                             if (this.processedMenus.has(menuId)) {
                                 // Only clean up if the entire menu container is being removed
@@ -165,8 +165,9 @@ class CustomContextMenu {
         typeItems.forEach(item => {
             if (!item.enabled) return;
 
-            const menuItem = document.createElement('li');
-            menuItem.className = item.className;
+            // Create Element UI dropdown item structure
+            const menuItem = document.createElement('div');
+            menuItem.className = 'el-dropdown-menu__item';
             menuItem.tabIndex = '-1';
             menuItem.setAttribute(`data-custom-${menuType}-item`, item.id);
 
