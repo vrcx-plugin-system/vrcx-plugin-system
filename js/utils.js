@@ -65,14 +65,10 @@ class Utils {
         
         try {
             const decoded = atob(str);
-            if (window.Logger?.log) {
-                window.Logger.log("Decoded base64 string", { console: true }, 'info');
-            }
+            window.Logger?.log("Decoded base64 string", { console: true }, 'info');
             return decoded;
         } catch (error) {
-            if (window.Logger?.log) {
-                window.Logger.log(`Failed to decode as base64, using original: ${error.message}`, { console: true }, 'warning');
-            }
+            window.Logger?.log(`Failed to decode as base64, using original: ${error.message}`, { console: true }, 'warning');
             return str;
         }
     }
@@ -80,9 +76,7 @@ class Utils {
     static async getSteamPlaytime(steamId, apiKey) {
         try {
             if (!steamId) {
-                if (window.Logger?.log) {
-                    window.Logger.log("No Steam ID found", { console: true }, 'warning');
-                }
+                window.Logger?.log("No Steam ID found", { console: true }, 'warning');
                 return null;
             }
 
@@ -93,20 +87,14 @@ class Utils {
             const response = await fetch(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${steamId}&steamid=${apiKey}&appids_filter[0]=438100`);
             const data = await response.json();
             if (!data?.response?.games?.[0]) {
-                if (window.Logger?.log) {
-                    window.Logger.log("No VRChat playtime data found", { console: true }, 'warning');
-                }
+                window.Logger?.log("No VRChat playtime data found", { console: true }, 'warning');
                 return null;
             }
             const playtimeMinutes = data.response.games[0].playtime_forever;
-            if (window.Logger?.log) {
-                window.Logger.log(`Got Steam playtime for vrchat: ${playtimeMinutes} minutes`, { console: true }, 'info');
-            }
+            window.Logger?.log(`Got Steam playtime for vrchat: ${playtimeMinutes} minutes`, { console: true }, 'info');
             return playtimeMinutes;
         } catch (error) {
-            if (window.Logger?.log) {
-                window.Logger.log(`Error getting Steam playtime: ${error.message}`, { console: true }, 'error');
-            }
+            window.Logger?.log(`Error getting Steam playtime: ${error.message}`, { console: true }, 'error');
             return null;
         }
     }
@@ -116,9 +104,7 @@ class Utils {
     // Utility function to clear the processed menus registry (useful for debugging)
     static clearProcessedMenus() {
         Utils.processedMenus.clear();
-        if (window.Logger?.log) {
-            window.Logger.log('Cleared processed menus registry', { console: true }, 'info');
-        }
+        window.Logger?.log('Cleared processed menus registry', { console: true }, 'info');
     }
 }
 

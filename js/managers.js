@@ -38,9 +38,7 @@ class Managers {
                 if (args.json.invisiblePlayers > 0) {
                     args.json.displayName = `${args.json.displayName??args.json.name} (${args.json.invisiblePlayers} invisible)`
                     setTimeout(async () => { 
-                        if (window.Logger?.log) {
-                            window.Logger.log(`Found ${args.json.invisiblePlayers} potentially invisible players in instance "${args.json.instanceId}" in world "${args.json.worldName}"`, window.Logger.defaultOptions, 'warning');
-                        }
+                        window.Logger?.log(`Found ${args.json.invisiblePlayers} potentially invisible players in instance "${args.json.instanceId}" in world "${args.json.worldName}"`, window.Logger.defaultOptions, 'warning');
                     }, 1000);
                 }
                 return args;
@@ -78,17 +76,13 @@ class Managers {
                     this.handleTaggedPlayerJoined(noty);
                     break;
                 case 'BlockedOnPlayerJoined':
-                    if (window.Logger?.log) {
-                        window.Logger.log(`Notification type: ${noty.type}, Last joined: ${autoInviteManager.lastJoined}`, { console: true }, 'info');
-                    }
+                                window.Logger?.log(`Notification type: ${noty.type}, Last joined: ${autoInviteManager.lastJoined}`, { console: true }, 'info');
                     if (Utils.isEmpty(autoInviteManager.lastJoined)) return;
                     const p = $app.parseLocation(autoInviteManager.lastJoined);
                     $app.newInstanceSelfInvite(p.worldId);
                     break;
                 case 'invite':
-                    if (window.Logger?.log) {
-                        window.Logger.log(`Notification received: ${JSON.stringify(noty)}`, { console: true }, 'info');
-                    }
+                                window.Logger?.log(`Notification received: ${JSON.stringify(noty)}`, { console: true }, 'info');
                     break;
                 case 'GameStarted':
                     // Trigger registry overrides when game starts
@@ -107,9 +101,7 @@ class Managers {
             const playerName = noty.displayName || noty.name || 'Unknown Player';
             
             if (!playerId) {
-                if (window.Logger?.log) {
-                    window.Logger.log('No player ID found in join notification', { console: true }, 'warning');
-                }
+                window.Logger?.log('No player ID found in join notification', { console: true }, 'warning');
                 return;
             }
 
@@ -138,14 +130,10 @@ class Managers {
                 // Notify with playerName and each tag on a new line
                 const lines = [playerName, ...playerTags.map(tag => tag.text)];
                 const notification = lines.join('\n');
-                if (window.Logger?.log) {
-                    window.Logger.log(notification, window.Logger.defaultOptions, 'info');
-                }
+                window.Logger?.log(notification, window.Logger.defaultOptions, 'info');
             }
         } catch (error) {
-            if (window.Logger?.log) {
-                window.Logger.log(`Error handling tagged player joined: ${error.message}`, { console: true }, 'error');
-            }
+            window.Logger?.log(`Error handling tagged player joined: ${error.message}`, { console: true }, 'error');
         }
         }
     };
@@ -162,16 +150,12 @@ class Managers {
 
     setupIPCLogging() {
         AppApi.SendIpc = (...args) => {
-            if (window.Logger?.log) {
-                window.Logger.log(`[IPC OUT] ${JSON.stringify(args)}`, { console: true }, 'info');
-            }
+            window.Logger?.log(`[IPC OUT] ${JSON.stringify(args)}`, { console: true }, 'info');
             bak.SendIpc(...args);
         }
         
         $app.store.vrcx.eventVrcxMessage = (...args) => {
-            if (window.Logger?.log) {
-                window.Logger.log(`[IPC IN] ${JSON.stringify(args)}`, { console: true }, 'info');
-            }
+            window.Logger?.log(`[IPC IN] ${JSON.stringify(args)}`, { console: true }, 'info');
             bak.eventVrcxMessage(...args);
         }
     }

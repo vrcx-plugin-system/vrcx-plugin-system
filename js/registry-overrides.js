@@ -73,9 +73,7 @@ class RegistryOverrides {
                     }
                     
                     const oldVal = await AppApi.GetVRChatRegistryKey(key);
-                    if (window.Logger?.log) {
-                        window.Logger.log(`[${triggerEvent}] ${key} was ${oldVal}, setting to ${value}`, { console: true }, 'info');
-                    }
+                    window.Logger?.log(`[${triggerEvent}] ${key} was ${oldVal}, setting to ${value}`, { console: true }, 'info');
                     
                     // Determine the registry type based on the value type
                     let registryType = 3; // Default to REG_DWORD
@@ -87,15 +85,11 @@ class RegistryOverrides {
                     
                     await AppApi.SetVRChatRegistryKey(key, value, registryType);
                 } catch (error) {
-                    if (window.Logger?.log) {
-                        window.Logger.log(`Error setting registry key ${key}: ${error.message}`, { console: true }, 'error');
-                    }
+                    window.Logger?.log(`Error setting registry key ${key}: ${error.message}`, { console: true }, 'error');
                 }
             }
         } catch (error) {
-            if (window.Logger?.log) {
-                window.Logger.log(`Error applying registry settings: ${error.message}`, { console: true }, 'error');
-            }
+            window.Logger?.log(`Error applying registry settings: ${error.message}`, { console: true }, 'error');
         }
     }
 }

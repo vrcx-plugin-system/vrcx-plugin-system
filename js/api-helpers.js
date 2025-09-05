@@ -235,9 +235,7 @@ class ApiHelpers {
             if (Utils.isEmpty(loc) && !Utils.isEmpty($app.lastLocation)) this.getLocationObject($app.lastLocation);
             if (Utils.isEmpty(loc) && !Utils.isEmpty($app.lastLocationDestination)) this.getLocationObject($app.lastLocationDestination);
             loc.worldName = await $app.getWorldName(loc);
-            if (window.Logger?.log) {
-                window.Logger.log(`Location object: ${JSON.stringify(loc)}`, { console: true }, 'info');
-            }
+            window.Logger?.log(`Location object: ${JSON.stringify(loc)}`, { console: true }, 'info');
             return loc;
         }
     };

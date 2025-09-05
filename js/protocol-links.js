@@ -29,9 +29,7 @@ class VRCXProtocolLinks {
                 clearInterval(checkInterval);
                 this.contextMenu = window.customjs.contextMenu;
                 this.setupContextMenuItems();
-                if (window.Logger?.log) {
-                    window.Logger.log(`✓ ${VRCXProtocolLinks.SCRIPT.name} initialized`, { console: true }, 'success');
-                }
+                window.Logger?.log(`✓ ${VRCXProtocolLinks.SCRIPT.name} initialized`, { console: true }, 'success');
             }
         }, 100);
 
@@ -39,20 +37,14 @@ class VRCXProtocolLinks {
         setTimeout(() => {
             clearInterval(checkInterval);
             if (!this.contextMenu) {
-                if (window.Logger?.log) {
-                    window.Logger.log(`Failed to initialize ${VRCXProtocolLinks.SCRIPT.name}: Context menu module not found`, { console: true }, 'error');
-                }
-                if (window.Logger?.log) {
-                    window.Logger.log(`Available modules: ${JSON.stringify(Object.keys(window.customjs || {}))}`, { console: true }, 'error');
-                }
+                window.Logger?.log(`Failed to initialize ${VRCXProtocolLinks.SCRIPT.name}: Context menu module not found`, { console: true }, 'error');
+                window.Logger?.log(`Available modules: ${JSON.stringify(Object.keys(window.customjs || {}))}`, { console: true }, 'error');
             }
         }, 10000);
     }
 
     setupContextMenuItems() {
-        if (window.Logger?.log) {
-            window.Logger.log('Setting up protocol links context menu items...', { console: true }, 'info');
-        }
+        window.Logger?.log('Setting up protocol links context menu items...', { console: true }, 'info');
         
         // User dialog items
         const userLinkResult = this.contextMenu.addUserItem('copy-user-link', {
@@ -60,9 +52,7 @@ class VRCXProtocolLinks {
             icon: 'el-icon-link',
             onClick: (userData) => this.copyUserLink(userData)
         });
-        if (window.Logger?.log) {
-            window.Logger.log(`User link item result: ${JSON.stringify(userLinkResult)}`, { console: true }, 'info');
-        }
+        window.Logger?.log(`User link item result: ${JSON.stringify(userLinkResult)}`, { console: true }, 'info');
 
         this.contextMenu.addUserItem('copy-user-import', {
             text: 'Copy User Import Link',
@@ -106,9 +96,7 @@ class VRCXProtocolLinks {
         // Note: Instance context items removed as they don't have a proper context menu in VRCX
         // Instance links should be handled through world dialogs instead
 
-        if (window.Logger?.log) {
-            window.Logger.log('VRCX Protocol Links context menu items added', { console: true }, 'success');
-        }
+        window.Logger?.log('VRCX Protocol Links context menu items added', { console: true }, 'success');
     }
 
     // Copy functions for different protocol types
@@ -205,9 +193,7 @@ class VRCXProtocolLinks {
             
             this.showSuccess(`${description} copied to clipboard: ${text}`);
         } catch (error) {
-            if (window.Logger?.log) {
-                window.Logger.log(`Failed to copy to clipboard: ${error.message}`, { console: true }, 'error');
-            }
+            window.Logger?.log(`Failed to copy to clipboard: ${error.message}`, { console: true }, 'error');
             this.showError(`Failed to copy ${description.toLowerCase()}`);
         }
     }
@@ -217,9 +203,7 @@ class VRCXProtocolLinks {
         if (window.$app && window.$app.$message) {
             window.$app.$message.success(message);
         } else {
-            if (window.Logger?.log) {
-                window.Logger.log(`✓ ${message}`, { console: true }, 'success');
-            }
+            window.Logger?.log(`✓ ${message}`, { console: true }, 'success');
         }
     }
 
@@ -228,9 +212,7 @@ class VRCXProtocolLinks {
         if (window.$app && window.$app.$message) {
             window.$app.$message.error(message);
         } else {
-            if (window.Logger?.log) {
-                window.Logger.log(`✗ ${message}`, { console: true }, 'error');
-            }
+            window.Logger?.log(`✗ ${message}`, { console: true }, 'error');
         }
     }
 
