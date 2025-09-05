@@ -32,24 +32,45 @@ class CustomContextMenu {
                 // Handle added nodes
                 if (mutation.addedNodes.length) {
                     mutation.addedNodes.forEach((node) => {
-                        if (node.classList && (node.classList.contains('el-dropdown-menu__item') || node.classList.contains('el-dropdown-item')) && node.parentElement) {
-                            const menuId = node.parentElement.id;
+                        // Check for dropdown menu items or dropdown menu containers
+                        if (node.classList && (
+                            node.classList.contains('el-dropdown-menu__item') || 
+                            node.classList.contains('el-dropdown-item') ||
+                            node.classList.contains('el-dropdown-menu')
+                        )) {
+                            let menuContainer = null;
+                            let menuId = null;
+                            
+                            if (node.classList.contains('el-dropdown-menu')) {
+                                // This is the dropdown menu container itself
+                                menuContainer = node;
+                                menuId = node.id;
+                            } else {
+                                // This is a dropdown item, find the parent menu container
+                                menuContainer = node.parentElement;
+                                menuId = node.parentElement?.id;
+                            }
+                            
+                            if (!menuContainer || !menuId) return;
+                            
                             // Skip if this menu has already been processed
                             if (this.processedMenus.has(menuId)) {
                                 return;
                             }
                             
                             // Determine menu type and process if we have items for it
-                            const menuType = this.detectMenuType(node.parentElement);
-                            console.log('Context Menu Detection:', {
+                            const menuType = this.detectMenuType(menuContainer);
+                            console.log('Menu Detection:', {
                                 menuId: menuId,
                                 menuType: menuType,
                                 hasItems: menuType ? this.items.get(menuType).size : 0,
-                                parentElement: node.parentElement,
-                                dialogElement: node.parentElement?.closest('.x-dialog')
+                                nodeClasses: node.classList.toString(),
+                                menuContainerClasses: menuContainer?.classList?.toString(),
+                                dialogElement: menuContainer?.closest('.x-dialog'),
+                                dialogClasses: menuContainer?.closest('.x-dialog')?.classList?.toString()
                             });
                             if (menuType && this.items.get(menuType).size > 0) {
-                                this.debouncedMenuDetection(menuId, menuType, node.parentElement);
+                                this.debouncedMenuDetection(menuId, menuType, menuContainer);
                             }
                         }
                     });
@@ -58,8 +79,17 @@ class CustomContextMenu {
                 // Handle removed nodes - clean up the registry
                 if (mutation.removedNodes.length) {
                     mutation.removedNodes.forEach((node) => {
-                        if (node.classList && (node.classList.contains('el-dropdown-menu__item') || node.classList.contains('el-dropdown-item')) && node.parentElement) {
-                            const menuId = node.parentElement.id;
+                        if (node.classList && (
+                            node.classList.contains('el-dropdown-menu__item') || 
+                            node.classList.contains('el-dropdown-item') ||
+                            node.classList.contains('el-dropdown-menu')
+                        )) {
+                            let menuId = null;
+                            if (node.classList.contains('el-dropdown-menu')) {
+                                menuId = node.id;
+                            } else {
+                                menuId = node.parentElement?.id;
+                            }
                             if (this.processedMenus.has(menuId)) {
                                 // Only clean up if the entire menu container is being removed
                                 // Check if the parent element still exists in the DOM
@@ -118,13 +148,6 @@ class CustomContextMenu {
         }
         
         const dialogElement = menuContainer.closest('.x-dialog');
-        console.log('Menu Type Detection:', {
-            menuContainer: menuContainer,
-            dialogElement: dialogElement,
-            dialogClasses: dialogElement?.classList?.toString(),
-            dialogId: dialogElement?.id
-        });
-        
         if (!dialogElement) {
             // If no dialog element found, check if this could be an instance menu
             const isInUserDialog = menuContainer.closest('.x-user-dialog') || 
@@ -137,29 +160,24 @@ class CustomContextMenu {
         if (dialogElement.classList.contains('x-user-dialog') || 
             dialogElement.id === 'user-dialog' ||
             dialogElement.querySelector('.x-user-dialog')) {
-            console.log('Detected user dialog');
             return 'user';
         }
         if (dialogElement.classList.contains('x-world-dialog') || 
             dialogElement.id === 'world-dialog' ||
             dialogElement.querySelector('.x-world-dialog')) {
-            console.log('Detected world dialog');
             return 'world';
         }
         if (dialogElement.classList.contains('x-avatar-dialog') || 
             dialogElement.id === 'avatar-dialog' ||
             dialogElement.querySelector('.x-avatar-dialog')) {
-            console.log('Detected avatar dialog');
             return 'avatar';
         }
         if (dialogElement.classList.contains('x-group-dialog') || 
             dialogElement.id === 'group-dialog' ||
             dialogElement.querySelector('.x-group-dialog')) {
-            console.log('Detected group dialog');
             return 'group';
         }
         
-        console.log('No dialog type detected');
         return null;
     }
 
@@ -184,19 +202,34 @@ class CustomContextMenu {
         typeItems.forEach(item => {
             if (!item.enabled) return;
 
-            // Create Element UI dropdown item structure
+            // Create Element UI dropdown item structure that matches Vue components
             const menuItem = document.createElement('div');
             menuItem.className = 'el-dropdown-menu__item';
             menuItem.tabIndex = '-1';
             menuItem.setAttribute(`data-custom-${menuType}-item`, item.id);
+            menuItem.style.cssText = 'line-height: normal; padding: 0 20px; margin: 0; list-style: none; cursor: pointer; transition: background-color 0.3s;';
 
             if (item.divider) {
                 menuItem.classList.add('el-dropdown-menu__item--divided');
             }
 
+            // Create icon element
             const icon = document.createElement('i');
             icon.className = item.icon;
+            icon.style.cssText = 'margin-right: 5px;';
             menuItem.appendChild(icon);
+
+            // Add text content
+            const textNode = document.createTextNode(item.text);
+            menuItem.appendChild(textNode);
+
+            // Add hover effects
+            menuItem.addEventListener('mouseenter', () => {
+                menuItem.style.backgroundColor = '#f5f7fa';
+            });
+            menuItem.addEventListener('mouseleave', () => {
+                menuItem.style.backgroundColor = '';
+            });
 
             menuItem.onclick = (event) => {
                 event.preventDefault();
@@ -204,7 +237,6 @@ class CustomContextMenu {
                 this.handleItemClick(menuType, item, event);
             };
 
-            menuItem.appendChild(document.createTextNode(item.text));
             menuContainer.appendChild(menuItem);
         });
     }
