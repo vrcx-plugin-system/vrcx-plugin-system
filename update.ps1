@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 # Define paths
 $SourceDir = "P:\Visual Studio\source\repos\VRCX\vrcx-custom"
-$TargetDir = "P:\Visual Studio\source\repos\VRCX\AppData"
+$TargetDir = "$env:APPDATA\VRCX"
 $CustomJs = "custom.js"
 $CustomCss = "custom.css"
 $ConfigJs = "js\config.js"
@@ -164,8 +164,15 @@ if (Test-Path $sourceCss) {
 # Copy config.js (if it exists)
 $sourceConfigJs = Join-Path $SourceDir $ConfigJs
 if (Test-Path $sourceConfigJs) {
-    $targetConfigJs = Join-Path $TargetDir $ConfigJs
+    $targetConfigJs = Join-Path $TargetDir "config.js"
     Write-Host "Copying $ConfigJs..." -ForegroundColor Yellow
+    
+    # Ensure target directory exists
+    $targetConfigDir = Split-Path $targetConfigJs -Parent
+    if (-not (Test-Path $targetConfigDir)) {
+        New-Item -ItemType Directory -Path $targetConfigDir -Force | Out-Null
+        Write-Host "Created directory: $targetConfigDir" -ForegroundColor Gray
+    }
     
     # Read source file content
     $content = Get-Content $sourceConfigJs -Raw
