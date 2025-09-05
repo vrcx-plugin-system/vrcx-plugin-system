@@ -7,8 +7,8 @@ console.log("custom.js START - Version 2.0 - Cache Buster: " + Date.now())
 // User-configurable settings
 const USER_CONFIG = {
     steam: {
-        id: "", // TODO: Remove
-        key: ""
+        id: "{env:STEAM_ID64}",
+        key: "{env:STEAM_API_KEY}"
     },
     bio: {
         updateInterval: 7200000, // 2 hours
@@ -36,10 +36,6 @@ Oculus ID: {oculusId}`
         "VRC_ALLOW_UNTRUSTED_URL": {
             value: 0,
             events: ["VRCX_START", "GAME_START", "INSTANCE_SWITCH_PUBLIC", "INSTANCE_SWITCH_PRIVATE"]
-        },
-        "VRC_ALLOW_INSECURE_CONTENT": {
-            value: "yes",
-            events: ["VRCX_START", "GAME_START"]
         }
         // Simple format (applies on all events):
         // VRC_SOME_OTHER_SETTING: 1,
@@ -193,171 +189,3 @@ if (document.readyState === 'loading') {
     const loader = new ModuleLoader();
     loader.loadAllModules();
 }
-
-// ============================================================================
-// USAGE EXAMPLES
-// ============================================================================
-
-/*
-// Example usage of the new CustomContextMenu class:
-
-// Create a single instance for all context menus
-const customMenu = new CustomContextMenu();
-
-// User context menu items
-const userItem = customMenu.addUserItem('customUserAction', {
-    text: 'Custom User Action',
-    icon: 'el-icon-star-on',
-    onClick: (user) => {
-        console.log('Custom action for user:', user.displayName);
-    }
-});
-
-// Remove user item later
-customMenu.removeUserItem('customUserAction');
-
-// World context menu items
-const worldItem = customMenu.addWorldItem('worldAction', {
-    text: 'Custom World Action',
-    icon: 'el-icon-location',
-    onClick: (world) => {
-        console.log('Custom action for world:', world.name);
-    }
-});
-
-// Avatar context menu items
-const avatarItem = customMenu.addAvatarItem('avatarAction', {
-    text: 'Custom Avatar Action',
-    icon: 'el-icon-user',
-    onClick: (avatar) => {
-        console.log('Custom action for avatar:', avatar.name);
-    }
-});
-
-// Group context menu items
-const groupItem = customMenu.addGroupItem('groupAction', {
-    text: 'Custom Group Action',
-    icon: 'el-icon-s-custom',
-    onClick: (group) => {
-        console.log('Custom action for group:', group.name);
-    }
-});
-
-// Instance context menu items
-const instanceItem = customMenu.addInstanceItem('instanceInfo', {
-    text: 'Show Instance Info',
-    icon: 'el-icon-info',
-    onClick: (instanceData) => {
-        console.log('Instance data:', instanceData);
-    }
-});
-
-// Update items
-customMenu.updateUserItem('customUserAction', { 
-    text: 'Updated User Action',
-    enabled: false 
-});
-
-// Check if item exists
-if (customMenu.hasItem('user', 'customUserAction')) {
-    console.log('User action item exists');
-}
-
-// Get all item IDs for a menu type
-const userItemIds = customMenu.getItemIds('user');
-console.log('User menu items:', userItemIds);
-
-// Clear all items of a specific type
-customMenu.clear('user');
-
-// Clear all items
-customMenu.clear();
-
-// Registry Overrides Examples:
-// Trigger registry updates for specific events
-registryOverrides.triggerEvent('GAME_START');
-registryOverrides.triggerEvent('INSTANCE_SWITCH_PUBLIC');
-
-// Registry Configuration Examples:
-registry: {
-    // Event-based configuration
-    "VRC_ALLOW_UNTRUSTED_URL": {
-        value: 0,
-        events: ["VRCX_START", "GAME_START", "INSTANCE_SWITCH_PUBLIC", "INSTANCE_SWITCH_PRIVATE"]
-    },
-    "VRC_ALLOW_INSECURE_CONTENT": {
-        value: "yes",
-        events: ["VRCX_START", "GAME_START"]
-    },
-    // Simple format (applies on all events)
-    "VRC_SIMPLE_SETTING": 42,
-    "VRC_ANOTHER_STRING_SETTING": "value"
-}
-
-// Custom Tags Examples:
-// Manual tag management
-customTagManager.addTag('usr_12345678-1234-1234-1234-123456789012', 'Cool Person', '#00FF00');
-customTagManager.refreshTags(); // Manually refresh from URLs
-console.log('Total loaded tags:', customTagManager.getLoadedTagsCount());
-
-// Tags Configuration Examples:
-tags: {
-    urls: [
-        "https://github.com/Bluscream/FewTags/raw/refs/heads/main/usertags.json",
-        "https://raw.githubusercontent.com/user/repo/main/tags.json",
-        "https://example.com/my-tags.json"
-    ],
-    updateInterval: 1800000, // 30 minutes
-    initialDelay: 10000      // 10 seconds
-}
-
-// JSON Tag File Format Examples:
-// Option 1: FewTags format (object with user IDs as keys)
-{
-    "usr_c4f62fc6-24ce-4806-8c8e-fd1857f79b66": {
-        "id": -231,
-        "active": true,
-        "malicious": false,
-        "tags": ["FewTags Owner", "Custom Tag 1", "Custom Tag 2"],
-        "tag": "FewTags Owner",
-        "foreground_color": "#ff0000",
-        "sources": ["ExternalTags.json", "FewTags.json"]
-    }
-}
-
-// Option 2: Direct array format
-[
-    {
-        "UserId": "usr_12345678-1234-1234-1234-123456789012",
-        "Tag": "Friend",
-        "TagColour": "#00FF00"
-    },
-    {
-        "UserId": "usr_87654321-4321-4321-4321-210987654321",
-        "Tag": "Moderator",
-        "TagColour": "#FF0000"
-    }
-]
-
-// Option 3: Object with tags property
-{
-    "tags": [
-        {
-            "UserId": "usr_12345678-1234-1234-1234-123456789012",
-            "Tag": "VIP",
-            "TagColour": "#FFD700"
-        }
-    ]
-}
-
-// Option 4: Object with data property
-{
-    "data": [
-        {
-            "UserId": "usr_12345678-1234-1234-1234-123456789012",
-            "Tag": "Developer",
-            "TagColour": "#0000FF"
-        }
-    ]
-}
-*/

@@ -13,79 +13,31 @@ $CustomJs = "custom.js"
 $CustomCss = "custom.css"
 $ConfigJs = "js\config.js"
 
-# Environment variable backup
-$envVarsBackup = @{}
-
-# Function to check and backup environment variables
-function Backup-EnvironmentVariables {
-    param($FilePath)
+# Function to process environment variable placeholders in file content
+function Convert-EnvironmentVariables {
+    param($Content)
     
-    if (-not (Test-Path $FilePath)) {
-        return $false
+    # Find all {env:VARIABLE_NAME} patterns and replace them
+    $pattern = '\{env:([^}]+)\}'
+    $envMatches = [regex]::Matches($Content, $pattern)
+    
+    foreach ($match in $envMatches) {
+        $fullMatch = $match.Value  # e.g., "{env:STEAM_ID64}"
+        $varName = $match.Groups[1].Value  # e.g., "STEAM_ID64"
+        
+        # Get the environment variable value
+        $envValue = [Environment]::GetEnvironmentVariable($varName)
+        
+        if ($envValue) {
+            $Content = $Content -replace [regex]::Escape($fullMatch), $envValue
+            Write-Host "Replaced $fullMatch with actual value" -ForegroundColor Green
+        }
+        else {
+            Write-Host "Warning: Environment variable $varName not set" -ForegroundColor Yellow
+        }
     }
     
-    $content = Get-Content $FilePath -Raw
-    $hasEnvVars = $false
-    
-    # Check for STEAM_ID64 environment variable
-    if ($content -match 'id:\s*["'']?\$env:STEAM_ID64["'']?') {
-        $envVarsBackup['STEAM_ID64'] = $matches[0]
-        $hasEnvVars = $true
-        Write-Host "Found STEAM_ID64 environment variable" -ForegroundColor Yellow
-    }
-    
-    # Check for STEAM_APIKEY environment variable  
-    if ($content -match 'key:\s*["'']?\$env:STEAM_APIKEY["'']?') {
-        $envVarsBackup['STEAM_APIKEY'] = $matches[0]
-        $hasEnvVars = $true
-        Write-Host "Found STEAM_APIKEY environment variable" -ForegroundColor Yellow
-    }
-    
-    return $hasEnvVars
-}
-
-# Function to remove environment variables
-function Remove-EnvironmentVariables {
-    param($FilePath)
-    
-    if (-not (Test-Path $FilePath)) {
-        return
-    }
-    
-    $content = Get-Content $FilePath -Raw
-    
-    # Remove STEAM_ID64 environment variable
-    $content = $content -replace 'id:\s*["'']?\$env:STEAM_ID64["'']?', 'id: ""'
-    
-    # Remove STEAM_APIKEY environment variable
-    $content = $content -replace 'key:\s*["'']?\$env:STEAM_APIKEY["'']?', 'key: ""'
-    
-    Set-Content $FilePath $content -NoNewline
-    Write-Host "Removed environment variables from $FilePath" -ForegroundColor Yellow
-}
-
-# Function to restore environment variables
-function Restore-EnvironmentVariables {
-    param($FilePath)
-    
-    if (-not (Test-Path $FilePath) -or $envVarsBackup.Count -eq 0) {
-        return
-    }
-    
-    $content = Get-Content $FilePath -Raw
-    
-    # Restore STEAM_ID64 if it was backed up
-    if ($envVarsBackup.ContainsKey('STEAM_ID64')) {
-        $content = $content -replace 'id:\s*""', $envVarsBackup['STEAM_ID64']
-    }
-    
-    # Restore STEAM_APIKEY if it was backed up
-    if ($envVarsBackup.ContainsKey('STEAM_APIKEY')) {
-        $content = $content -replace 'key:\s*""', $envVarsBackup['STEAM_APIKEY']
-    }
-    
-    Set-Content $FilePath $content -NoNewline
-    Write-Host "Restored environment variables to $FilePath" -ForegroundColor Green
+    return $Content
 }
 
 Write-Host "=== VRCX Custom Update Script ===" -ForegroundColor Cyan
@@ -97,29 +49,6 @@ Write-Host ""
 Write-Host "Changing to source directory..." -ForegroundColor Yellow
 Set-Location $SourceDir
 
-# Environment variable handling
-Write-Host "=== Environment Variable Check ===" -ForegroundColor Cyan
-
-# Check for environment variables in custom.js and config.js
-$customJsPath = Join-Path $SourceDir $CustomJs
-$configJsPath = Join-Path $SourceDir $ConfigJs
-
-$hasEnvVars = $false
-if (Backup-EnvironmentVariables $customJsPath) {
-    $hasEnvVars = $true
-}
-if (Backup-EnvironmentVariables $configJsPath) {
-    $hasEnvVars = $true
-}
-
-if ($hasEnvVars) {
-    Write-Host "Environment variables detected. Will remove before commit and restore after push." -ForegroundColor Yellow
-    Remove-EnvironmentVariables $customJsPath
-    Remove-EnvironmentVariables $configJsPath
-}
-else {
-    Write-Host "No environment variables found." -ForegroundColor Green
-}
 
 # Git operations
 Write-Host "=== Git Operations ===" -ForegroundColor Cyan
@@ -166,13 +95,6 @@ else {
         git stash push -m "Auto-stash after failed commit at $timestamp"
         Write-Host "Changes stashed successfully." -ForegroundColor Yellow
         
-        # Restore environment variables even if commit failed
-        if ($hasEnvVars) {
-            Write-Host "Restoring environment variables after failed commit..." -ForegroundColor Yellow
-            Restore-EnvironmentVariables $customJsPath
-            Restore-EnvironmentVariables $configJsPath
-            Write-Host "Environment variables restored successfully!" -ForegroundColor Green
-        }
         
         exit 1
     }
@@ -185,26 +107,12 @@ else {
         git stash push -m "Auto-stash after failed push at $timestamp"
         Write-Host "Changes stashed successfully." -ForegroundColor Yellow
         
-        # Restore environment variables even if push failed
-        if ($hasEnvVars) {
-            Write-Host "Restoring environment variables after failed push..." -ForegroundColor Yellow
-            Restore-EnvironmentVariables $customJsPath
-            Restore-EnvironmentVariables $configJsPath
-            Write-Host "Environment variables restored successfully!" -ForegroundColor Green
-        }
         
         exit 1
     }
     
     Write-Host "Git operations completed successfully!" -ForegroundColor Green
     
-    # Restore environment variables after successful push
-    if ($hasEnvVars) {
-        Write-Host "Restoring environment variables..." -ForegroundColor Yellow
-        Restore-EnvironmentVariables $customJsPath
-        Restore-EnvironmentVariables $configJsPath
-        Write-Host "Environment variables restored successfully!" -ForegroundColor Green
-    }
 }
 
 # File copying operations
@@ -233,8 +141,16 @@ if (-not (Test-Path $TargetDir)) {
 if (Test-Path $sourceJs) {
     $targetJs = Join-Path $TargetDir $CustomJs
     Write-Host "Copying $CustomJs..." -ForegroundColor Yellow
-    Copy-Item $sourceJs $targetJs -Force
-    Write-Host "✓ $CustomJs copied successfully" -ForegroundColor Green
+    
+    # Read source file content
+    $content = Get-Content $sourceJs -Raw
+    
+    # Process environment variables
+    $content = Convert-EnvironmentVariables $content
+    
+    # Write processed content to target file
+    Set-Content $targetJs $content -NoNewline
+    Write-Host "✓ $CustomJs copied and processed successfully" -ForegroundColor Green
 }
 
 # Copy custom.css
@@ -243,6 +159,23 @@ if (Test-Path $sourceCss) {
     Write-Host "Copying $CustomCss..." -ForegroundColor Yellow
     Copy-Item $sourceCss $targetCss -Force
     Write-Host "✓ $CustomCss copied successfully" -ForegroundColor Green
+}
+
+# Copy config.js (if it exists)
+$sourceConfigJs = Join-Path $SourceDir $ConfigJs
+if (Test-Path $sourceConfigJs) {
+    $targetConfigJs = Join-Path $TargetDir $ConfigJs
+    Write-Host "Copying $ConfigJs..." -ForegroundColor Yellow
+    
+    # Read source file content
+    $content = Get-Content $sourceConfigJs -Raw
+    
+    # Process environment variables
+    $content = Convert-EnvironmentVariables $content
+    
+    # Write processed content to target file
+    Set-Content $targetConfigJs $content -NoNewline
+    Write-Host "✓ $ConfigJs copied and processed successfully" -ForegroundColor Green
 }
 
 Write-Host "File copy operations completed successfully!" -ForegroundColor Green
