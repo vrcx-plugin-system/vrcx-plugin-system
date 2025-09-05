@@ -33,12 +33,19 @@ class ConfigManager {
     registerModule() {
         // Register this module in the global namespace
         window.customjs = window.customjs || {};
-        window.customjs.config = this;
+        
+        // Don't overwrite the existing config if it exists
+        if (!window.customjs.config) {
+            window.customjs.config = this.config;
+        }
+        
+        // Store the config manager instance separately
+        window.customjs.configManager = this;
         window.customjs.script = window.customjs.script || {};
 //         window.customjs.script.config = SCRIPT;
         
         // Also make CONFIG available globally for backward compatibility
-        window.CONFIG = this.config;
+        window.CONFIG = window.customjs.config;
         
         console.log(`✓ Loaded ${ConfigManager.SCRIPT.name} v${ConfigManager.SCRIPT.version} by ${ConfigManager.SCRIPT.author}`);
     }

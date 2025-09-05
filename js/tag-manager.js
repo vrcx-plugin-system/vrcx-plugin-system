@@ -25,13 +25,34 @@ class CustomTagManager {
         setTimeout(async () => {
             await this.loadAllTags();
             this.startPeriodicUpdates();
-            const msg = `VRCX-Utils started at\n ${Utils.getTimestamp()}`;
-            Logger.log(msg, true, true, true);
+            
+            // Log startup message if Utils and Logger are available
+            try {
+                const timestamp = window.Utils?.getTimestamp ? window.Utils.getTimestamp() : new Date().toISOString();
+                const msg = `VRCX-Utils started at\n ${timestamp}`;
+                if (window.Logger?.log) {
+                    window.Logger.log(msg, true, true, true);
+                } else {
+                    console.log(msg);
+                }
+            } catch (error) {
+                console.log('VRCX-Utils started at', new Date().toISOString());
+            }
         }, window.customjs?.config?.tags?.initialDelay || 5000);
     }
 
     async loadAllTags() {
         const tagConfig = window.customjs?.config?.tags;
+        
+        // Debug logging to help troubleshoot configuration issues
+        console.log('Tag Manager Debug Info:');
+        console.log('- window.customjs exists:', !!window.customjs);
+        console.log('- window.customjs.config exists:', !!window.customjs?.config);
+        console.log('- tagConfig exists:', !!tagConfig);
+        console.log('- tagConfig.urls exists:', !!tagConfig?.urls);
+        console.log('- tagConfig.urls length:', tagConfig?.urls?.length || 0);
+        console.log('- Full config object:', window.customjs?.config);
+        
         if (!tagConfig?.urls || tagConfig.urls.length === 0) {
             console.log('No tag URLs configured');
             return;
