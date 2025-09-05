@@ -39,7 +39,7 @@ class Managers {
                     args.json.displayName = `${args.json.displayName??args.json.name} (${args.json.invisiblePlayers} invisible)`
                     setTimeout(async () => { 
                         if (window.Logger?.log) {
-                            window.Logger.log(`Found ${args.json.invisiblePlayers} potentially invisible players in instance "${args.json.instanceId}" in world "${args.json.worldName}"`, true, true, true, 'warning');
+                            window.Logger.log(`Found ${args.json.invisiblePlayers} potentially invisible players in instance "${args.json.instanceId}" in world "${args.json.worldName}"`, window.Logger.defaultOptions, 'warning');
                         }
                     }, 1000);
                 }
@@ -133,7 +133,7 @@ class Managers {
                 const lines = [playerName, ...playerTags.map(tag => tag.text)];
                 const notification = lines.join('\n');
                 if (window.Logger?.log) {
-                    window.Logger.log(notification, true, true, true, 'info');
+                    window.Logger.log(notification, window.Logger.defaultOptions, 'info');
                 }
             }
         } catch (error) {

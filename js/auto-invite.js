@@ -53,7 +53,7 @@ class AutoInviteManager {
                 }
                 if (Utils.isEmpty(n)) n = await $app.getWorldName(l);
                 if (window.Logger?.log) {
-                    window.Logger.log(`Inviting user ${userName} to "${n}"`, false, false, false, 'info');
+                    window.Logger.log(`Inviting user ${userName} to "${n}"`, { console: true }, 'info');
                 }
                 API.sendInvite({ instanceId: l, worldId: l, worldName: n }, this.autoInviteUser.id);
                 this.lastInvitedTo = l;
@@ -74,7 +74,7 @@ class AutoInviteManager {
     toggleAutoInvite(user) {
         if (Utils.isEmpty(user) || (!Utils.isEmpty(this.autoInviteUser) && user.id === this.autoInviteUser?.id)) {
             if (window.Logger?.log) {
-                window.Logger.log(`Disabled Auto Invite for user ${this.autoInviteUser.displayName}`, true, false, false, 'warning');
+                window.Logger.log(`Disabled Auto Invite for user ${this.autoInviteUser.displayName}`, { console: true, vrcx: { message: true } }, 'warning');
             }
             this.autoInviteUser = null;
             this.customMenu.updateUserItem('autoInvite', { 
@@ -84,7 +84,7 @@ class AutoInviteManager {
         } else {
             this.autoInviteUser = user;
             if (window.Logger?.log) {
-                window.Logger.log(`Enabled Auto Invite for user ${this.autoInviteUser.displayName}`, true, false, false, 'success');
+                window.Logger.log(`Enabled Auto Invite for user ${this.autoInviteUser.displayName}`, { console: true, vrcx: { message: true } }, 'success');
             }
             this.customMenu.updateUserItem('autoInvite', { 
                 text: `Auto Invite: ${this.autoInviteUser.displayName}`,

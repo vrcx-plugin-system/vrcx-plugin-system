@@ -51,7 +51,8 @@ Oculus ID: {oculusId}`
         updateInterval: 3600000,
         // Initial delay before first fetch (default: 5 seconds)
         initialDelay: 5000
-    }
+    },
+    webhook: "http://homeassistant.local:8123/api/webhook/vrcx" // Example: "http://homeassistant.local:8123/api/webhook/vrcx_notifications"
 };
 
 // ============================================================================

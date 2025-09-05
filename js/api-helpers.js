@@ -64,39 +64,155 @@ class ApiHelpers {
     // ============================================================================
 
     static Logger = {
-        log: function(msg, _alert = true, _notify = false, _noty = false, _level = 'info') {
-            console.log(msg);
-            $app.store.vrcx.eventVrcxMessage({'MsgType': 'Noty', 'Data': msg });
-            $app.store.vrcx.eventVrcxMessage({'MsgType': 'External', 'UserId': $app.store.user.currentUser.id, 'Data': msg });
-            if (_notify) ApiHelpers.Logger.notify("VRCX Addon", msg);
-            if (_noty) {
-                setTimeout(async () => { await AppApi.DesktopNotification("VRCX Addon", msg) }, 0);
+        // Default options object with all logging methods enabled
+        defaultOptions: {
+            console: true,
+            vrcx: {
+                notify: true,
+                message: true
+            },
+            event: {
+                noty: true,
+                external: true
+            },
+            desktop: true,
+            xsoverlay: true,
+            ovrtoolkit: true,
+            webhook: true
+        },
+
+        log: function(msg, options = {}, level = 'info') {
+            // Merge with default options, assuming false for missing properties
+            const opts = {
+                console: options.console ?? false,
+                vrcx: {
+                    notify: options.vrcx?.notify ?? false,
+                    message: options.vrcx?.message ?? false
+                },
+                event: {
+                    noty: options.event?.noty ?? false,
+                    external: options.event?.external ?? false
+                },
+                desktop: options.desktop ?? false,
+                xsoverlay: options.xsoverlay ?? false,
+                ovrtoolkit: options.ovrtoolkit ?? false,
+                webhook: options.webhook ?? false
+            };
+
+            // Add timestamp to longer messages
+            const timestamp = new Date().toISOString();
+            const timestampedMsg = msg.length > 50 ? `[${timestamp}] ${msg}` : msg;
+
+            // Console logging
+            if (opts.console) {
+                console.log(timestampedMsg);
             }
-            if (_alert && window.$app && window.$app.$message) {
-                console.log(`Showing toast with level: ${_level}`);
-                // Call the appropriate toast method based on _level
-                const toastMethod = window.$app.$message[_level];
-                if (typeof toastMethod === 'function') {
-                    toastMethod(msg);
-                } else {
-                    // Fallback to info if the method doesn't exist
-                    window.$app.$message.info(msg);
+
+            // VRCX event logging
+            if (opts.event.noty) {
+                $app.store.vrcx.eventVrcxMessage({'MsgType': 'Noty', 'Data': timestampedMsg });
+            }
+            if (opts.event.external) {
+                $app.store.vrcx.eventVrcxMessage({'MsgType': 'External', 'UserId': $app.store.user.currentUser.id, 'Data': timestampedMsg });
+            }
+
+            // Desktop notifications
+            if (opts.desktop) {
+                setTimeout(async () => { 
+                    try {
+                        await AppApi.DesktopNotification("VRCX Addon", timestampedMsg);
+                    } catch (error) {
+                        console.error('Error sending desktop notification:', error);
+                    }
+                }, 0);
+            }
+
+            // XSOverlay notifications
+            if (opts.xsoverlay) {
+                setTimeout(async () => { 
+                    try {
+                        await AppApi.XSNotification("VRCX Addon", timestampedMsg, 5000);
+                    } catch (error) {
+                        console.error('Error sending XSOverlay notification:', error);
+                    }
+                }, 0);
+            }
+
+            // OVRToolkit notifications
+            if (opts.ovrtoolkit) {
+                setTimeout(async () => { 
+                    try {
+                        await AppApi.OVRTNotification(true, true, "VRCX Addon", timestampedMsg, 5000, 1.0, null);
+                    } catch (error) {
+                        console.error('Error sending OVRToolkit notification:', error);
+                    }
+                }, 0);
+            }
+
+            // VRCX UI notifications
+            if (opts.vrcx.notify && window.$app && window.$app.$notify) {
+                try {
+                    const notifyMethod = window.$app.$notify[level];
+                    if (typeof notifyMethod === 'function') {
+                        notifyMethod({
+                            title: 'VRCX Addon',
+                            message: msg,
+                            type: level
+                        });
+                    } else {
+                        window.$app.$notify.info({
+                            title: 'VRCX Addon',
+                            message: msg,
+                            type: 'info'
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error sending VRCX notify:', error);
                 }
+            }
+
+            // VRCX message toasts
+            if (opts.vrcx.message && window.$app && window.$app.$message) {
+                try {
+                    const messageMethod = window.$app.$message[level];
+                    if (typeof messageMethod === 'function') {
+                        messageMethod(msg);
+                    } else {
+                        window.$app.$message.info(msg);
+                    }
+                } catch (error) {
+                    console.error('Error sending VRCX message:', error);
+                }
+            }
+
+            // Webhook notifications
+            if (opts.webhook) {
+                setTimeout(async () => {
+                    try {
+                        const webhookUrl = window.customjs?.config?.webhook;
+                        if (webhookUrl) {
+                            const payload = {
+                                message: msg,
+                                level: level,
+                                timestamp: timestamp,
+                                source: 'VRCX-Addon'
+                            };
+                            
+                            await fetch(webhookUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify(payload)
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Error sending webhook notification:', error);
+                    }
+                }, 0);
             }
         },
 
-        notify: function(title, msg) {
-            (async () => {
-                try {
-                    await AppApi.DesktopNotification(title, msg);
-                    // XSNotification requires additional parameters - let's skip it for now
-                    // await AppApi.XSNotification(title, msg, 5000);
-                    await AppApi.OVRTNotification(true, true, title, msg, 5000, 1.0, null);
-                } catch (error) {
-                    console.error('Error sending notification:', error);
-                }
-            })();
-        }
     };
 
     // ============================================================================
