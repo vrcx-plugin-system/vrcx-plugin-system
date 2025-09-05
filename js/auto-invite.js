@@ -41,7 +41,9 @@ class AutoInviteManager {
     }
 
     async onCurrentUserLocationChanged(loc) {
-        console.log(`User Location changed to: ${loc}`)
+        if (window.Logger?.log) {
+            window.Logger.log(`User Location changed to: ${loc}`, { console: true }, 'info');
+        }
         if (loc === 'traveling:traveling') {
             if (!Utils.isEmpty(this.autoInviteUser) && this.lastInvitedTo !== loc) {
                 const userName = `"${this.autoInviteUser?.displayName ?? this.autoInviteUser}"`;

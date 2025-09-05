@@ -74,10 +74,14 @@ class BioUpdater {
                 .replace('{rank}', $app.store.user.currentUser.$trustLevel)
             
             const bio = oldBio + newBio;
-            console.log(`Updating bio to ${bio}`)
+            if (window.Logger?.log) {
+                window.Logger.log(`Updating bio to ${bio}`, { console: true }, 'info');
+            }
             await API.saveBio(bio);
         } catch (error) {
-            console.error('Error updating bio:', error);
+            if (window.Logger?.log) {
+                window.Logger.log(`Error updating bio: ${error.message}`, { console: true }, 'error');
+            }
         }
     }
 }

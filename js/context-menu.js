@@ -60,15 +60,17 @@ class CustomContextMenu {
                             
                             // Determine menu type and process if we have items for it
                             const menuType = this.detectMenuType(menuContainer);
-                            console.log('Menu Detection:', {
-                                menuId: menuId,
-                                menuType: menuType,
-                                hasItems: menuType ? this.items.get(menuType).size : 0,
-                                nodeClasses: node.classList.toString(),
-                                menuContainerClasses: menuContainer?.classList?.toString(),
-                                dialogElement: menuContainer?.closest('.x-dialog'),
-                                dialogClasses: menuContainer?.closest('.x-dialog')?.classList?.toString()
-                            });
+                            if (window.Logger?.log) {
+                                window.Logger.log(`Menu Detection: ${JSON.stringify({
+                                    menuId: menuId,
+                                    menuType: menuType,
+                                    hasItems: menuType ? this.items.get(menuType).size : 0,
+                                    nodeClasses: node.classList.toString(),
+                                    menuContainerClasses: menuContainer?.classList?.toString(),
+                                    dialogElement: menuContainer?.closest('.x-dialog'),
+                                    dialogClasses: menuContainer?.closest('.x-dialog')?.classList?.toString()
+                                })}`, { console: true }, 'info');
+                            }
                             if (menuType && this.items.get(menuType).size > 0) {
                                 this.debouncedMenuDetection(menuId, menuType, menuContainer);
                             }
@@ -101,7 +103,9 @@ class CustomContextMenu {
                                     }
                                     this.processedMenus.delete(menuId);
                                     this.menuContainers.delete(menuId);
-                                    console.log(`Cleaned up processed menu: ${menuId}`);
+                                    if (window.Logger?.log) {
+                                        window.Logger.log(`Cleaned up processed menu: ${menuId}`, { console: true }, 'info');
+                                    }
                                 }
                             }
                         }
@@ -126,12 +130,14 @@ class CustomContextMenu {
         const timer = setTimeout(() => {
             // Double-check that the menu still exists and hasn't been processed
             if (!this.processedMenus.has(menuId) && document.contains(menuElement)) {
-                console.log(`Menu type ${menuType} detected for menu:`, {
-                    menuType: menuType,
-                    menuElement: menuElement,
-                    dialogElement: menuElement?.closest('.x-dialog'),
-                    menuId: menuId
-                });
+                if (window.Logger?.log) {
+                    window.Logger.log(`Menu type ${menuType} detected for menu: ${JSON.stringify({
+                        menuType: menuType,
+                        menuElement: menuElement,
+                        dialogElement: menuElement?.closest('.x-dialog'),
+                        menuId: menuId
+                    })}`, { console: true }, 'info');
+                }
                 // Mark this menu as processed
                 this.processedMenus.add(menuId);
                 this.onMenuDetected(menuType, menuElement);
@@ -194,12 +200,14 @@ class CustomContextMenu {
     onMenuDetected(menuType, menuContainer) {
         this.menuContainers.set(menuContainer.id, { menuType, container: menuContainer });
         this.renderItems(menuType, menuContainer);
-        console.log(`${menuType} context menu detected, items initialized`, {
-            menuType: menuType,
-            menuContainer: menuContainer,
-            menuId: menuContainer.id,
-            itemCount: this.items.get(menuType).size
-        });
+        if (window.Logger?.log) {
+            window.Logger.log(`${menuType} context menu detected, items initialized: ${JSON.stringify({
+                menuType: menuType,
+                menuContainer: menuContainer,
+                menuId: menuContainer.id,
+                itemCount: this.items.get(menuType).size
+            })}`, { console: true }, 'info');
+        }
     }
 
     renderItems(menuType, menuContainer) {
@@ -353,7 +361,9 @@ class CustomContextMenu {
     addItem(menuType, id, config) {
         const typeItems = this.items.get(menuType);
         if (!typeItems) {
-            console.error(`Invalid menu type: ${menuType}`);
+            if (window.Logger?.log) {
+                window.Logger.log(`Invalid menu type: ${menuType}`, { console: true }, 'error');
+            }
             return null;
         }
 
@@ -383,7 +393,9 @@ class CustomContextMenu {
     removeItem(menuType, id) {
         const typeItems = this.items.get(menuType);
         if (!typeItems) {
-            console.error(`Invalid menu type: ${menuType}`);
+            if (window.Logger?.log) {
+                window.Logger.log(`Invalid menu type: ${menuType}`, { console: true }, 'error');
+            }
             return false;
         }
 
@@ -402,7 +414,9 @@ class CustomContextMenu {
     updateItem(menuType, id, updates) {
         const typeItems = this.items.get(menuType);
         if (!typeItems) {
-            console.error(`Invalid menu type: ${menuType}`);
+            if (window.Logger?.log) {
+                window.Logger.log(`Invalid menu type: ${menuType}`, { console: true }, 'error');
+            }
             return false;
         }
 

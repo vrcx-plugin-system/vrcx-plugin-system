@@ -46,24 +46,32 @@ class CustomTagManager {
         
         
         if (!tagConfig?.urls || tagConfig.urls.length === 0) {
-            console.log('No tag URLs configured');
+            if (window.Logger?.log) {
+                window.Logger.log('No tag URLs configured', { console: true }, 'warning');
+            }
             return;
         }
 
-        console.log(`Loading tags from ${tagConfig.urls.length} URL(s)...`);
+        if (window.Logger?.log) {
+            window.Logger.log(`Loading tags from ${tagConfig.urls.length} URL(s)...`, { console: true }, 'info');
+        }
         
         for (const url of tagConfig.urls) {
             try {
                 await this.loadTagsFromUrl(url);
             } catch (error) {
-                console.error(`Failed to load tags from ${url}:`, error);
+                if (window.Logger?.log) {
+                    window.Logger.log(`Failed to load tags from ${url}: ${error.message}`, { console: true }, 'error');
+                }
             }
         }
     }
 
     async loadTagsFromUrl(url) {
         try {
-            console.log(`Fetching tags from: ${url}`);
+            if (window.Logger?.log) {
+                window.Logger.log(`Fetching tags from: ${url}`, { console: true }, 'info');
+            }
             const response = await fetch(url);
             
             if (!response.ok) {
@@ -76,12 +84,18 @@ class CustomTagManager {
             if (tags.length > 0) {
                 this.loadedTags.set(url, new Set(tags));
                 await this.applyTags(tags);
-                console.log(`Loaded ${tags.length} tags from ${url}`);
+                if (window.Logger?.log) {
+                    window.Logger.log(`Loaded ${tags.length} tags from ${url}`, { console: true }, 'success');
+                }
             } else {
-                console.log(`No valid tags found in ${url}`);
+                if (window.Logger?.log) {
+                    window.Logger.log(`No valid tags found in ${url}`, { console: true }, 'warning');
+                }
             }
         } catch (error) {
-            console.error(`Error loading tags from ${url}:`, error);
+            if (window.Logger?.log) {
+                window.Logger.log(`Error loading tags from ${url}: ${error.message}`, { console: true }, 'error');
+            }
             throw error;
         }
     }
@@ -129,7 +143,9 @@ class CustomTagManager {
             // Object with data property
             tags.push(...data.data);
         } else {
-            console.warn(`Unknown data structure in ${url}:`, data);
+            if (window.Logger?.log) {
+                window.Logger.log(`Unknown data structure in ${url}: ${JSON.stringify(data)}`, { console: true }, 'warning');
+            }
             return [];
         }
 
@@ -152,23 +168,31 @@ class CustomTagManager {
 
     validateTag(tag, url) {
         if (!tag || typeof tag !== 'object') {
-            console.warn(`Invalid tag object in ${url}:`, tag);
+            if (window.Logger?.log) {
+                window.Logger.log(`Invalid tag object in ${url}: ${JSON.stringify(tag)}`, { console: true }, 'warning');
+            }
             return false;
         }
 
         if (!tag.UserId || typeof tag.UserId !== 'string') {
-            console.warn(`Invalid UserId in tag from ${url}:`, tag);
+            if (window.Logger?.log) {
+                window.Logger.log(`Invalid UserId in tag from ${url}: ${JSON.stringify(tag)}`, { console: true }, 'warning');
+            }
             return false;
         }
 
         if (!tag.Tag || typeof tag.Tag !== 'string') {
-            console.warn(`Invalid Tag in tag from ${url}:`, tag);
+            if (window.Logger?.log) {
+                window.Logger.log(`Invalid Tag in tag from ${url}: ${JSON.stringify(tag)}`, { console: true }, 'warning');
+            }
             return false;
         }
 
         // Validate color if provided
         if (tag.TagColour && typeof tag.TagColour !== 'string') {
-            console.warn(`Invalid TagColour in tag from ${url}:`, tag);
+            if (window.Logger?.log) {
+                window.Logger.log(`Invalid TagColour in tag from ${url}: ${JSON.stringify(tag)}`, { console: true }, 'warning');
+            }
             return false;
         }
 
@@ -196,7 +220,9 @@ class CustomTagManager {
                     // console.log(`Applied tag: ${tag.Tag} for user ${tag.UserId}`);
                 }
             } catch (error) {
-                console.error(`Error applying tag for user ${tag.UserId}:`, error);
+                if (window.Logger?.log) {
+                    window.Logger.log(`Error applying tag for user ${tag.UserId}: ${error.message}`, { console: true }, 'error');
+                }
             }
         }
         
@@ -206,11 +232,15 @@ class CustomTagManager {
 
     checkFriendsAndBlockedForTags() {
         try {
-            console.log('=== Checking Friends and Blocked Players for Tags ===');
+            if (window.Logger?.log) {
+                window.Logger.log('=== Checking Friends and Blocked Players for Tags ===', { console: true }, 'info');
+            }
             
             // Check friends
             const friends = $app.store.user.currentUser?.friends || [];
-            console.log(`Checking ${friends.length} friends for tags...`);
+            if (window.Logger?.log) {
+                window.Logger.log(`Checking ${friends.length} friends for tags...`, { console: true }, 'info');
+            }
             
             let taggedFriendsCount = 0;
             for (const friend of friends) {
@@ -218,14 +248,18 @@ class CustomTagManager {
                 if (friendTags.length > 0) {
                     taggedFriendsCount++;
                     const tagText = friendTags.map(tag => tag.Tag).join(', ');
-                    console.log(`👥 Friend: ${friend.displayName} (${friend.id}) - Tags: ${tagText}`);
+                    if (window.Logger?.log) {
+                        window.Logger.log(`👥 Friend: ${friend.displayName} (${friend.id}) - Tags: ${tagText}`, { console: true }, 'info');
+                    }
                 }
             }
             
             // Check blocked players
             const moderations = Array.from($app.store.moderation?.cachedPlayerModerations?.values() || []);
             const blockedPlayers = moderations.filter(item => item.type === "block");
-            console.log(`Checking ${blockedPlayers.length} blocked players for tags...`);
+            if (window.Logger?.log) {
+                window.Logger.log(`Checking ${blockedPlayers.length} blocked players for tags...`, { console: true }, 'info');
+            }
             
             let taggedBlockedCount = 0;
             for (const blocked of blockedPlayers) {
@@ -233,18 +267,24 @@ class CustomTagManager {
                 if (blockedTags.length > 0) {
                     taggedBlockedCount++;
                     const tagText = blockedTags.map(tag => tag.Tag).join(', ');
-                    console.log(`🚫 Blocked: ${blocked.targetDisplayName} (${blocked.targetUserId}) - Tags: ${tagText}`);
+                    if (window.Logger?.log) {
+                        window.Logger.log(`🚫 Blocked: ${blocked.targetDisplayName} (${blocked.targetUserId}) - Tags: ${tagText}`, { console: true }, 'info');
+                    }
                 }
             }
             
             // Summary
-            console.log(`=== Tag Summary ===`);
-            console.log(`Tagged Friends: ${taggedFriendsCount}/${friends.length}`);
-            console.log(`Tagged Blocked: ${taggedBlockedCount}/${blockedPlayers.length}`);
-            console.log(`Total Tagged Users: ${taggedFriendsCount + taggedBlockedCount}`);
+            if (window.Logger?.log) {
+                window.Logger.log('=== Tag Summary ===', { console: true }, 'info');
+                window.Logger.log(`Tagged Friends: ${taggedFriendsCount}/${friends.length}`, { console: true }, 'info');
+                window.Logger.log(`Tagged Blocked: ${taggedBlockedCount}/${blockedPlayers.length}`, { console: true }, 'info');
+                window.Logger.log(`Total Tagged Users: ${taggedFriendsCount + taggedBlockedCount}`, { console: true }, 'info');
+            }
             
         } catch (error) {
-            console.error('Error checking friends and blocked players for tags:', error);
+            if (window.Logger?.log) {
+                window.Logger.log(`Error checking friends and blocked players for tags: ${error.message}`, { console: true }, 'error');
+            }
         }
     }
 
@@ -269,14 +309,18 @@ class CustomTagManager {
         }
 
         this.updateInterval = setInterval(async () => {
-            console.log('Updating tags from URLs...');
+            if (window.Logger?.log) {
+                window.Logger.log('Updating tags from URLs...', { console: true }, 'info');
+            }
             await this.loadAllTags();
         }, window.customjs?.config?.tags?.updateInterval || 3600000);
     }
 
     // Method to manually refresh tags
     async refreshTags() {
-        console.log('Manually refreshing tags...');
+        if (window.Logger?.log) {
+            window.Logger.log('Manually refreshing tags...', { console: true }, 'info');
+        }
         await this.loadAllTags();
     }
 
@@ -288,9 +332,13 @@ class CustomTagManager {
                 Tag: tag,
                 TagColour: color
             });
-            console.log(`Manually added tag: ${tag} for user ${userId}`);
+            if (window.Logger?.log) {
+                window.Logger.log(`Manually added tag: ${tag} for user ${userId}`, { console: true }, 'success');
+            }
         } catch (error) {
-            console.error(`Error adding manual tag:`, error);
+            if (window.Logger?.log) {
+                window.Logger.log(`Error adding manual tag: ${error.message}`, { console: true }, 'error');
+            }
         }
     }
 

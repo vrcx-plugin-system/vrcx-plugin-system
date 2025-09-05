@@ -78,13 +78,17 @@ class Managers {
                     this.handleTaggedPlayerJoined(noty);
                     break;
                 case 'BlockedOnPlayerJoined':
-                    console.log(noty.type, autoInviteManager.lastJoined);
+                    if (window.Logger?.log) {
+                        window.Logger.log(`Notification type: ${noty.type}, Last joined: ${autoInviteManager.lastJoined}`, { console: true }, 'info');
+                    }
                     if (Utils.isEmpty(autoInviteManager.lastJoined)) return;
                     const p = $app.parseLocation(autoInviteManager.lastJoined);
                     $app.newInstanceSelfInvite(p.worldId);
                     break;
                 case 'invite':
-                    console.log(noty);
+                    if (window.Logger?.log) {
+                        window.Logger.log(`Notification received: ${JSON.stringify(noty)}`, { console: true }, 'info');
+                    }
                     break;
                 case 'GameStarted':
                     // Trigger registry overrides when game starts
@@ -103,7 +107,9 @@ class Managers {
             const playerName = noty.displayName || noty.name || 'Unknown Player';
             
             if (!playerId) {
-                console.log('No player ID found in join notification');
+                if (window.Logger?.log) {
+                    window.Logger.log('No player ID found in join notification', { console: true }, 'warning');
+                }
                 return;
             }
 
@@ -137,7 +143,9 @@ class Managers {
                 }
             }
         } catch (error) {
-            console.error('Error handling tagged player joined:', error);
+            if (window.Logger?.log) {
+                window.Logger.log(`Error handling tagged player joined: ${error.message}`, { console: true }, 'error');
+            }
         }
         }
     };
@@ -154,12 +162,16 @@ class Managers {
 
     setupIPCLogging() {
         AppApi.SendIpc = (...args) => {
-            console.log("[IPC OUT]", ...args);
+            if (window.Logger?.log) {
+                window.Logger.log(`[IPC OUT] ${JSON.stringify(args)}`, { console: true }, 'info');
+            }
             bak.SendIpc(...args);
         }
         
         $app.store.vrcx.eventVrcxMessage = (...args) => {
-            console.log("[IPC IN]", ...args);
+            if (window.Logger?.log) {
+                window.Logger.log(`[IPC IN] ${JSON.stringify(args)}`, { console: true }, 'info');
+            }
             bak.eventVrcxMessage(...args);
         }
     }

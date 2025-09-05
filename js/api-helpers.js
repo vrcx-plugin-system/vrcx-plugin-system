@@ -103,9 +103,13 @@ class ApiHelpers {
             const timestamp = new Date().toISOString();
             const timestampedMsg = msg.length > 50 ? `[${timestamp}] ${msg}` : msg;
 
-            // Console logging
+            // Console logging using the specified level
             if (opts.console) {
-                console.log(timestampedMsg);
+                if (typeof console[level] === 'function') {
+                    console[level](timestampedMsg);
+                } else {
+                    console.log(timestampedMsg);
+                }
             }
 
             // VRCX event logging
@@ -231,7 +235,9 @@ class ApiHelpers {
             if (Utils.isEmpty(loc) && !Utils.isEmpty($app.lastLocation)) this.getLocationObject($app.lastLocation);
             if (Utils.isEmpty(loc) && !Utils.isEmpty($app.lastLocationDestination)) this.getLocationObject($app.lastLocationDestination);
             loc.worldName = await $app.getWorldName(loc);
-            console.log(loc);
+            if (window.Logger?.log) {
+                window.Logger.log(`Location object: ${JSON.stringify(loc)}`, { console: true }, 'info');
+            }
             return loc;
         }
     };
