@@ -4,7 +4,8 @@
 param(
     [string]$CommitMessage = "",
     [switch]$SkipGit = $false,
-    [switch]$SkipCopy = $false
+    [switch]$SkipCopy = $false,
+    [switch]$Backup = $false
 )
 
 # Set error action preference
@@ -107,8 +108,8 @@ if (-not $SkipCopy) {
         $targetJs = Join-Path $TargetDir $CustomJs
         Write-Host "Copying $CustomJs..." -ForegroundColor Yellow
         
-        # Create backup if target exists
-        if (Test-Path $targetJs) {
+        # Create backup if target exists and -Backup is specified
+        if ($Backup -and (Test-Path $targetJs)) {
             $backupJs = "$targetJs.backup.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
             Copy-Item $targetJs $backupJs
             Write-Host "Created backup: $backupJs" -ForegroundColor Gray
@@ -123,8 +124,8 @@ if (-not $SkipCopy) {
         $targetCss = Join-Path $TargetDir $CustomCss
         Write-Host "Copying $CustomCss..." -ForegroundColor Yellow
         
-        # Create backup if target exists
-        if (Test-Path $targetCss) {
+        # Create backup if target exists and -Backup is specified
+        if ($Backup -and (Test-Path $targetCss)) {
             $backupCss = "$targetCss.backup.$(Get-Date -Format 'yyyyMMdd-HHmmss')"
             Copy-Item $targetCss $backupCss
             Write-Host "Created backup: $backupCss" -ForegroundColor Gray
