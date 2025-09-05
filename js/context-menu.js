@@ -2,16 +2,15 @@
 // CUSTOM CONTEXT MENU MANAGEMENT
 // ============================================================================
 
-const SCRIPT = {
-    name: "Context Menu Module",
-    description: "Custom context menu management for VRCX dialogs",
-    author: "Bluscream",
-    version: "1.0.0",
-    dependencies: []
-};
-
 // Single class for managing all custom context menu items
 class CustomContextMenu {
+    static SCRIPT = {
+        name: "Context Menu Module",
+        description: "Custom context menu management for VRCX dialogs",
+        author: "Bluscream",
+        version: "1.0.0",
+        dependencies: []
+    };
     constructor() {
         this.menuTypes = ['user', 'world', 'avatar', 'group', 'instance'];
         this.items = new Map(); // Map of menuType -> Map of itemId -> item

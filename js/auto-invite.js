@@ -2,19 +2,18 @@
 // AUTO INVITE MANAGEMENT
 // ============================================================================
 
-const SCRIPT = {
-    name: "Auto Invite Module",
-    description: "Automatic user invitation system with location tracking",
-    author: "Bluscream",
-    version: "1.0.0",
-    dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js"
-    ]
-};
-
 class AutoInviteManager {
+    static SCRIPT = {
+        name: "Auto Invite Module",
+        description: "Automatic user invitation system with location tracking",
+        author: "Bluscream",
+        version: "1.0.0",
+        dependencies: [
+            "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
+            "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu.js",
+            "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js"
+        ]
+    };
     constructor() {
         this.autoInviteUser = null;
         this.lastInvitedTo = null;

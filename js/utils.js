@@ -2,16 +2,15 @@
 // UTILITY CLASSES
 // ============================================================================
 
-const SCRIPT = {
-    name: "Utils Module",
-    description: "Utility classes and helper functions for VRCX custom modules",
-    author: "Bluscream",
-    version: "1.0.0",
-    dependencies: []
-};
-
 // Utils class for common utility functions
 class Utils {
+    static SCRIPT = {
+        name: "Utils Module",
+        description: "Utility classes and helper functions for VRCX custom modules",
+        author: "Bluscream",
+        version: "1.0.0",
+        dependencies: []
+    };
     static isEmpty(v) {
         return v === null || v === undefined || v === ""
     }
@@ -74,15 +73,14 @@ class Utils {
             return null;
         }
     }
-}
+    // Global registry to track processed menus
+    static processedMenus = new Set();
 
-// Global registry to track processed menus
-const processedMenus = new Set();
-
-// Utility function to clear the processed menus registry (useful for debugging)
-function clearProcessedMenus() {
-    processedMenus.clear();
-    console.log('Cleared processed menus registry');
+    // Utility function to clear the processed menus registry (useful for debugging)
+    static clearProcessedMenus() {
+        Utils.processedMenus.clear();
+        console.log('Cleared processed menus registry');
+    }
 }
 
 // Auto-initialize the module
@@ -90,13 +88,13 @@ function clearProcessedMenus() {
     // Register this module in the global namespace
     window.customjs = window.customjs || {};
     window.customjs.utils = Utils;
-    window.customjs.clearProcessedMenus = clearProcessedMenus;
+    window.customjs.clearProcessedMenus = Utils.clearProcessedMenus;
     window.customjs.script = window.customjs.script || {};
-//     window.customjs.script.utils = SCRIPT;
+    window.customjs.script.utils = Utils.SCRIPT;
     
     // Also make Utils available globally for backward compatibility
     window.Utils = Utils;
-    window.clearProcessedMenus = clearProcessedMenus;
+    window.clearProcessedMenus = Utils.clearProcessedMenus;
     
-    console.log(`✓ Loaded ${SCRIPT.name} v${SCRIPT.version} by ${SCRIPT.author}`);
+    console.log(`✓ Loaded ${Utils.SCRIPT.name} v${Utils.SCRIPT.version} by ${Utils.SCRIPT.author}`);
 })();

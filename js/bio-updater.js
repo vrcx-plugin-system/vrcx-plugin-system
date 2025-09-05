@@ -2,19 +2,18 @@
 // BIO MANAGEMENT SYSTEM
 // ============================================================================
 
-const SCRIPT = {
-    name: "Bio Updater Module",
-    description: "Automatic bio updating with user statistics and custom templates",
-    author: "Bluscream",
-    version: "1.0.0",
-    dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js"
-    ]
-};
-
 class BioUpdater {
+    static SCRIPT = {
+        name: "Bio Updater Module",
+        description: "Automatic bio updating with user statistics and custom templates",
+        author: "Bluscream",
+        version: "1.0.0",
+        dependencies: [
+            "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
+            "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
+            "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js"
+        ]
+    };
     constructor() {
         this.updateInterval = null;
         this.init();

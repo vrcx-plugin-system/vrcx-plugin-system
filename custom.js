@@ -6,7 +6,6 @@ console.log("custom.js START - Version 2.0 - Cache Buster: " + Date.now())
 
 // User-configurable settings
 const USER_CONFIG = {
-    url: "https://gist.github.com/Bluscream/7842ad23efb6cbb73f6a1bb17008deed",
     steam: {
         id: "", // TODO: Remove
         key: ""
@@ -116,16 +115,9 @@ class ModuleLoader {
             
             const moduleCode = await response.text();
             
-            // Extract module name from URL for unique variable naming
-            const moduleName = modulePath.split('/').pop().replace('.js', '');
-            const uniqueScriptVar = `SCRIPT_${moduleName.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`;
-            
-            // Replace SCRIPT declarations with unique variable names
-            const processedCode = moduleCode.replace(/const SCRIPT =/g, `const ${uniqueScriptVar} =`);
-            
             // Wrap the module code in an IIFE to create a separate scope
             const wrappedCode = `(function() {
-                ${processedCode}
+                ${moduleCode}
             })();`;
             
             // Create a script element and inject the wrapped code directly

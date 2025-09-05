@@ -2,16 +2,16 @@
 // CONFIGURATION & METADATA
 // ============================================================================
 
-const SCRIPT = {
-    name: "Config Module",
-    description: "Configuration management and metadata for VRCX custom modules",
-    author: "Bluscream",
-    version: "1.0.0",
-    dependencies: []
-};
-
 // Configuration class that uses the user config from main custom.js
 class ConfigManager {
+    static SCRIPT = {
+        name: "Config Module",
+        description: "Configuration management and metadata for VRCX custom modules",
+        author: "Bluscream",
+        version: "1.0.0",
+        dependencies: []
+    };
+
     constructor() {
         this.config = null;
         this.init();
@@ -40,7 +40,7 @@ class ConfigManager {
         // Also make CONFIG available globally for backward compatibility
         window.CONFIG = this.config;
         
-        console.log(`✓ Loaded ${SCRIPT.name} v${SCRIPT.version} by ${SCRIPT.author}`);
+        console.log(`✓ Loaded ${ConfigManager.SCRIPT.name} v${ConfigManager.SCRIPT.version} by ${ConfigManager.SCRIPT.author}`);
     }
 
 }

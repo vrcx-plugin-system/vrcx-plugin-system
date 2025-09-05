@@ -2,17 +2,16 @@
 // REGISTRY OVERRIDES MANAGEMENT
 // ============================================================================
 
-const SCRIPT = {
-    name: "Registry Overrides Module",
-    description: "VRChat registry settings management with event-based triggers",
-    author: "Bluscream",
-    version: "1.0.0",
-    dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js"
-    ]
-};
-
 class RegistryOverrides {
+    static SCRIPT = {
+        name: "Registry Overrides Module",
+        description: "VRChat registry settings management with event-based triggers",
+        author: "Bluscream",
+        version: "1.0.0",
+        dependencies: [
+            "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js"
+        ]
+    };
     constructor() {
         this.updateInterval = null;
         this.eventHandlers = new Map();

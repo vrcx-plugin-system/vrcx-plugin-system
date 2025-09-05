@@ -2,22 +2,27 @@
 // MANAGEMENT CLASSES
 // ============================================================================
 
-const SCRIPT = {
-    name: "Managers Module",
-    description: "Management classes for instance monitoring, notifications, and debug tools",
-    author: "Bluscream",
-    version: "1.0.0",
-    dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js"
-    ]
-};
-
 // ============================================================================
-// INSTANCE MONITORING
+// MANAGEMENT CLASSES
 // ============================================================================
 
-class InstanceMonitor {
+class Managers {
+    static SCRIPT = {
+        name: "Managers Module",
+        description: "Management classes for instance monitoring, notifications, and debug tools",
+        author: "Bluscream",
+        version: "1.0.0",
+        dependencies: [
+            "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
+            "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js"
+        ]
+    };
+
+    // ============================================================================
+    // INSTANCE MONITORING
+    // ============================================================================
+
+    static InstanceMonitor = class {
     constructor() {
         this.lastInvisiblePlayers = 0;
         this.setupInstanceOverride();
@@ -39,14 +44,14 @@ class InstanceMonitor {
                 return args;
             });
         };
-    }
-}
+        }
+    };
 
-// ============================================================================
-// NOTIFICATION HANDLING
-// ============================================================================
+    // ============================================================================
+    // NOTIFICATION HANDLING
+    // ============================================================================
 
-class NotificationHandler {
+    static NotificationHandler = class {
     constructor() {
         this.setupNotificationOverride();
     }
@@ -130,14 +135,14 @@ class NotificationHandler {
         } catch (error) {
             console.error('Error handling tagged player joined:', error);
         }
-    }
-}
+        }
+    };
 
-// ============================================================================
-// DEBUG & DEVELOPMENT TOOLS
-// ============================================================================
+    // ============================================================================
+    // DEBUG & DEVELOPMENT TOOLS
+    // ============================================================================
 
-class DebugTools {
+    static DebugTools = class {
     constructor() {
         this.setupIPCLogging();
         this.setupConsoleFunctions();
@@ -174,23 +179,24 @@ class DebugTools {
         
         // Also make available globally for backward compatibility
         window.debugVRCX = debugVRCX;
-    }
+        }
+    };
 }
 
 // Auto-initialize the module
 (function() {
     // Register this module in the global namespace
     window.customjs = window.customjs || {};
-    window.customjs.instanceMonitor = new InstanceMonitor();
-    window.customjs.notificationHandler = new NotificationHandler();
-    window.customjs.debugTools = new DebugTools();
+    window.customjs.instanceMonitor = new Managers.InstanceMonitor();
+    window.customjs.notificationHandler = new Managers.NotificationHandler();
+    window.customjs.debugTools = new Managers.DebugTools();
     window.customjs.script = window.customjs.script || {};
-//     window.customjs.script.managers = SCRIPT;
+    window.customjs.script.managers = Managers.SCRIPT;
     
     // Also make classes available globally for backward compatibility
-    window.InstanceMonitor = InstanceMonitor;
-    window.NotificationHandler = NotificationHandler;
-    window.DebugTools = DebugTools;
+    window.InstanceMonitor = Managers.InstanceMonitor;
+    window.NotificationHandler = Managers.NotificationHandler;
+    window.DebugTools = Managers.DebugTools;
     
-    console.log(`✓ Loaded ${SCRIPT.name} v${SCRIPT.version} by ${SCRIPT.author}`);
+    console.log(`✓ Loaded ${Managers.SCRIPT.name} v${Managers.SCRIPT.version} by ${Managers.SCRIPT.author}`);
 })();
