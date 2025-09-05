@@ -53,13 +53,38 @@ class Utils {
         return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} GMT+1`;
     }
 
+    static tryDecodeBase64(str) {
+        if (!str || typeof str !== 'string') {
+            return str;
+        }
+        
+        // Check if string looks like base64 (ends with = or =)
+        if (!str.endsWith('=')) {
+            return str;
+        }
+        
+        try {
+            const decoded = atob(str);
+            console.log("Decoded base64 string");
+            return decoded;
+        } catch (error) {
+            console.warn("Failed to decode as base64, using original:", error);
+            return str;
+        }
+    }
+
     static async getSteamPlaytime(steamId, apiKey) {
         try {
             if (!steamId) {
                 console.log("No Steam ID found");
                 return null;
             }
-            const response = await fetch(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${apiKey}&steamid=${steamId}&appids_filter[0]=438100`);
+
+            // Decode base64 encoded steam ID or key if needed
+            steamId = this.tryDecodeBase64(steamId);
+            apiKey = this.tryDecodeBase64(apiKey);
+
+            const response = await fetch(`https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${steamId}&steamid=${apiKey}&appids_filter[0]=438100`);
             const data = await response.json();
             if (!data?.response?.games?.[0]) {
                 console.log("No VRChat playtime data found");
