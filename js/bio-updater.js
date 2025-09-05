@@ -20,8 +20,16 @@ class BioUpdater {
     }
 
     init() {
-        this.updateInterval = setInterval(async () => { await this.updateBio(); }, CONFIG.bio.updateInterval);
-        setTimeout(async () => { await this.updateBio(); }, CONFIG.bio.initialDelay);
+        // Wait for config to be available
+        const checkConfig = () => {
+            if (window.CONFIG && window.CONFIG.bio) {
+                this.updateInterval = setInterval(async () => { await this.updateBio(); }, window.CONFIG.bio.updateInterval);
+                setTimeout(async () => { await this.updateBio(); }, window.CONFIG.bio.initialDelay);
+            } else {
+                setTimeout(checkConfig, 100);
+            }
+        };
+        checkConfig();
     }
 
     async updateBio() {
@@ -29,7 +37,7 @@ class BioUpdater {
             const now = Date.now();
             const stats = await window.database.getUserStats({'id': $app.store.user.currentUser.id});
             const oldBio = $app.store.user.currentUser.bio.split("\n-\n")[0];
-            const steamPlayTime = await Utils.getSteamPlaytime(CONFIG.steam.id, CONFIG.steam.key);
+            const steamPlayTime = await Utils.getSteamPlaytime(window.CONFIG.steam.id, window.CONFIG.steam.key);
             
             let steamHours, steamSeconds = null;
             if (steamPlayTime) {
@@ -46,7 +54,7 @@ class BioUpdater {
             const joiners = favs.filter(friend => friend.groupKey === "friend:group_2");
             const partners = favs.filter(friend => friend.groupKey === "friend:group_1");
             
-            const newBio = CONFIG.bio.template
+            const newBio = window.CONFIG.bio.template
                 .replace('{last_activity}', Utils.timeToText(now-last_activity) ?? "")
                 .replace('{playtime}', playTimeText)
                 .replace('{date_joined}', $app.store.user.currentUser.date_joined ?? "Unknown")
@@ -80,10 +88,10 @@ class BioUpdater {
     window.customjs = window.customjs || {};
     window.customjs.bioUpdater = new BioUpdater();
     window.customjs.script = window.customjs.script || {};
-//     window.customjs.script.bioUpdater = SCRIPT;
+    window.customjs.script.bioUpdater = BioUpdater.SCRIPT;
     
     // Also make BioUpdater available globally for backward compatibility
     window.BioUpdater = BioUpdater;
     
-    console.log(`✓ Loaded ${SCRIPT.name} v${SCRIPT.version} by ${SCRIPT.author}`);
+    console.log(`✓ Loaded ${BioUpdater.SCRIPT.name} v${BioUpdater.SCRIPT.version} by ${BioUpdater.SCRIPT.author}`);
 })();

@@ -464,10 +464,10 @@ class CustomContextMenu {
     window.customjs = window.customjs || {};
     window.customjs.contextMenu = new CustomContextMenu();
     window.customjs.script = window.customjs.script || {};
-//     window.customjs.script.contextMenu = SCRIPT;
+    window.customjs.script.contextMenu = CustomContextMenu.SCRIPT;
     
     // Also make CustomContextMenu available globally for backward compatibility
     window.CustomContextMenu = CustomContextMenu;
     
-    console.log(`✓ Loaded ${SCRIPT.name} v${SCRIPT.version} by ${SCRIPT.author}`);
+    console.log(`✓ Loaded ${CustomContextMenu.SCRIPT.name} v${CustomContextMenu.SCRIPT.version} by ${CustomContextMenu.SCRIPT.author}`);
 })();

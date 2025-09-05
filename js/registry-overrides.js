@@ -100,10 +100,10 @@ class RegistryOverrides {
     window.customjs = window.customjs || {};
     window.customjs.registryOverrides = new RegistryOverrides();
     window.customjs.script = window.customjs.script || {};
-//     window.customjs.script.registryOverrides = SCRIPT;
+    window.customjs.script.registryOverrides = RegistryOverrides.SCRIPT;
     
     // Also make RegistryOverrides available globally for backward compatibility
     window.RegistryOverrides = RegistryOverrides;
     
-    console.log(`✓ Loaded ${SCRIPT.name} v${SCRIPT.version} by ${SCRIPT.author}`);
+    console.log(`✓ Loaded ${RegistryOverrides.SCRIPT.name} v${RegistryOverrides.SCRIPT.version} by ${RegistryOverrides.SCRIPT.author}`);
 })();
