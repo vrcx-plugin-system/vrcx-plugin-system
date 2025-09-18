@@ -27,8 +27,8 @@ class AutoInviteManager {
             this.customMenu = new window.CustomContextMenu();
             window.Logger?.log('Created new CustomContextMenu instance', { console: true }, 'info');
         } else {
-            window.Logger?.log('CustomContextMenu not available, creating local instance', { console: true }, 'warning');
-            this.customMenu = new CustomContextMenu();
+            window.Logger?.log('CustomContextMenu not available, will retry later', { console: true }, 'warning');
+            this.customMenu = null;
         }
         
         this.autoInviteItem = null;
@@ -48,8 +48,17 @@ class AutoInviteManager {
         try {
             window.Logger?.log('Setting up Auto Invite user button...', { console: true }, 'info');
             
+            // Try to get the context menu if we don't have it yet
             if (!this.customMenu) {
-                throw new Error('CustomContextMenu not available');
+                if (window.customjs?.contextMenu) {
+                    this.customMenu = window.customjs.contextMenu;
+                    window.Logger?.log('Found CustomContextMenu instance on retry', { console: true }, 'info');
+                } else if (window.CustomContextMenu) {
+                    this.customMenu = new window.CustomContextMenu();
+                    window.Logger?.log('Created new CustomContextMenu instance on retry', { console: true }, 'info');
+                } else {
+                    throw new Error('CustomContextMenu still not available');
+                }
             }
             
             this.autoInviteItem = this.customMenu.addUserItem('autoInvite', {
