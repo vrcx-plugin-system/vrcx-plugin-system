@@ -18,7 +18,19 @@ class AutoInviteManager {
         this.autoInviteUser = null;
         this.lastInvitedTo = null;
         this.lastJoined = null;
-        this.customMenu = new CustomContextMenu();
+        
+        // Try to get existing CustomContextMenu instance or create new one
+        if (window.customjs?.contextMenu) {
+            this.customMenu = window.customjs.contextMenu;
+            window.Logger?.log('Using existing CustomContextMenu instance', { console: true }, 'info');
+        } else if (window.CustomContextMenu) {
+            this.customMenu = new window.CustomContextMenu();
+            window.Logger?.log('Created new CustomContextMenu instance', { console: true }, 'info');
+        } else {
+            window.Logger?.log('CustomContextMenu not available, creating local instance', { console: true }, 'warning');
+            this.customMenu = new CustomContextMenu();
+        }
+        
         this.autoInviteItem = null;
         this.setupLocationTracking();
         this.setupUserButton();
@@ -33,11 +45,33 @@ class AutoInviteManager {
     }
 
     setupUserButton() {
-        this.autoInviteItem = this.customMenu.addUserItem('autoInvite', {
-            text: 'Auto Invite',
-            icon: 'el-icon-message',
-            onClick: (user) => this.toggleAutoInvite(user)
-        });
+        try {
+            window.Logger?.log('Setting up Auto Invite user button...', { console: true }, 'info');
+            
+            if (!this.customMenu) {
+                throw new Error('CustomContextMenu not available');
+            }
+            
+            this.autoInviteItem = this.customMenu.addUserItem('autoInvite', {
+                text: 'Auto Invite',
+                icon: 'el-icon-message',
+                onClick: (user) => this.toggleAutoInvite(user)
+            });
+            
+            window.Logger?.log('Auto Invite user button setup completed', { console: true }, 'info');
+            return true;
+        } catch (error) {
+            window.Logger?.log(`Error setting up Auto Invite user button: ${error.message}`, { console: true }, 'error');
+            console.error('Auto Invite setup error:', error);
+            
+            // Retry after a delay if the context menu isn't ready yet
+            setTimeout(() => {
+                window.Logger?.log('Retrying Auto Invite user button setup...', { console: true }, 'info');
+                this.setupUserButton();
+            }, 2000);
+            
+            return false;
+        }
     }
 
     async onCurrentUserLocationChanged(loc) {
@@ -90,6 +124,30 @@ class AutoInviteManager {
     getAutoInviteUser() {
         return this.autoInviteUser;
     }
+
+    // Debug method to check if the menu item is properly registered
+    debugMenuStatus() {
+        const status = {
+            hasCustomMenu: !!this.customMenu,
+            hasAutoInviteItem: !!this.autoInviteItem,
+            userItemsCount: this.customMenu?.items?.get('user')?.size || 0,
+            hasUserItems: this.customMenu?.hasItem('user', 'autoInvite') || false,
+            processedMenus: this.customMenu?.processedMenus?.size || 0,
+            menuContainers: this.customMenu?.menuContainers?.size || 0
+        };
+        
+        console.log('Auto Invite Menu Debug Status:', status);
+        window.Logger?.log(`Auto Invite Menu Debug: ${JSON.stringify(status)}`, { console: true }, 'info');
+        
+        return status;
+    }
+
+    // Method to manually trigger menu setup (for debugging)
+    reinitializeMenu() {
+        window.Logger?.log('Manually reinitializing Auto Invite menu...', { console: true }, 'info');
+        this.setupUserButton();
+        return this.debugMenuStatus();
+    }
 }
 
 // Auto-initialize the module
@@ -103,5 +161,14 @@ class AutoInviteManager {
     // Also make AutoInviteManager available globally for backward compatibility
     window.AutoInviteManager = AutoInviteManager;
     
+    // Add debug functions to global scope for easy console access
+    window.debugAutoInvite = () => window.customjs.autoInviteManager.debugMenuStatus();
+    window.reinitAutoInvite = () => window.customjs.autoInviteManager.reinitializeMenu();
+    
     console.log(`✓ Loaded ${AutoInviteManager.SCRIPT.name} v${AutoInviteManager.SCRIPT.version} by ${AutoInviteManager.SCRIPT.author}`);
+    
+    // Run initial debug check after a short delay
+    setTimeout(() => {
+        window.customjs.autoInviteManager.debugMenuStatus();
+    }, 1000);
 })();

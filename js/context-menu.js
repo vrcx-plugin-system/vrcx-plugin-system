@@ -1,4 +1,4 @@
-// ============================================================================
+cd // ============================================================================
 // CUSTOM CONTEXT MENU MANAGEMENT
 // ============================================================================
 
@@ -60,14 +60,15 @@ class CustomContextMenu {
                             
                             // Determine menu type and process if we have items for it
                             const menuType = this.detectMenuType(menuContainer);
+                            const dialogElement = menuContainer?.closest('.x-dialog');
                             window.Logger?.log(`Menu Detection: ${JSON.stringify({
                                 menuId: menuId,
                                 menuType: menuType,
                                 hasItems: menuType ? this.items.get(menuType).size : 0,
                                 nodeClasses: node.classList.toString(),
                                 menuContainerClasses: menuContainer?.classList?.toString(),
-                                dialogElement: menuContainer?.closest('.x-dialog'),
-                                dialogClasses: menuContainer?.closest('.x-dialog')?.classList?.toString()
+                                hasDialogElement: !!dialogElement,
+                                dialogClasses: dialogElement?.classList?.toString()
                             })}`, { console: true }, 'info');
                             if (menuType && this.items.get(menuType).size > 0) {
                                 this.debouncedMenuDetection(menuId, menuType, menuContainer);
@@ -126,10 +127,12 @@ class CustomContextMenu {
         const timer = setTimeout(() => {
             // Double-check that the menu still exists and hasn't been processed
             if (!this.processedMenus.has(menuId) && document.contains(menuElement)) {
+                const dialogElement = menuElement?.closest('.x-dialog');
                 window.Logger?.log(`Menu type ${menuType} detected for menu: ${JSON.stringify({
                     menuType: menuType,
-                    menuElement: menuElement,
-                    dialogElement: menuElement?.closest('.x-dialog'),
+                    hasMenuElement: !!menuElement,
+                    hasDialogElement: !!dialogElement,
+                    dialogClasses: dialogElement?.classList?.toString(),
                     menuId: menuId
                 })}`, { console: true }, 'info');
                 // Mark this menu as processed
@@ -147,44 +150,82 @@ class CustomContextMenu {
             return null;
         }
         
-        const dialogElement = menuContainer.closest('.x-dialog');
+        // First, try to find the dialog element using various selectors
+        let dialogElement = menuContainer.closest('.x-dialog') || 
+                           menuContainer.closest('[class*="dialog"]') ||
+                           menuContainer.closest('.el-dialog');
+        
+        // If no dialog found by closest, look for dialog in the document
         if (!dialogElement) {
-            // If no dialog element found, this is likely a dropdown menu that's positioned outside the dialog
-            // We need to be more careful about detecting instance menus
-            // Only consider it an instance menu if it's clearly not part of any dialog
-            const isInAnyDialog = menuContainer.closest('.x-user-dialog') || 
-                                 menuContainer.closest('.x-world-dialog') ||
-                                 menuContainer.closest('.x-avatar-dialog') ||
-                                 menuContainer.closest('.x-group-dialog') ||
-                                 menuContainer.querySelector('.x-user-dialog') ||
-                                 menuContainer.querySelector('.x-world-dialog') ||
-                                 menuContainer.querySelector('.x-avatar-dialog') ||
-                                 menuContainer.querySelector('.x-group-dialog');
-            
-            // Only return 'instance' if we're sure this is not part of any dialog
-            // For now, let's be conservative and not add instance items to unknown menus
+            // Check if there are any visible dialogs in the document
+            const visibleDialogs = document.querySelectorAll('.x-dialog:not([style*="display: none"]), .el-dialog:not([style*="display: none"])');
+            if (visibleDialogs.length === 1) {
+                // If there's only one visible dialog, assume this menu belongs to it
+                dialogElement = visibleDialogs[0];
+            }
+        }
+        
+        if (!dialogElement) {
+            // Last resort: check if we have any user dialog data available
+            if (window.$app?.userDialog?.visible || window.$app?.store?.user?.userDialog?.visible) {
+                return 'user';
+            }
             return null;
         }
 
-        // Check for dialog-specific classes or IDs
-        if (dialogElement.classList.contains('x-user-dialog') || 
-            dialogElement.id === 'user-dialog' ||
-            dialogElement.querySelector('.x-user-dialog')) {
+        // Check for dialog-specific classes or IDs with more flexible matching
+        const dialogClasses = dialogElement.className || '';
+        const dialogId = dialogElement.id || '';
+        
+        // User dialog detection - be more flexible
+        if (dialogClasses.includes('user-dialog') || 
+            dialogClasses.includes('x-user-dialog') ||
+            dialogId.includes('user-dialog') ||
+            dialogElement.querySelector('.x-user-dialog') ||
+            dialogElement.querySelector('[class*="user-dialog"]') ||
+            // Also check if user dialog is currently visible in app state
+            (window.$app?.userDialog?.visible || window.$app?.store?.user?.userDialog?.visible)) {
             return 'user';
         }
-        if (dialogElement.classList.contains('x-world-dialog') || 
-            dialogElement.id === 'world-dialog' ||
-            dialogElement.querySelector('.x-world-dialog')) {
+        
+        // World dialog detection
+        if (dialogClasses.includes('world-dialog') || 
+            dialogClasses.includes('x-world-dialog') ||
+            dialogId.includes('world-dialog') ||
+            dialogElement.querySelector('.x-world-dialog') ||
+            dialogElement.querySelector('[class*="world-dialog"]')) {
             return 'world';
         }
-        if (dialogElement.classList.contains('x-avatar-dialog') || 
-            dialogElement.id === 'avatar-dialog' ||
-            dialogElement.querySelector('.x-avatar-dialog')) {
+        
+        // Avatar dialog detection
+        if (dialogClasses.includes('avatar-dialog') || 
+            dialogClasses.includes('x-avatar-dialog') ||
+            dialogId.includes('avatar-dialog') ||
+            dialogElement.querySelector('.x-avatar-dialog') ||
+            dialogElement.querySelector('[class*="avatar-dialog"]')) {
             return 'avatar';
         }
-        if (dialogElement.classList.contains('x-group-dialog') || 
-            dialogElement.id === 'group-dialog' ||
-            dialogElement.querySelector('.x-group-dialog')) {
+        
+        // Group dialog detection
+        if (dialogClasses.includes('group-dialog') || 
+            dialogClasses.includes('x-group-dialog') ||
+            dialogId.includes('group-dialog') ||
+            dialogElement.querySelector('.x-group-dialog') ||
+            dialogElement.querySelector('[class*="group-dialog"]')) {
+            return 'group';
+        }
+        
+        // If we still can't determine the type, check app state for any visible dialogs
+        if (window.$app?.userDialog?.visible || window.$app?.store?.user?.userDialog?.visible) {
+            return 'user';
+        }
+        if (window.$app?.worldDialog?.visible || window.$app?.store?.world?.worldDialog?.visible) {
+            return 'world';
+        }
+        if (window.$app?.avatarDialog?.visible || window.$app?.store?.avatar?.avatarDialog?.visible) {
+            return 'avatar';
+        }
+        if (window.$app?.groupDialog?.visible || window.$app?.store?.group?.groupDialog?.visible) {
             return 'group';
         }
         
@@ -196,8 +237,8 @@ class CustomContextMenu {
         this.renderItems(menuType, menuContainer);
         window.Logger?.log(`${menuType} context menu detected, items initialized: ${JSON.stringify({
             menuType: menuType,
-            menuContainer: menuContainer,
-            menuId: menuContainer.id,
+            hasMenuContainer: !!menuContainer,
+            menuId: menuContainer?.id,
             itemCount: this.items.get(menuType).size
         })}`, { console: true }, 'info');
     }
