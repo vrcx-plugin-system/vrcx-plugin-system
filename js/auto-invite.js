@@ -33,6 +33,16 @@ class AutoInviteManager {
         
         this.autoInviteItem = null;
         this.setupLocationTracking();
+        
+        // Listen for context menu ready event as additional fallback
+        window.addEventListener('contextMenuReady', (event) => {
+            if (!this.customMenu && !this.autoInviteItem) {
+                this.customMenu = event.detail.contextMenu;
+                window.Logger?.log('Context menu received via event, setting up user button', { console: true }, 'info');
+                this.setupUserButton();
+            }
+        });
+        
         this.setupUserButton();
     }
 
@@ -46,6 +56,12 @@ class AutoInviteManager {
 
     setupUserButton() {
         try {
+            // Don't setup if already done
+            if (this.autoInviteItem) {
+                window.Logger?.log('Auto Invite user button already setup, skipping', { console: true }, 'info');
+                return true;
+            }
+            
             window.Logger?.log('Setting up Auto Invite user button...', { console: true }, 'info');
             
             // Try to get the context menu if we don't have it yet
@@ -73,11 +89,13 @@ class AutoInviteManager {
             window.Logger?.log(`Error setting up Auto Invite user button: ${error.message}`, { console: true }, 'error');
             console.error('Auto Invite setup error:', error);
             
-            // Retry after a delay if the context menu isn't ready yet
-            setTimeout(() => {
-                window.Logger?.log('Retrying Auto Invite user button setup...', { console: true }, 'info');
-                this.setupUserButton();
-            }, 2000);
+            // Retry after a delay if the context menu isn't ready yet (but only if we haven't already succeeded)
+            if (!this.autoInviteItem) {
+                setTimeout(() => {
+                    window.Logger?.log('Retrying Auto Invite user button setup...', { console: true }, 'info');
+                    this.setupUserButton();
+                }, 2000);
+            }
             
             return false;
         }

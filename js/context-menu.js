@@ -581,5 +581,10 @@ class CustomContextMenu {
     // Also make CustomContextMenu available globally for backward compatibility
     window.CustomContextMenu = CustomContextMenu;
     
-    console.log(`✓ Loaded ${CustomContextMenu.SCRIPT.name} v${CustomContextMenu.SCRIPT.version} by ${CustomContextMenu.SCRIPT.author}`); // t
+    console.log(`✓ Loaded ${CustomContextMenu.SCRIPT.name} v${CustomContextMenu.SCRIPT.version} by ${CustomContextMenu.SCRIPT.author}`);
+    
+    // Notify other modules that context menu is ready
+    window.dispatchEvent(new CustomEvent('contextMenuReady', { 
+        detail: { contextMenu: window.customjs.contextMenu } 
+    }));
 })();
