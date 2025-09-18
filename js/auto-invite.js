@@ -18,6 +18,8 @@ class AutoInviteManager {
         this.autoInviteUser = null;
         this.lastInvitedTo = null;
         this.lastJoined = null;
+        this.lastDestinationCheck = null;
+        this.locationMonitorInterval = null;
         
         // Try to get existing CustomContextMenu instance or create new one
         if (window.customjs?.contextMenu) {
@@ -47,26 +49,86 @@ class AutoInviteManager {
     }
 
     setupLocationTracking() {
-        // Store original function if not already stored
+        // Store original functions if not already stored
         if (typeof window.bak === 'undefined') {
             window.bak = {};
         }
-        if (!window.bak.setCurrentUserLocation) {
-            window.bak.setCurrentUserLocation = $app.setCurrentUserLocation;
-        }
         
-        // Override setCurrentUserLocation to track location changes
-        $app.setCurrentUserLocation = (location, travelingToLocation) => {
-            window.Logger?.log(`Location change detected: ${location} (traveling to: ${travelingToLocation})`, { console: true }, 'info');
+        // Hook into the game log system for better location detection
+        this.setupGameLogHook();
+        
+        // Also hook setCurrentUserLocation as fallback for API-based updates
+        this.setupLocationAPIHook();
+        
+        // Monitor location store changes directly
+        this.setupLocationStoreMonitor();
+    }
+
+    setupGameLogHook() {
+        // Hook into the game log entry processing
+        if ($app.data.gameLogStore && $app.data.gameLogStore.addGameLogEntry) {
+            if (!window.bak.addGameLogEntry) {
+                window.bak.addGameLogEntry = $app.data.gameLogStore.addGameLogEntry;
+            }
             
-            // Call original function with all parameters
-            window.bak.setCurrentUserLocation(location, travelingToLocation);
+            $app.data.gameLogStore.addGameLogEntry = (gameLog, location) => {
+                // Call original function first
+                window.bak.addGameLogEntry(gameLog, location);
+                
+                // Process our custom logic for location-destination entries
+                if (gameLog.type === 'location-destination') {
+                    window.Logger?.log(`Game log location-destination detected: ${gameLog.location}`, { console: true }, 'info');
+                    setTimeout(async () => {
+                        await this.onLocationDestinationDetected(gameLog.location);
+                    }, 500);
+                }
+            };
+        }
+    }
+
+    setupLocationAPIHook() {
+        // Keep the API hook as fallback
+        if (!window.bak.setCurrentUserLocation && $app.setCurrentUserLocation) {
+            window.bak.setCurrentUserLocation = $app.setCurrentUserLocation;
             
-            // Process location change with a delay to ensure VRCX state is updated
-            setTimeout(async () => { 
-                await this.onCurrentUserLocationChanged(location, travelingToLocation);
-            }, 1000);
-        };
+            $app.setCurrentUserLocation = (location, travelingToLocation) => {
+                window.Logger?.log(`API Location change detected: ${location} (traveling to: ${travelingToLocation})`, { console: true }, 'info');
+                
+                // Call original function with all parameters
+                window.bak.setCurrentUserLocation(location, travelingToLocation);
+                
+                // Process location change
+                setTimeout(async () => { 
+                    await this.onCurrentUserLocationChanged(location, travelingToLocation);
+                }, 1000);
+            };
+        }
+    }
+
+    setupLocationStoreMonitor() {
+        // Monitor location store changes by polling
+        this.locationMonitorInterval = setInterval(() => {
+            this.checkLocationStoreChanges();
+        }, 1000);
+    }
+
+    checkLocationStoreChanges() {
+        try {
+            const locationStore = $app.data?.locationStore;
+            if (!locationStore) return;
+            
+            const currentLocation = locationStore.lastLocation?.location;
+            const destination = locationStore.lastLocationDestination;
+            
+            // Check if we're traveling and have a destination
+            if (currentLocation === 'traveling' && destination && destination !== this.lastDestinationCheck) {
+                window.Logger?.log(`Location store traveling detected: ${destination}`, { console: true }, 'info');
+                this.lastDestinationCheck = destination;
+                this.onLocationDestinationDetected(destination);
+            }
+        } catch (error) {
+            // Silently handle errors in polling
+        }
     }
 
     setupUserButton() {
@@ -113,6 +175,52 @@ class AutoInviteManager {
             }
             
             return false;
+        }
+    }
+
+    async onLocationDestinationDetected(destination) {
+        window.Logger?.log(`Processing location destination: ${destination}`, { console: true }, 'info');
+        
+        if (!Utils.isEmpty(this.autoInviteUser) && !Utils.isEmpty(destination)) {
+            // Only invite if we haven't already invited to this location
+            if (this.lastInvitedTo !== destination) {
+                const userName = `"${this.autoInviteUser?.displayName ?? this.autoInviteUser}"`;
+                
+                // Parse the destination
+                let instanceId = destination;
+                let worldId = destination;
+                let worldName = '';
+                
+                // Try to get world name from VRCX
+                try {
+                    worldName = await $app.getWorldName(worldId.split(':')[0]);
+                } catch (error) {
+                    window.Logger?.log(`Failed to get world name: ${error.message}`, { console: true }, 'warning');
+                    worldName = 'Unknown World';
+                }
+                
+                console.info(`Inviting user ${userName} to "${worldName}" (${instanceId})`);
+                window.Logger?.log(`Inviting user ${userName} to "${worldName}" (${instanceId})`, { console: true }, 'info');
+                
+                try {
+                    API.sendInvite({ 
+                        instanceId: instanceId, 
+                        worldId: worldId.split(':')[0], 
+                        worldName: worldName 
+                    }, this.autoInviteUser.id);
+                    
+                    this.lastInvitedTo = destination;
+                    window.Logger?.log(`Successfully sent invite to ${userName}`, { console: true }, 'success');
+                } catch (error) {
+                    window.Logger?.log(`Failed to send invite: ${error.message}`, { console: true }, 'error');
+                }
+            } else {
+                window.Logger?.log(`Already invited user to this location: ${destination}`, { console: true }, 'info');
+            }
+        } else if (Utils.isEmpty(this.autoInviteUser)) {
+            window.Logger?.log(`No auto invite user selected`, { console: true }, 'info');
+        } else if (Utils.isEmpty(destination)) {
+            window.Logger?.log(`No destination provided`, { console: true }, 'warning');
         }
     }
 
@@ -233,6 +341,22 @@ class AutoInviteManager {
         this.setupUserButton();
         return this.debugMenuStatus();
     }
+
+    // Cleanup method
+    cleanup() {
+        if (this.locationMonitorInterval) {
+            clearInterval(this.locationMonitorInterval);
+            this.locationMonitorInterval = null;
+        }
+        
+        // Restore original functions
+        if (window.bak?.addGameLogEntry && $app.data?.gameLogStore) {
+            $app.data.gameLogStore.addGameLogEntry = window.bak.addGameLogEntry;
+        }
+        if (window.bak?.setCurrentUserLocation && $app.setCurrentUserLocation) {
+            $app.setCurrentUserLocation = window.bak.setCurrentUserLocation;
+        }
+    }
 }
 
 // Auto-initialize the module
@@ -250,6 +374,8 @@ class AutoInviteManager {
     window.debugAutoInvite = () => window.customjs.autoInviteManager.debugMenuStatus();
     window.reinitAutoInvite = () => window.customjs.autoInviteManager.reinitializeMenu();
     window.testAutoInviteLocation = (location, travelingTo) => window.customjs.autoInviteManager.debugLocationChange(location, travelingTo);
+    window.testAutoInviteDestination = (destination) => window.customjs.autoInviteManager.onLocationDestinationDetected(destination);
+    window.cleanupAutoInvite = () => window.customjs.autoInviteManager.cleanup();
     
     console.log(`✓ Loaded ${AutoInviteManager.SCRIPT.name} v${AutoInviteManager.SCRIPT.version} by ${AutoInviteManager.SCRIPT.author}`);
     
