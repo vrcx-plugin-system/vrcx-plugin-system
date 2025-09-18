@@ -47,10 +47,25 @@ class AutoInviteManager {
     }
 
     setupLocationTracking() {
+        // Store original function if not already stored
+        if (typeof window.bak === 'undefined') {
+            window.bak = {};
+        }
+        if (!window.bak.setCurrentUserLocation) {
+            window.bak.setCurrentUserLocation = $app.setCurrentUserLocation;
+        }
+        
         // Override setCurrentUserLocation to track location changes
-        $app.setCurrentUserLocation = (loc) => {
-            bak.setCurrentUserLocation();
-            setTimeout(async () => { await this.onCurrentUserLocationChanged(loc) }, 1000);
+        $app.setCurrentUserLocation = (location, travelingToLocation) => {
+            window.Logger?.log(`Location change detected: ${location} (traveling to: ${travelingToLocation})`, { console: true }, 'info');
+            
+            // Call original function with all parameters
+            window.bak.setCurrentUserLocation(location, travelingToLocation);
+            
+            // Process location change with a delay to ensure VRCX state is updated
+            setTimeout(async () => { 
+                await this.onCurrentUserLocationChanged(location, travelingToLocation);
+            }, 1000);
         };
     }
 
@@ -101,29 +116,63 @@ class AutoInviteManager {
         }
     }
 
-    async onCurrentUserLocationChanged(loc) {
-        window.Logger?.log(`User Location changed to: ${loc}`, { console: true }, 'info');
-        if (loc === 'traveling:traveling') {
-            if (!Utils.isEmpty(this.autoInviteUser) && this.lastInvitedTo !== loc) {
-                const userName = `"${this.autoInviteUser?.displayName ?? this.autoInviteUser}"`;
-                let n;
-                let l = $app.lastLocationDestination;
-                if (Utils.isEmpty(l)) {
-                    l = $app.lastLocation.location;
-                    n = $app.lastLocation.name;
+    async onCurrentUserLocationChanged(location, travelingToLocation) {
+        window.Logger?.log(`Processing location change: ${location} (traveling to: ${travelingToLocation})`, { console: true }, 'info');
+        
+        // Check if user is starting to travel (entering a new instance)
+        if (location === 'traveling') {
+            window.Logger?.log(`User is traveling, checking for auto invite...`, { console: true }, 'info');
+            
+            if (!Utils.isEmpty(this.autoInviteUser) && !Utils.isEmpty(travelingToLocation)) {
+                // Only invite if we haven't already invited to this location
+                if (this.lastInvitedTo !== travelingToLocation) {
+                    const userName = `"${this.autoInviteUser?.displayName ?? this.autoInviteUser}"`;
+                    
+                    // Parse the traveling destination
+                    let instanceId = travelingToLocation;
+                    let worldId = travelingToLocation;
+                    let worldName = '';
+                    
+                    // Try to get world name from VRCX
+                    try {
+                        worldName = await $app.getWorldName(worldId.split(':')[0]);
+                    } catch (error) {
+                        window.Logger?.log(`Failed to get world name: ${error.message}`, { console: true }, 'warning');
+                        worldName = 'Unknown World';
+                    }
+                    
+                    console.info(`Inviting user ${userName} to "${worldName}" (${instanceId})`);
+                    window.Logger?.log(`Inviting user ${userName} to "${worldName}" (${instanceId})`, { console: true }, 'info');
+                    
+                    try {
+                        API.sendInvite({ 
+                            instanceId: instanceId, 
+                            worldId: worldId.split(':')[0], 
+                            worldName: worldName 
+                        }, this.autoInviteUser.id);
+                        
+                        this.lastInvitedTo = travelingToLocation;
+                        window.Logger?.log(`Successfully sent invite to ${userName}`, { console: true }, 'success');
+                    } catch (error) {
+                        window.Logger?.log(`Failed to send invite: ${error.message}`, { console: true }, 'error');
+                    }
+                } else {
+                    window.Logger?.log(`Already invited user to this location: ${travelingToLocation}`, { console: true }, 'info');
                 }
-                if (Utils.isEmpty(n)) n = await $app.getWorldName(l);
-                window.Logger?.log(`Inviting user ${userName} to "${n}"`, { console: true }, 'info');
-                API.sendInvite({ instanceId: l, worldId: l, worldName: n }, this.autoInviteUser.id);
-                this.lastInvitedTo = l;
+            } else if (Utils.isEmpty(this.autoInviteUser)) {
+                window.Logger?.log(`No auto invite user selected`, { console: true }, 'info');
+            } else if (Utils.isEmpty(travelingToLocation)) {
+                window.Logger?.log(`No traveling destination provided`, { console: true }, 'warning');
             }
-        } else {
-            this.lastJoined = loc;
+        } else if (location && location !== 'offline' && location !== 'private') {
+            // User has arrived at a new location
+            this.lastJoined = location;
+            window.Logger?.log(`User arrived at: ${location}`, { console: true }, 'info');
             
             // Trigger registry overrides for instance switching
             if (window.customjs?.registryOverrides) {
                 // Determine if this is a public or private instance
-                const isPublic = loc.includes('~public') || loc.includes('~hidden');
+                const isPublic = location.includes('~public') || location.includes('~hidden');
                 const eventType = isPublic ? 'INSTANCE_SWITCH_PUBLIC' : 'INSTANCE_SWITCH_PRIVATE';
                 window.customjs.registryOverrides.triggerEvent(eventType);
             }
@@ -160,13 +209,22 @@ class AutoInviteManager {
             userItemsCount: this.customMenu?.items?.get('user')?.size || 0,
             hasUserItems: this.customMenu?.hasItem('user', 'autoInvite') || false,
             processedMenus: this.customMenu?.processedMenus?.size || 0,
-            menuContainers: this.customMenu?.menuContainers?.size || 0
+            menuContainers: this.customMenu?.menuContainers?.size || 0,
+            autoInviteUser: this.autoInviteUser?.displayName || 'None',
+            lastInvitedTo: this.lastInvitedTo || 'None',
+            lastJoined: this.lastJoined || 'None'
         };
         
-        console.log('Auto Invite Menu Debug Status:', status);
-        window.Logger?.log(`Auto Invite Menu Debug: ${JSON.stringify(status)}`, { console: true }, 'info');
+        console.log('Auto Invite Debug Status:', status);
+        window.Logger?.log(`Auto Invite Debug: ${JSON.stringify(status)}`, { console: true }, 'info');
         
         return status;
+    }
+
+    // Debug method to manually test location change
+    debugLocationChange(location, travelingTo) {
+        console.log(`Manual location change test: ${location} -> ${travelingTo}`);
+        this.onCurrentUserLocationChanged(location, travelingTo);
     }
 
     // Method to manually trigger menu setup (for debugging)
@@ -191,6 +249,7 @@ class AutoInviteManager {
     // Add debug functions to global scope for easy console access
     window.debugAutoInvite = () => window.customjs.autoInviteManager.debugMenuStatus();
     window.reinitAutoInvite = () => window.customjs.autoInviteManager.reinitializeMenu();
+    window.testAutoInviteLocation = (location, travelingTo) => window.customjs.autoInviteManager.debugLocationChange(location, travelingTo);
     
     console.log(`✓ Loaded ${AutoInviteManager.SCRIPT.name} v${AutoInviteManager.SCRIPT.version} by ${AutoInviteManager.SCRIPT.author}`);
     
