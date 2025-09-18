@@ -20,6 +20,7 @@ class AutoInviteManager {
         this.lastJoined = null;
         this.lastDestinationCheck = null;
         this.locationMonitorInterval = null;
+        this.gameLogHookRetries = 0;
         
         // Try to get existing CustomContextMenu instance or create new one
         if (window.customjs?.contextMenu) {
@@ -65,13 +66,35 @@ class AutoInviteManager {
     }
 
     setupGameLogHook() {
-        // Hook into the game log entry processing
-        if ($app.data.gameLogStore && $app.data.gameLogStore.addGameLogEntry) {
+        // Try multiple paths to find the game log store
+        let gameLogStore = null;
+        const possiblePaths = [
+            () => $app?.data?.gameLogStore,
+            () => $app?.gameLogStore,
+            () => window.$app?.data?.gameLogStore,
+            () => window.$app?.gameLogStore,
+            () => window.gameLogStore
+        ];
+        
+        for (const pathFn of possiblePaths) {
+            try {
+                const store = pathFn();
+                if (store && store.addGameLogEntry) {
+                    gameLogStore = store;
+                    window.Logger?.log(`Found gameLogStore via path: ${pathFn.toString()}`, { console: true }, 'info');
+                    break;
+                }
+            } catch (error) {
+                // Continue to next path
+            }
+        }
+        
+        if (gameLogStore && gameLogStore.addGameLogEntry) {
             if (!window.bak.addGameLogEntry) {
-                window.bak.addGameLogEntry = $app.data.gameLogStore.addGameLogEntry;
+                window.bak.addGameLogEntry = gameLogStore.addGameLogEntry;
             }
             
-            $app.data.gameLogStore.addGameLogEntry = (gameLog, location) => {
+            gameLogStore.addGameLogEntry = (gameLog, location) => {
                 // Call original function first
                 window.bak.addGameLogEntry(gameLog, location);
                 
@@ -83,6 +106,20 @@ class AutoInviteManager {
                     }, 500);
                 }
             };
+            window.Logger?.log('Game log hook successfully installed', { console: true }, 'success');
+        } else {
+            window.Logger?.log('Game log store not found, will retry in 3 seconds and rely on location store monitoring', { console: true }, 'warning');
+            
+            // Retry after a delay in case VRCX isn't fully loaded yet (max 3 retries)
+            if (this.gameLogHookRetries < 3) {
+                this.gameLogHookRetries++;
+                setTimeout(() => {
+                    window.Logger?.log(`Retrying game log hook setup (attempt ${this.gameLogHookRetries}/3)...`, { console: true }, 'info');
+                    this.setupGameLogHook();
+                }, 3000);
+            } else {
+                window.Logger?.log('Max retries reached for game log hook, relying on location store monitoring only', { console: true }, 'warning');
+            }
         }
     }
 
@@ -114,7 +151,28 @@ class AutoInviteManager {
 
     checkLocationStoreChanges() {
         try {
-            const locationStore = $app.data?.locationStore;
+            // Try multiple paths to find the location store
+            let locationStore = null;
+            const possiblePaths = [
+                () => $app?.data?.locationStore,
+                () => $app?.locationStore,
+                () => window.$app?.data?.locationStore,
+                () => window.$app?.locationStore,
+                () => window.locationStore
+            ];
+            
+            for (const pathFn of possiblePaths) {
+                try {
+                    const store = pathFn();
+                    if (store && store.lastLocation !== undefined) {
+                        locationStore = store;
+                        break;
+                    }
+                } catch (error) {
+                    // Continue to next path
+                }
+            }
+            
             if (!locationStore) return;
             
             const currentLocation = locationStore.lastLocation?.location;
@@ -127,7 +185,7 @@ class AutoInviteManager {
                 this.onLocationDestinationDetected(destination);
             }
         } catch (error) {
-            // Silently handle errors in polling
+            // Silently handle errors in polling - don't spam console
         }
     }
 
@@ -154,11 +212,11 @@ class AutoInviteManager {
                 }
             }
             
-            this.autoInviteItem = this.customMenu.addUserItem('autoInvite', {
-                text: 'Auto Invite',
-                icon: 'el-icon-message',
-                onClick: (user) => this.toggleAutoInvite(user)
-            });
+        this.autoInviteItem = this.customMenu.addUserItem('autoInvite', {
+            text: 'Auto Invite',
+            icon: 'el-icon-message',
+            onClick: (user) => this.toggleAutoInvite(user)
+        });
             
             window.Logger?.log('Auto Invite user button setup completed', { console: true }, 'info');
             return true;
@@ -263,8 +321,8 @@ class AutoInviteManager {
                         window.Logger?.log(`Successfully sent invite to ${userName}`, { console: true }, 'success');
                     } catch (error) {
                         window.Logger?.log(`Failed to send invite: ${error.message}`, { console: true }, 'error');
-                    }
-                } else {
+            }
+        } else {
                     window.Logger?.log(`Already invited user to this location: ${travelingToLocation}`, { console: true }, 'info');
                 }
             } else if (Utils.isEmpty(this.autoInviteUser)) {
@@ -335,6 +393,24 @@ class AutoInviteManager {
         this.onCurrentUserLocationChanged(location, travelingTo);
     }
 
+    // Debug method to inspect VRCX structure
+    debugVRCXStructure() {
+        const structure = {
+            hasApp: !!window.$app,
+            hasAppData: !!window.$app?.data,
+            appDataKeys: window.$app?.data ? Object.keys(window.$app.data) : [],
+            hasGameLogStore: !!window.$app?.data?.gameLogStore,
+            hasLocationStore: !!window.$app?.data?.locationStore,
+            locationStoreKeys: window.$app?.data?.locationStore ? Object.keys(window.$app.data.locationStore) : [],
+            gameLogStoreKeys: window.$app?.data?.gameLogStore ? Object.keys(window.$app.data.gameLogStore) : []
+        };
+        
+        console.log('VRCX Structure Debug:', structure);
+        window.Logger?.log(`VRCX Structure: ${JSON.stringify(structure, null, 2)}`, { console: true }, 'info');
+        
+        return structure;
+    }
+
     // Method to manually trigger menu setup (for debugging)
     reinitializeMenu() {
         window.Logger?.log('Manually reinitializing Auto Invite menu...', { console: true }, 'info');
@@ -372,6 +448,7 @@ class AutoInviteManager {
     
     // Add debug functions to global scope for easy console access
     window.debugAutoInvite = () => window.customjs.autoInviteManager.debugMenuStatus();
+    window.debugVRCXStructure = () => window.customjs.autoInviteManager.debugVRCXStructure();
     window.reinitAutoInvite = () => window.customjs.autoInviteManager.reinitializeMenu();
     window.testAutoInviteLocation = (location, travelingTo) => window.customjs.autoInviteManager.debugLocationChange(location, travelingTo);
     window.testAutoInviteDestination = (destination) => window.customjs.autoInviteManager.onLocationDestinationDetected(destination);
@@ -382,5 +459,6 @@ class AutoInviteManager {
     // Run initial debug check after a short delay
     setTimeout(() => {
         window.customjs.autoInviteManager.debugMenuStatus();
+        window.customjs.autoInviteManager.debugVRCXStructure();
     }, 1000);
 })();
