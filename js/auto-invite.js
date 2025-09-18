@@ -66,22 +66,28 @@ class AutoInviteManager {
     }
 
     setupGameLogHook() {
-        // Try multiple paths to find the game log store
+        // Try to access VRCX Pinia stores through different paths
         let gameLogStore = null;
+        let locationStore = null;
+        
         const possiblePaths = [
-            () => $app?.data?.gameLogStore,
-            () => $app?.gameLogStore,
-            () => window.$app?.data?.gameLogStore,
-            () => window.$app?.gameLogStore,
-            () => window.gameLogStore
+            // Try window.$pinia (exposed in App.vue)
+            () => window.$pinia?.gameLog,
+            // Try global $app if it exists
+            () => $app?.data?.gameLog,
+            () => $app?.gameLog,
+            // Try direct access patterns
+            () => window.$app?.data?.gameLog,
+            () => window.$app?.gameLog,
+            () => window.gameLog
         ];
         
         for (const pathFn of possiblePaths) {
             try {
                 const store = pathFn();
-                if (store && store.addGameLogEntry) {
+                if (store && typeof store === 'object') {
                     gameLogStore = store;
-                    window.Logger?.log(`Found gameLogStore via path: ${pathFn.toString()}`, { console: true }, 'info');
+                    window.Logger?.log(`Found gameLog store via Pinia`, { console: true }, 'info');
                     break;
                 }
             } catch (error) {
@@ -89,36 +95,22 @@ class AutoInviteManager {
             }
         }
         
-        if (gameLogStore && gameLogStore.addGameLogEntry) {
-            if (!window.bak.addGameLogEntry) {
-                window.bak.addGameLogEntry = gameLogStore.addGameLogEntry;
-            }
-            
-            gameLogStore.addGameLogEntry = (gameLog, location) => {
-                // Call original function first
-                window.bak.addGameLogEntry(gameLog, location);
-                
-                // Process our custom logic for location-destination entries
-                if (gameLog.type === 'location-destination') {
-                    window.Logger?.log(`Game log location-destination detected: ${gameLog.location}`, { console: true }, 'info');
-                    setTimeout(async () => {
-                        await this.onLocationDestinationDetected(gameLog.location);
-                    }, 500);
-                }
-            };
-            window.Logger?.log('Game log hook successfully installed', { console: true }, 'success');
+        // Since addGameLogEntry is internal to the store, we need to hook into the location store changes instead
+        // The location-destination processing happens in addGameLogEntry and sets locationStore.lastLocationDestination
+        if (gameLogStore || window.$pinia?.location) {
+            window.Logger?.log('Using location store monitoring for travel detection', { console: true }, 'success');
         } else {
-            window.Logger?.log('Game log store not found, will retry in 3 seconds and rely on location store monitoring', { console: true }, 'warning');
+            window.Logger?.log('Pinia stores not found, will retry in 3 seconds and rely on polling', { console: true }, 'warning');
             
             // Retry after a delay in case VRCX isn't fully loaded yet (max 3 retries)
             if (this.gameLogHookRetries < 3) {
                 this.gameLogHookRetries++;
                 setTimeout(() => {
-                    window.Logger?.log(`Retrying game log hook setup (attempt ${this.gameLogHookRetries}/3)...`, { console: true }, 'info');
+                    window.Logger?.log(`Retrying store access (attempt ${this.gameLogHookRetries}/3)...`, { console: true }, 'info');
                     this.setupGameLogHook();
                 }, 3000);
             } else {
-                window.Logger?.log('Max retries reached for game log hook, relying on location store monitoring only', { console: true }, 'warning');
+                window.Logger?.log('Max retries reached, relying on location store polling only', { console: true }, 'warning');
             }
         }
     }
@@ -151,14 +143,17 @@ class AutoInviteManager {
 
     checkLocationStoreChanges() {
         try {
-            // Try multiple paths to find the location store
+            // Try multiple paths to find the location store (Pinia-based)
             let locationStore = null;
             const possiblePaths = [
-                () => $app?.data?.locationStore,
-                () => $app?.locationStore,
-                () => window.$app?.data?.locationStore,
-                () => window.$app?.locationStore,
-                () => window.locationStore
+                // Try window.$pinia (primary method)
+                () => window.$pinia?.location,
+                // Try legacy paths as fallback
+                () => $app?.data?.location,
+                () => $app?.location,
+                () => window.$app?.data?.location,
+                () => window.$app?.location,
+                () => window.location
             ];
             
             for (const pathFn of possiblePaths) {
@@ -396,13 +391,24 @@ class AutoInviteManager {
     // Debug method to inspect VRCX structure
     debugVRCXStructure() {
         const structure = {
+            // Legacy structure
             hasApp: !!window.$app,
             hasAppData: !!window.$app?.data,
             appDataKeys: window.$app?.data ? Object.keys(window.$app.data) : [],
-            hasGameLogStore: !!window.$app?.data?.gameLogStore,
-            hasLocationStore: !!window.$app?.data?.locationStore,
-            locationStoreKeys: window.$app?.data?.locationStore ? Object.keys(window.$app.data.locationStore) : [],
-            gameLogStoreKeys: window.$app?.data?.gameLogStore ? Object.keys(window.$app.data.gameLogStore) : []
+            
+            // Pinia structure (current VRCX)
+            hasPinia: !!window.$pinia,
+            piniaKeys: window.$pinia ? Object.keys(window.$pinia) : [],
+            hasGameLogStore: !!window.$pinia?.gameLog,
+            hasLocationStore: !!window.$pinia?.location,
+            
+            // Location store details
+            locationStoreKeys: window.$pinia?.location ? Object.keys(window.$pinia.location) : [],
+            currentLocation: window.$pinia?.location?.lastLocation?.location || 'unknown',
+            locationDestination: window.$pinia?.location?.lastLocationDestination || 'none',
+            
+            // Game log store details  
+            gameLogStoreKeys: window.$pinia?.gameLog ? Object.keys(window.$pinia.gameLog) : []
         };
         
         console.log('VRCX Structure Debug:', structure);
@@ -425,13 +431,12 @@ class AutoInviteManager {
             this.locationMonitorInterval = null;
         }
         
-        // Restore original functions
-        if (window.bak?.addGameLogEntry && $app.data?.gameLogStore) {
-            $app.data.gameLogStore.addGameLogEntry = window.bak.addGameLogEntry;
-        }
-        if (window.bak?.setCurrentUserLocation && $app.setCurrentUserLocation) {
+        // Restore original functions (if any were hooked)
+        if (window.bak?.setCurrentUserLocation && $app?.setCurrentUserLocation) {
             $app.setCurrentUserLocation = window.bak.setCurrentUserLocation;
         }
+        
+        window.Logger?.log('Auto Invite cleanup completed', { console: true }, 'info');
     }
 }
 
