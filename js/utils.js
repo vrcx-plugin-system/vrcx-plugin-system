@@ -77,7 +77,7 @@ class Utils {
     }
   }
 
-  static async getSteamPlaytime(steamId, apiKey) {
+  static async getSteamPlaytime(steamId, apiKey, appId = "438100") {
     try {
       if (!steamId) {
         window.Logger?.log("No Steam ID found", { console: true }, "warning");
@@ -89,10 +89,15 @@ class Utils {
       apiKey = this.tryDecodeBase64(apiKey);
 
       const response = await fetch(
-        `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${apiKey}&steamid=${steamId}&appids_filter[0]=438100`
+        `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${apiKey}&steamid=${steamId}` //&appids_filter[0]={appId}`
       );
       const data = await response.json();
-      if (!data?.response?.games?.[0]) {
+
+      // Filter games by app ID to find VRChat specifically
+      const vrchatGame = data?.response?.games?.find(
+        (game) => game.appid == appId
+      );
+      if (!vrchatGame) {
         window.Logger?.log(
           "No VRChat playtime data found",
           { console: true },
@@ -100,7 +105,7 @@ class Utils {
         );
         return null;
       }
-      const playtimeMinutes = data.response.games[0].playtime_forever;
+      const playtimeMinutes = vrchatGame.playtime_forever;
       window.Logger?.log(
         `Got Steam playtime for vrchat: ${playtimeMinutes} minutes`,
         { console: true },
