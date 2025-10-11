@@ -90,7 +90,7 @@ class NavMenuAPI {
 
   updateContentVisibility(activeIndex) {
     console.log(
-      `[NavMenu] updateContentVisibility called with: ${activeIndex}`
+      `[NavMenu] updateContentVisibilitys called with: ${activeIndex}`
     );
     console.log(
       `[NavMenu] Custom containers:`,
