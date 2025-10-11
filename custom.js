@@ -1,4 +1,6 @@
-console.log("custom.js START - Version 2.0 - Cache Buster: " + Date.now());
+console.log(
+  `custom.js START - Version {VERSION} - Build: {BUILD} - Cache Buster: ${Date.now()}`
+);
 
 // ============================================================================
 // USER CONFIGURATION

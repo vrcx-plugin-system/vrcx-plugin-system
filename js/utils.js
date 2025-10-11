@@ -9,6 +9,7 @@ class Utils {
     description: "Utility classes and helper functions for VRCX custom modules",
     author: "Bluscream",
     version: "1.0.0",
+    build: "{build:utils.js}",
     dependencies: [],
   };
   static isEmpty(v) {
