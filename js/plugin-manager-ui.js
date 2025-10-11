@@ -112,6 +112,10 @@ class PluginManagerUI {
     container.appendChild(header);
     container.appendChild(controls);
     container.appendChild(pluginList);
+
+    // Populate the plugin list immediately
+    console.log("[PluginManager] Calling refreshPluginList from renderContent");
+    this.refreshPluginList();
   }
 
   createButton(label, icon, onClick) {
@@ -123,14 +127,28 @@ class PluginManagerUI {
   }
 
   refreshPluginList() {
-    if (!this.contentContainer) return;
+    if (!this.contentContainer) {
+      console.warn("[PluginManager] contentContainer not ready");
+      return;
+    }
 
     const container = this.contentContainer.querySelector(
       "#plugin-list-container"
     );
-    if (!container) return;
+    if (!container) {
+      console.warn("[PluginManager] plugin-list-container not found");
+      return;
+    }
+
+    if (!window.plugins?.list) {
+      console.warn("[PluginManager] plugins.list() not available");
+      container.innerHTML =
+        '<p style="color: var(--color-text-secondary);">Plugin API not ready yet. Please wait...</p>';
+      return;
+    }
 
     const info = plugins.list();
+    console.log("[PluginManager] Refreshing plugin list", info);
 
     container.innerHTML = `
       <div style="background: var(--color-background-mute); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
