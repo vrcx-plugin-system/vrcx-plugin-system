@@ -34,8 +34,7 @@ vrcx-custom/
 │   ├── bio-updater.js     # Automatic bio updates
 │   ├── auto-invite.js     # Auto-invite functionality
 │   ├── managers.js        # Core management classes
-│   ├── debug.js           # Debug plugin (disabled by default)
-│   └── DEBUG_PLUGIN.md    # Debug plugin documentation
+│   └── debug.js           # Debug plugin (disabled by default)
 └── README.md              # This file
 ```
 
@@ -56,7 +55,7 @@ vrcx-custom/
 - **`bio-updater.js`** - Automatic bio updates with dynamic content templates
 - **`auto-invite.js`** - Automatic user invitation system with location tracking
 - **`managers.js`** - Instance monitoring, notifications, and debug tools
-- **`debug.js`** - Comprehensive debug plugin (disabled by default, see DEBUG_PLUGIN.md)
+- **`debug.js`** - Comprehensive debug plugin with mutation observers and event logging (disabled by default)
 
 ## ⚙️ Configuration
 
@@ -252,31 +251,44 @@ Enable comprehensive debugging by uncommenting the debug module in `custom.js`:
 "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/debug.js",
 ```
 
-See `js/DEBUG_PLUGIN.md` for full documentation on debug commands.
+When enabled, the debug plugin will automatically log:
 
-### Console Logs
-
-Check the browser console for detailed loading information:
-
-```
-Module loading complete. Loaded: 10, Failed: 0
-✓ Loaded Context Menu Module v1.4.1 by Bluscream
-```
+- ✓ All dialog additions/removals (user, avatar, world, group)
+- ✓ All dropdown menu visibility changes
+- ✓ Button clicks on dialogs and links
+- ✓ Pinia store state changes (dialog visibility, location)
+- ✓ All logs are saved to `%APPDATA%\VRCX\logs\VRCX*.log`
 
 ### Debug Commands
 
 ```javascript
-// VRCX state inspection
+// Inspect current VRCX state
 window.logVRCXState();
 
-// Find elements
+// Find elements in DOM
 window.debugFindElements(".x-dialog");
+window.debugFindElements("button[aria-haspopup='menu']");
 
-// Get recent logs (when debug plugin enabled)
-window.getDebugLogs("Dialog", 50);
+// Watch specific element for changes
+window.debugWatchElement(".x-avatar-dialog");
+
+// Stop all debug observers
+window.debugPlugin.cleanup();
 
 // Clear processed menus
 window.customjs.clearProcessedMenus();
+```
+
+### Console Logs
+
+Check the browser console or log files for detailed information:
+
+```
+[Debug:Init] Initialized 2 mutation observers
+[Debug:Init] Registered 9 event listeners
+[Debug:Dialog] User dialog added to DOM | {"id":"el-id-123-456"}
+[Debug:Dropdown] Dropdown menu shown (avatar) | {"menuId":"el-id-789-012"}
+[Debug:Pinia] avatarDialog.visible changed: false → true
 ```
 
 ### Common Issues
