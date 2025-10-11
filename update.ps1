@@ -254,6 +254,26 @@ if (Test-Path $sourceCss) {
 
 Write-Host "File copy operations completed successfully!" -ForegroundColor Green
 
+# Verify GitHub deployment
+Write-Host ""
+Write-Host "=== Verifying GitHub Deployment ===" -ForegroundColor Cyan
+try {
+    $githubUrl = "https://raw.githubusercontent.com/Bluscream/vrcx-custom/main/custom.js"
+    Write-Host "Fetching from GitHub: $githubUrl" -ForegroundColor Yellow
+    $response = Invoke-WebRequest -Uri $githubUrl -UseBasicParsing -ErrorAction Stop
+    $lines = $response.Content -split "`n"
+    if ($lines.Length -ge 2) {
+        Write-Host "✓ GitHub custom.js second line:" -ForegroundColor Green
+        Write-Host "  $($lines[1])" -ForegroundColor Cyan
+    }
+    else {
+        Write-Host "⚠ File has fewer than 2 lines" -ForegroundColor Yellow
+    }
+}
+catch {
+    Write-Host "✗ Failed to fetch from GitHub: $($_.Exception.Message)" -ForegroundColor Red
+}
+
 Write-Host ""
 Write-Host "=== Script Completed ===" -ForegroundColor Cyan
 Write-Host "All operations finished successfully!" -ForegroundColor Green
