@@ -31,7 +31,6 @@ class NavMenuAPI {
   }
 
   on_login() {
-    console.log("[NavMenu] on_login called, setting up menu watcher");
     this.watchMenuChanges();
   }
 
@@ -54,37 +53,21 @@ class NavMenuAPI {
   watchMenuChanges() {
     const setupWatch = () => {
       if (window.$pinia?.ui?.$subscribe) {
-        console.log("[NavMenu] Setting up menu watcher using Pinia $subscribe");
         try {
           // Subscribe to UI store changes
           window.$pinia.ui.$subscribe((mutation, state) => {
             // Read directly from the store, not from the state parameter
             const activeIndex = window.$pinia.ui.menuActiveIndex;
-            console.log(`[NavMenu] Menu changed to: ${activeIndex}`, {
-              fromState: state.menuActiveIndex,
-              fromStore: activeIndex,
-            });
             this.updateContentVisibility(activeIndex);
           });
 
           // Call immediately with current value
           const currentIndex = window.$pinia.ui.menuActiveIndex;
-          console.log(`[NavMenu] Initial menu index: ${currentIndex}`);
           this.updateContentVisibility(currentIndex);
-
-          console.log("[NavMenu] Watcher setup complete");
         } catch (error) {
           console.error("[NavMenu] Error setting up watcher:", error);
         }
       } else {
-        console.log(
-          "[NavMenu] Pinia UI store not available yet, retrying in 500ms...",
-          {
-            hasPinia: !!window.$pinia,
-            hasUI: !!window.$pinia?.ui,
-            hasSubscribe: !!window.$pinia?.ui?.$subscribe,
-          }
-        );
         setTimeout(setupWatch, 500);
       }
     };
@@ -93,19 +76,9 @@ class NavMenuAPI {
   }
 
   updateContentVisibility(activeIndex) {
-    console.log(
-      `[NavMenu] updateContentVisibilitys called with: ${activeIndex}`
-    );
-    console.log(
-      `[NavMenu] Custom containers:`,
-      Array.from(this.contentContainers.keys())
-    );
-
     // Show/hide custom content containers based on active menu
     this.contentContainers.forEach((container, itemId) => {
-      const shouldShow = activeIndex === itemId;
-      console.log(`[NavMenu] ${itemId}: ${shouldShow ? "SHOW" : "hide"}`);
-      container.style.display = shouldShow ? "block" : "none";
+      container.style.display = activeIndex === itemId ? "block" : "none";
     });
   }
 
@@ -330,19 +303,9 @@ class NavMenuAPI {
       e.preventDefault();
       e.stopPropagation();
 
-      console.log(`[NavMenu] Click on menu item: ${item.id}`, {
-        hasContent: !!item.content,
-        hasSelectMenu: !!window.$pinia?.ui?.selectMenu,
-      });
-
       // If item has content, use VRCX's selectMenu to switch tabs
       if (item.content && window.$pinia?.ui?.selectMenu) {
-        console.log(`[NavMenu] Calling selectMenu("${item.id}")`);
         window.$pinia.ui.selectMenu(item.id);
-        console.log(
-          `[NavMenu] After selectMenu, menuActiveIndex =`,
-          window.$pinia.ui.menuActiveIndex
-        );
       }
 
       // Call custom onClick if provided

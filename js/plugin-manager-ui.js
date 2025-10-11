@@ -53,8 +53,6 @@ class PluginManagerUI {
       content: () => this.createPanelContent(),
       before: "settings", // Insert before settings
     });
-
-    console.log("[PluginManager] Added navigation menu item with content");
   }
 
   createPanelContent() {
@@ -114,7 +112,6 @@ class PluginManagerUI {
     container.appendChild(pluginList);
 
     // Populate the plugin list immediately
-    console.log("[PluginManager] Calling refreshPluginList from renderContent");
     this.refreshPluginList();
   }
 
@@ -127,28 +124,20 @@ class PluginManagerUI {
   }
 
   refreshPluginList() {
-    if (!this.contentContainer) {
-      console.warn("[PluginManager] contentContainer not ready");
-      return;
-    }
+    if (!this.contentContainer) return;
 
     const container = this.contentContainer.querySelector(
       "#plugin-list-container"
     );
-    if (!container) {
-      console.warn("[PluginManager] plugin-list-container not found");
-      return;
-    }
+    if (!container) return;
 
     if (!window.plugins?.list) {
-      console.warn("[PluginManager] plugins.list() not available");
       container.innerHTML =
         '<p style="color: var(--color-text-secondary);">Plugin API not ready yet. Please wait...</p>';
       return;
     }
 
     const info = plugins.list();
-    console.log("[PluginManager] Refreshing plugin list", info);
 
     container.innerHTML = `
       <div style="background: var(--color-background-mute); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
@@ -286,14 +275,11 @@ class PluginManagerUI {
     // Use VRCX notification if available
     if (window.$app && window.$app.$message) {
       window.$app.$message[type](message);
-    } else {
-      console.log(`[PluginManager] ${type.toUpperCase()}: ${message}`);
     }
   }
 
   cleanup() {
     window.customjs?.navMenu?.removeItem("plugins");
-    console.log("[PluginManager] Cleaned up");
   }
 }
 
