@@ -26,6 +26,13 @@ class DebugPlugin {
     console.log(
       "[Debug] Initializing debug plugin - all logs will be saved to AppData\\logs\\VRCX*.log"
     );
+
+    // Open DevTools automatically
+    if (window.AppApi?.ShowDevTools) {
+      window.AppApi.ShowDevTools();
+      console.log("[Debug] DevTools opened");
+    }
+
     this.setupMutationObservers();
     this.setupEventListeners();
     this.setupPiniaWatchers();

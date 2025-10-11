@@ -183,6 +183,19 @@ else {
 Write-Host ""
 Write-Host "=== File Copy Operations ===" -ForegroundColor Cyan
 
+# Clear logs directory
+$logsDir = Join-Path $TargetDir "logs"
+if (Test-Path $logsDir) {
+    Write-Host "Clearing logs directory..." -ForegroundColor Yellow
+    try {
+        Get-ChildItem $logsDir -Filter "*.log" | Remove-Item -Force -ErrorAction Stop
+        Write-Host "✓ Logs cleared successfully" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "⚠ Failed to clear some logs (may be in use): $($_.Exception.Message)" -ForegroundColor Yellow
+    }
+}
+
 # Check if source files exist
 $sourceJs = Join-Path $SourceDir $CustomJs
 $sourceCss = Join-Path $SourceDir $CustomCss
