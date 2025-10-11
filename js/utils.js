@@ -142,12 +142,18 @@ class Utils {
    * @returns {Promise<boolean>} - True if successful, false otherwise
    */
   static async copyToClipboard(text, description = "Text") {
+    // Try modern clipboard API first
     try {
-      if (navigator.clipboard && window.isSecureContext) {
-        // Modern clipboard API
-        await navigator.clipboard.writeText(text);
-      } else {
-        // Fallback for non-secure contexts or when document isn't focused
+      await navigator.clipboard.writeText(text);
+      window.Logger?.log(
+        `${description} copied to clipboard`,
+        { console: true },
+        "info"
+      );
+      return true;
+    } catch (error) {
+      // Modern API failed, try fallback method
+      try {
         const textArea = document.createElement("textarea");
         textArea.value = text;
         textArea.style.position = "fixed";
@@ -156,23 +162,27 @@ class Utils {
         document.body.appendChild(textArea);
         textArea.focus();
         textArea.select();
-        document.execCommand("copy");
+        const successful = document.execCommand("copy");
         textArea.remove();
-      }
 
-      window.Logger?.log(
-        `${description} copied to clipboard`,
-        { console: true },
-        "info"
-      );
-      return true;
-    } catch (error) {
-      window.Logger?.log(
-        `Failed to copy to clipboard: ${error.message}`,
-        { console: true },
-        "error"
-      );
-      return false;
+        if (successful) {
+          window.Logger?.log(
+            `${description} copied to clipboard (fallback method)`,
+            { console: true },
+            "info"
+          );
+          return true;
+        } else {
+          throw new Error("execCommand('copy') returned false");
+        }
+      } catch (fallbackError) {
+        window.Logger?.log(
+          `Failed to copy to clipboard: ${error.message} (fallback also failed: ${fallbackError.message})`,
+          { console: true },
+          "error"
+        );
+        return false;
+      }
     }
   }
 
