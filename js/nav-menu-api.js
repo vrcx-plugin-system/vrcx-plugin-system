@@ -53,27 +53,32 @@ class NavMenuAPI {
 
   watchMenuChanges() {
     const setupWatch = () => {
-      if (window.$app && typeof window.$app.$watch === "function") {
-        console.log("[NavMenu] Setting up menu watcher");
+      if (window.$pinia?.ui?.$subscribe) {
+        console.log("[NavMenu] Setting up menu watcher using Pinia $subscribe");
         try {
-          window.$app.$watch(
-            () => window.$pinia?.ui?.menuActiveIndex,
-            (activeIndex) => {
-              console.log(`[NavMenu] Menu changed to: ${activeIndex}`);
-              this.updateContentVisibility(activeIndex);
-            },
-            { immediate: true } // Call immediately with current value
-          );
+          // Subscribe to UI store changes
+          window.$pinia.ui.$subscribe((mutation, state) => {
+            const activeIndex = state.menuActiveIndex;
+            console.log(`[NavMenu] Menu changed to: ${activeIndex}`);
+            this.updateContentVisibility(activeIndex);
+          });
+
+          // Call immediately with current value
+          const currentIndex = window.$pinia.ui.menuActiveIndex;
+          console.log(`[NavMenu] Initial menu index: ${currentIndex}`);
+          this.updateContentVisibility(currentIndex);
+
           console.log("[NavMenu] Watcher setup complete");
         } catch (error) {
           console.error("[NavMenu] Error setting up watcher:", error);
         }
       } else {
         console.log(
-          "[NavMenu] $watch not available yet, retrying in 500ms...",
+          "[NavMenu] Pinia UI store not available yet, retrying in 500ms...",
           {
-            hasApp: !!window.$app,
-            watchType: typeof window.$app?.$watch,
+            hasPinia: !!window.$pinia,
+            hasUI: !!window.$pinia?.ui,
+            hasSubscribe: !!window.$pinia?.ui?.$subscribe,
           }
         );
         setTimeout(setupWatch, 500);
