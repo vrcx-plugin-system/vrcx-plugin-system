@@ -89,7 +89,7 @@ class Utils {
       apiKey = this.tryDecodeBase64(apiKey);
 
       const response = await fetch(
-        `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${apiKey}&steamid=${steamId}` //&appids_filter[0]={appId}`
+        `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${steamId}&format=json&include_played_free_games=1`
       );
       const data = await response.json();
 
