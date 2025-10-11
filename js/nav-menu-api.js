@@ -326,9 +326,19 @@ class NavMenuAPI {
       e.preventDefault();
       e.stopPropagation();
 
+      console.log(`[NavMenu] Click on menu item: ${item.id}`, {
+        hasContent: !!item.content,
+        hasSelectMenu: !!window.$pinia?.ui?.selectMenu,
+      });
+
       // If item has content, use VRCX's selectMenu to switch tabs
       if (item.content && window.$pinia?.ui?.selectMenu) {
+        console.log(`[NavMenu] Calling selectMenu("${item.id}")`);
         window.$pinia.ui.selectMenu(item.id);
+        console.log(
+          `[NavMenu] After selectMenu, menuActiveIndex =`,
+          window.$pinia.ui.menuActiveIndex
+        );
       }
 
       // Call custom onClick if provided
