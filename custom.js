@@ -274,7 +274,7 @@ class ModuleLoader {
         setTimeout(() => {
           clearTimeout(timeout);
           this.loadedModules.add(modulePath);
-          console.log(`✓ Loaded module: ${modulePath}`);
+          // console.log(`✓ Loaded module: ${modulePath}`);
           resolve();
         }, 10);
       });
