@@ -50,10 +50,21 @@ class BioUpdater {
   async updateBio() {
     try {
       const now = Date.now();
+      // Updated for new Pinia store structure
+      const currentUser = window.$pinia?.user?.currentUser;
+      if (!currentUser) {
+        window.Logger?.log(
+          "Current user not available, skipping bio update",
+          { console: true },
+          "warning"
+        );
+        return;
+      }
+
       const stats = await window.database.getUserStats({
-        id: $app.store.user.currentUser.id,
+        id: currentUser.id,
       });
-      const oldBio = $app.store.user.currentUser.bio.split("\n-\n")[0];
+      const oldBio = currentUser.bio.split("\n-\n")[0];
       const steamPlayTime = await Utils.getSteamPlaytime(
         window.CONFIG.steam.id,
         window.CONFIG.steam.key
@@ -72,10 +83,12 @@ class BioUpdater {
       if (steamHours) playTimeText += ` (${steamHours})`;
 
       const moderations = Array.from(
-        $app.store.moderation.cachedPlayerModerations.values()
+        window.$pinia?.moderation?.cachedPlayerModerations?.values() || []
       );
-      const last_activity = new Date($app.store.user.currentUser.last_activity);
-      const favs = Array.from($app.store.favorite.favoriteFriends.values());
+      const last_activity = new Date(currentUser.last_activity);
+      const favs = Array.from(
+        window.$pinia?.favorite?.favoriteFriends?.values() || []
+      );
       const joiners = favs.filter(
         (friend) => friend.groupKey === "friend:group_2"
       );
@@ -86,11 +99,8 @@ class BioUpdater {
       const newBio = window.CONFIG.bio.template
         .replace("{last_activity}", Utils.timeToText(now - last_activity) ?? "")
         .replace("{playtime}", playTimeText)
-        .replace(
-          "{date_joined}",
-          $app.store.user.currentUser.date_joined ?? "Unknown"
-        )
-        .replace("{friends}", $app.store.user.currentUser.friends.length ?? "?")
+        .replace("{date_joined}", currentUser.date_joined ?? "Unknown")
+        .replace("{friends}", currentUser.friends.length ?? "?")
         .replace(
           "{blocked}",
           moderations.filter((item) => item.type === "block").length ?? "?"
@@ -113,12 +123,12 @@ class BioUpdater {
             ? window.customjs.tagManager.getLoadedTagsCount()
             : 0
         )
-        .replace("{userId}", $app.store.user.currentUser.id)
-        .replace("{steamId}", $app.store.user.currentUser.steamId)
-        .replace("{oculusId}", $app.store.user.currentUser.oculusId)
-        .replace("{picoId}", $app.store.user.currentUser.picoId)
-        .replace("{viveId}", $app.store.user.currentUser.viveId)
-        .replace("{rank}", $app.store.user.currentUser.$trustLevel);
+        .replace("{userId}", currentUser.id)
+        .replace("{steamId}", currentUser.steamId)
+        .replace("{oculusId}", currentUser.oculusId)
+        .replace("{picoId}", currentUser.picoId)
+        .replace("{viveId}", currentUser.viveId)
+        .replace("{rank}", currentUser.$trustLevel);
 
       let bio = oldBio + newBio;
 

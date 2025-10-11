@@ -44,6 +44,10 @@ Write-Host "=== VRCX Custom Update Script ===" -ForegroundColor Cyan
 Write-Host "Source Directory: $SourceDir" -ForegroundColor Gray
 Write-Host "Target Directory: $TargetDir" -ForegroundColor Gray
 Write-Host ""
+Write-Host "⚠ IMPORTANT NOTICE:" -ForegroundColor Yellow
+Write-Host "If you see theme errors, the 'material3' theme has been removed in the new VRCX." -ForegroundColor Yellow
+Write-Host "Please change your theme to 'dark', 'darkblue', or 'amoled' in VRCX settings." -ForegroundColor Yellow
+Write-Host ""
 
 # Change to source directory
 Write-Host "Changing to source directory..." -ForegroundColor Yellow
@@ -236,6 +240,16 @@ Write-Host "File copy operations completed successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "=== Script Completed ===" -ForegroundColor Cyan
 Write-Host "All operations finished successfully!" -ForegroundColor Green
+Write-Host ""
+Write-Host "⚠ REMINDER: Theme Compatibility Notice" -ForegroundColor Yellow
+Write-Host "The plugins have been updated for the new VRCX structure (Pinia stores)." -ForegroundColor Cyan
+Write-Host "Key changes:" -ForegroundColor Cyan
+Write-Host "  • Store access changed from `$app.store.* to window.`$pinia.*" -ForegroundColor Gray
+Write-Host "  • 'material3' theme is no longer available" -ForegroundColor Gray
+Write-Host "  • IPC event logging may work differently" -ForegroundColor Gray
+Write-Host ""
+Write-Host "If you encounter issues, check the browser console for errors." -ForegroundColor Yellow
+Write-Host ""
 
 # Return to original directory
 Set-Location $SourceDir

@@ -462,42 +462,62 @@ class CustomContextMenu {
         return false;
     }
 
-    // Data access methods
+    // Data access methods - Updated for new Pinia store structure
     getUserDialogData() {
-        if (window.$app && window.$app.store && window.$app.store.user && window.$app.store.user.userDialog) {
+        // Try new Pinia store structure first
+        if (window.$pinia?.user?.userDialog) {
+            return window.$pinia.user.userDialog.ref;
+        }
+        // Fallback to old structure
+        if (window.$app?.store?.user?.userDialog) {
             return window.$app.store.user.userDialog.ref;
         }
-        if (window.$app && window.$app.userDialog) {
+        if (window.$app?.userDialog) {
             return window.$app.userDialog.ref;
         }
         return null;
     }
 
     getWorldDialogData() {
-        if (window.$app && window.$app.store && window.$app.store.world && window.$app.store.world.worldDialog) {
+        // Try new Pinia store structure first
+        if (window.$pinia?.world?.worldDialog) {
+            return window.$pinia.world.worldDialog.ref;
+        }
+        // Fallback to old structure
+        if (window.$app?.store?.world?.worldDialog) {
             return window.$app.store.world.worldDialog.ref;
         }
-        if (window.$app && window.$app.worldDialog) {
+        if (window.$app?.worldDialog) {
             return window.$app.worldDialog.ref;
         }
         return null;
     }
 
     getAvatarDialogData() {
-        if (window.$app && window.$app.store && window.$app.store.avatar && window.$app.store.avatar.avatarDialog) {
+        // Try new Pinia store structure first
+        if (window.$pinia?.avatar?.avatarDialog) {
+            return window.$pinia.avatar.avatarDialog.ref;
+        }
+        // Fallback to old structure
+        if (window.$app?.store?.avatar?.avatarDialog) {
             return window.$app.store.avatar.avatarDialog.ref;
         }
-        if (window.$app && window.$app.avatarDialog) {
+        if (window.$app?.avatarDialog) {
             return window.$app.avatarDialog.ref;
         }
         return null;
     }
 
     getGroupDialogData() {
-        if (window.$app && window.$app.store && window.$app.store.group && window.$app.store.group.groupDialog) {
+        // Try new Pinia store structure first
+        if (window.$pinia?.group?.groupDialog) {
+            return window.$pinia.group.groupDialog.ref;
+        }
+        // Fallback to old structure
+        if (window.$app?.store?.group?.groupDialog) {
             return window.$app.store.group.groupDialog.ref;
         }
-        if (window.$app && window.$app.groupDialog) {
+        if (window.$app?.groupDialog) {
             return window.$app.groupDialog.ref;
         }
         return null;
@@ -507,15 +527,22 @@ class CustomContextMenu {
         let lastLocation = null;
         let currentInstanceWorld = null;
         
-        if (window.$app && window.$app.store && window.$app.store.location) {
+        // Try new Pinia store structure first
+        if (window.$pinia?.location) {
+            lastLocation = window.$pinia.location.lastLocation;
+            currentInstanceWorld = window.$pinia.location.currentInstanceWorld;
+        }
+        
+        // Fallback to old structure
+        if (!lastLocation && window.$app?.store?.location) {
             lastLocation = window.$app.store.location.lastLocation;
             currentInstanceWorld = window.$app.store.location.currentInstanceWorld;
         }
         
-        if (!lastLocation && window.$app && window.$app.lastLocation) {
+        if (!lastLocation && window.$app?.lastLocation) {
             lastLocation = window.$app.lastLocation;
         }
-        if (!currentInstanceWorld && window.$app && window.$app.currentInstanceWorld) {
+        if (!currentInstanceWorld && window.$app?.currentInstanceWorld) {
             currentInstanceWorld = window.$app.currentInstanceWorld;
         }
         

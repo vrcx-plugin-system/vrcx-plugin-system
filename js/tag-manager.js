@@ -177,14 +177,21 @@ class CustomTagManager {
     }
 
     async applyTags(tags) {
+        // Updated for new Pinia store structure
+        const userStore = window.$pinia?.user;
+        if (!userStore) {
+            window.Logger?.log('User store not available, cannot apply tags', { console: true }, 'warning');
+            return;
+        }
+        
         for (const tag of tags) {
             try {
                 // Check if tag already exists to avoid duplicates
-                const existingTags = $app.store.user.customTags || new Map();
+                const existingTags = userStore.customTags || new Map();
                 const tagKey = `${tag.UserId}_${tag.Tag}`;
                 
                 if (!existingTags.has(tagKey)) {
-                    $app.store.user.addCustomTag({
+                    userStore.addCustomTag({
                         UserId: tag.UserId,
                         Tag: tag.Tag,
                         TagColour: tag.TagColour
@@ -204,8 +211,8 @@ class CustomTagManager {
         try {
             window.Logger?.log('=== Checking Friends and Blocked Players for Tags ===', { console: true }, 'info');
             
-            // Check friends
-            const friends = $app.store.user.currentUser?.friends || [];
+            // Check friends - Updated for new Pinia store structure
+            const friends = window.$pinia?.user?.currentUser?.friends || [];
             window.Logger?.log(`Checking ${friends.length} friends for tags...`, { console: true }, 'info');
             
             let taggedFriendsCount = 0;
@@ -218,8 +225,8 @@ class CustomTagManager {
                 }
             }
             
-            // Check blocked players
-            const moderations = Array.from($app.store.moderation?.cachedPlayerModerations?.values() || []);
+            // Check blocked players - Updated for new Pinia store structure
+            const moderations = Array.from(window.$pinia?.moderation?.cachedPlayerModerations?.values() || []);
             const blockedPlayers = moderations.filter(item => item.type === "block");
             window.Logger?.log(`Checking ${blockedPlayers.length} blocked players for tags...`, { console: true }, 'info');
             
@@ -245,7 +252,8 @@ class CustomTagManager {
     }
 
     getUserTags(userId) {
-        const customTags = $app.store.user.customTags;
+        // Updated for new Pinia store structure
+        const customTags = window.$pinia?.user?.customTags;
         if (!customTags || customTags.size === 0) {
             return [];
         }
@@ -279,7 +287,14 @@ class CustomTagManager {
     // Method to add a single tag manually
     addTag(userId, tag, color = '#FF00C6') {
         try {
-            $app.store.user.addCustomTag({
+            // Updated for new Pinia store structure
+            const userStore = window.$pinia?.user;
+            if (!userStore) {
+                window.Logger?.log('User store not available, cannot add tag', { console: true }, 'warning');
+                return;
+            }
+            
+            userStore.addCustomTag({
                 UserId: userId,
                 Tag: tag,
                 TagColour: color
