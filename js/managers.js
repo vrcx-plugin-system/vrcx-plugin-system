@@ -153,32 +153,20 @@ class Managers {
 
         // Check if the player has custom tags - updated for new Pinia store structure
         // Note: it's customUserTags, not customTags!
+        // Tag structure: Map<userId, { tag: string, colour: string }>
         const customTags = window.$pinia?.user?.customUserTags;
         if (!customTags || customTags.size === 0) {
           return; // No custom tags loaded
         }
 
-        // Look for tags for this player
-        const playerTags = [];
-        for (const [tagKey, tagData] of customTags.entries()) {
-          if (tagKey.startsWith(playerId + "_")) {
-            playerTags.push({
-              text: tagData.Tag,
-              color: tagData.TagColour || "#FF00C6",
-            });
-          }
-        }
+        // Look up the tag for this player (only one tag per user)
+        const playerTag = customTags.get(playerId);
 
-        // If player has tags, show notification
-        if (playerTags.length > 0) {
-          const tagText = playerTags.map((tag) => tag.text).join(", ");
-          const notificationMessage = `${playerName} joined (${tagText})`;
-
-          // Notify with playerName and each tag on a new line
-          const lines = [playerName, ...playerTags.map((tag) => tag.text)];
-          const notification = lines.join("\n");
+        // If player has a tag, show notification
+        if (playerTag) {
+          const notificationMessage = `${playerName} joined (${playerTag.tag})`;
           window.Logger?.log(
-            notification,
+            notificationMessage,
             window.Logger.defaultOptions,
             "info"
           );
@@ -242,13 +230,16 @@ class Managers {
         getCurrentUser: () => window.$pinia?.user?.currentUser,
         getCurrentLocation: () => $app?.lastLocation,
         getFriends: () => window.$pinia?.user?.currentUser?.friends,
-        getCustomTags: () => window.$pinia?.user?.customTags,
+        getCustomTags: () => window.$pinia?.user?.customUserTags, // Updated to customUserTags
+        getUserTag: (userId) => window.customjs?.tagManager?.getUserTag(userId),
         clearProcessedMenus: () => window.customjs?.clearProcessedMenus(),
         triggerRegistryEvent: (event) =>
           window.customjs?.registryOverrides?.triggerEvent(event),
         refreshTags: () => window.customjs?.tagManager?.refreshTags(),
         getLoadedTagsCount: () =>
           window.customjs?.tagManager?.getLoadedTagsCount(),
+        getActiveTagsCount: () =>
+          window.customjs?.tagManager?.getActiveTagsCount(),
         getStores: () => window.$pinia, // Helper to inspect all Pinia stores
       };
 

@@ -240,18 +240,13 @@ class CustomTagManager {
 
     for (const tag of tags) {
       try {
-        // Check if tag already exists to avoid duplicates - use customUserTags!
-        const existingTags = userStore.customUserTags || new Map();
-        const tagKey = `${tag.UserId}_${tag.Tag}`;
-
-        if (!existingTags.has(tagKey)) {
-          userStore.addCustomTag({
-            UserId: tag.UserId,
-            Tag: tag.Tag,
-            TagColour: tag.TagColour,
-          });
-          // console.log(`Applied tag: ${tag.Tag} for user ${tag.UserId}`);
-        }
+        // VRCX stores tags with userId as key, and only ONE tag per user
+        // The key is just the userId, not userId_TagName
+        userStore.addCustomTag({
+          UserId: tag.UserId,
+          Tag: tag.Tag,
+          TagColour: tag.TagColour,
+        });
       } catch (error) {
         window.Logger?.log(
           `Error applying tag for user ${tag.UserId}: ${error.message}`,
@@ -303,7 +298,7 @@ class CustomTagManager {
           for (const [tagKey, tagData] of customTags.entries()) {
             if (count < 3) {
               window.Logger?.log(
-                `[DEBUG] Sample tag key: "${tagKey}", UserId in data: "${tagData.UserId}", Tag: "${tagData.Tag}"`,
+                `[DEBUG] Sample tag key: "${tagKey}", tag: "${tagData.tag}", colour: "${tagData.colour}"`,
                 { console: true },
                 "info"
               );
@@ -318,14 +313,13 @@ class CustomTagManager {
       let taggedFriendsCount = 0;
       for (const friendId of friends) {
         // Friends array contains userId strings directly
-        const friendTags = this.getUserTags(friendId);
-        if (friendTags.length > 0) {
+        const friendTag = this.getUserTag(friendId);
+        if (friendTag) {
           taggedFriendsCount++;
-          const tagText = friendTags.map((tag) => tag.Tag).join(", ");
           // Look up friend name if available
           const friendName = this.getFriendName(friendId);
           window.Logger?.log(
-            `👥 Friend: ${friendName} (${friendId}) - Tags: ${tagText}`,
+            `👥 Friend: ${friendName} (${friendId}) - Tag: ${friendTag.tag}`,
             { console: true },
             "info"
           );
@@ -347,12 +341,11 @@ class CustomTagManager {
 
       let taggedBlockedCount = 0;
       for (const blocked of blockedPlayers) {
-        const blockedTags = this.getUserTags(blocked.targetUserId);
-        if (blockedTags.length > 0) {
+        const blockedTag = this.getUserTag(blocked.targetUserId);
+        if (blockedTag) {
           taggedBlockedCount++;
-          const tagText = blockedTags.map((tag) => tag.Tag).join(", ");
           window.Logger?.log(
-            `🚫 Blocked: ${blocked.targetDisplayName} (${blocked.targetUserId}) - Tags: ${tagText}`,
+            `🚫 Blocked: ${blocked.targetDisplayName} (${blocked.targetUserId}) - Tag: ${blockedTag.tag}`,
             { console: true },
             "info"
           );
@@ -385,43 +378,32 @@ class CustomTagManager {
     }
   }
 
-  getUserTags(userId) {
+  getUserTag(userId) {
     // Updated for new Pinia store structure - use customUserTags not customTags!
+    // VRCX stores tags with userId as key directly, ONE tag per user
+    // Tag structure: Map<userId, { tag: string, colour: string }>
     const customTags = window.$pinia?.user?.customUserTags;
     if (!customTags || customTags.size === 0) {
-      return [];
-    }
-
-    const userTags = [];
-    const searchPrefix = userId + "_";
-
-    for (const [tagKey, tagData] of customTags.entries()) {
-      if (tagKey.startsWith(searchPrefix)) {
-        userTags.push(tagData);
-      }
+      return null;
     }
 
     // Debug logging for first call only
     if (!this._debugLogged) {
       this._debugLogged = true;
       window.Logger?.log(
-        `[DEBUG getUserTags] Looking for userId: "${userId}"`,
+        `[DEBUG getUserTag] Looking for userId: "${userId}"`,
         { console: true },
         "info"
       );
+      const tag = customTags.get(userId);
       window.Logger?.log(
-        `[DEBUG getUserTags] Search prefix: "${searchPrefix}"`,
-        { console: true },
-        "info"
-      );
-      window.Logger?.log(
-        `[DEBUG getUserTags] Found ${userTags.length} tags for this user`,
+        `[DEBUG getUserTag] Found tag: ${tag ? `"${tag.tag}"` : "null"}`,
         { console: true },
         "info"
       );
     }
 
-    return userTags;
+    return customTags.get(userId) || null;
   }
 
   getFriendName(userId) {
@@ -488,13 +470,18 @@ class CustomTagManager {
     }
   }
 
-  // Method to get loaded tags count
+  // Method to get loaded tags count (from source URLs)
   getLoadedTagsCount() {
     let total = 0;
     for (const tagSet of this.loadedTags.values()) {
       total += tagSet.size;
     }
     return total;
+  }
+
+  // Method to get currently active tags count (in VRCX)
+  getActiveTagsCount() {
+    return window.$pinia?.user?.customUserTags?.size || 0;
   }
 
   // Method to get tags from specific URL
