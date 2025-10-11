@@ -9,8 +9,8 @@ class ConfigManager {
     description:
       "Configuration management and metadata for VRCX custom modules",
     author: "Bluscream",
-    version: "{VERSION}",
-    build: "{BUILD}",
+    version: "1.0.0",
+    build: "1760216414",
     dependencies: [],
   };
 

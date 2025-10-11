@@ -11,7 +11,6 @@ $SourceDir = "P:\Visual Studio\source\repos\VRCX\vrcx-custom"
 $TargetDir = "$env:APPDATA\VRCX"
 $CustomJs = "custom.js"
 $CustomCss = "custom.css"
-$ConfigJs = "js\config.js"
 
 # Function to process environment variable placeholders in file content
 function Convert-EnvironmentVariables {
@@ -104,11 +103,6 @@ function Convert-BuildTimestamps {
 Write-Host "=== VRCX Custom Update Script ===" -ForegroundColor Cyan
 Write-Host "Source Directory: $SourceDir" -ForegroundColor Gray
 Write-Host "Target Directory: $TargetDir" -ForegroundColor Gray
-Write-Host ""
-Write-Host "⚠ IMPORTANT NOTICE:" -ForegroundColor Yellow
-Write-Host "If you see theme errors, the 'material3' theme has been removed in the new VRCX." -ForegroundColor Yellow
-Write-Host "Please change your theme to 'dark', 'darkblue', or 'amoled' in VRCX settings." -ForegroundColor Yellow
-Write-Host ""
 
 # Change to source directory
 Write-Host "Changing to source directory..." -ForegroundColor Yellow
@@ -252,70 +246,12 @@ if (Test-Path $sourceCss) {
     Write-Host "✓ $CustomCss copied successfully" -ForegroundColor Green
 }
 
-# Copy config.js (if it exists)
-$sourceConfigJs = Join-Path $SourceDir $ConfigJs
-if (Test-Path $sourceConfigJs) {
-    $targetConfigJs = Join-Path $TargetDir "config.js"
-    Write-Host "Copying $ConfigJs..." -ForegroundColor Yellow
-    
-    # Ensure target directory exists
-    $targetConfigDir = Split-Path $targetConfigJs -Parent
-    if (-not (Test-Path $targetConfigDir)) {
-        New-Item -ItemType Directory -Path $targetConfigDir -Force | Out-Null
-        Write-Host "Created directory: $targetConfigDir" -ForegroundColor Gray
-    }
-    
-    # Read source file content
-    $content = Get-Content $sourceConfigJs -Raw
-    
-    # Process build timestamps
-    $content = Convert-BuildTimestamps $content $sourceConfigJs
-    
-    # Process environment variables
-    $content = Convert-EnvironmentVariables $content
-    
-    # Try to write to target file with error handling
-    try {
-        Set-Content $targetConfigJs $content -NoNewline
-        Write-Host "✓ $ConfigJs copied and processed successfully" -ForegroundColor Green
-    }
-    catch {
-        Write-Host "⚠ Failed to write $ConfigJs directly: $($_.Exception.Message)" -ForegroundColor Yellow
-        Write-Host "The file may be in use by VRCX. Trying alternative approach..." -ForegroundColor Yellow
-        
-        # Try using a temporary file and then moving it
-        $tempFile = "$targetConfigJs.tmp"
-        try {
-            Set-Content $tempFile $content -NoNewline
-            Move-Item $tempFile $targetConfigJs -Force
-            Write-Host "✓ $ConfigJs copied and processed successfully (via temp file)" -ForegroundColor Green
-        }
-        catch {
-            Write-Host "⚠ Still unable to update $ConfigJs. Please close VRCX and try again." -ForegroundColor Red
-            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-            
-            # Clean up temp file if it exists
-            if (Test-Path $tempFile) {
-                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-            }
-        }
-    }
-}
 
 Write-Host "File copy operations completed successfully!" -ForegroundColor Green
 
 Write-Host ""
 Write-Host "=== Script Completed ===" -ForegroundColor Cyan
 Write-Host "All operations finished successfully!" -ForegroundColor Green
-Write-Host ""
-Write-Host "⚠ REMINDER: Theme Compatibility Notice" -ForegroundColor Yellow
-Write-Host "The plugins have been updated for the new VRCX structure (Pinia stores)." -ForegroundColor Cyan
-Write-Host "Key changes:" -ForegroundColor Cyan
-Write-Host "  • Store access changed from `$app.store.* to window.`$pinia.*" -ForegroundColor Gray
-Write-Host "  • 'material3' theme is no longer available" -ForegroundColor Gray
-Write-Host "  • IPC event logging may work differently" -ForegroundColor Gray
-Write-Host ""
-Write-Host "If you encounter issues, check the browser console for errors." -ForegroundColor Yellow
 Write-Host ""
 
 # Return to original directory

@@ -8,8 +8,8 @@ class CustomContextMenu {
     name: "Context Menu Module",
     description: "Custom context menu management for VRCX dialogs",
     author: "Bluscream",
-    version: "{VERSION}",
-    build: "{BUILD}",
+    version: "1.0.0",
+    build: "1760216414",
     dependencies: [],
   };
   constructor() {

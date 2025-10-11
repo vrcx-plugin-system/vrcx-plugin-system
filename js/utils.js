@@ -8,8 +8,8 @@ class Utils {
     name: "Utils Module",
     description: "Utility classes and helper functions for VRCX custom modules",
     author: "Bluscream",
-    version: "{VERSION}",
-    build: "{BUILD}",
+    version: "1.0.0",
+    build: "1760216414",
     dependencies: [],
   };
   static isEmpty(v) {

@@ -8,8 +8,8 @@ class BioUpdater {
     description:
       "Automatic bio updating with user statistics and custom templates",
     author: "Bluscream",
-    version: "{VERSION}",
-    build: "{BUILD}",
+    version: "1.0.0",
+    build: "1760216414",
     dependencies: [
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",

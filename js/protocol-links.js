@@ -8,8 +8,8 @@ class VRCXProtocolLinks {
     description:
       "Adds context menu items to copy VRCX protocol links for users, avatars, worlds, groups, and instances",
     author: "Bluscream",
-    version: "{VERSION}",
-    build: "{BUILD}",
+    version: "1.0.0",
+    build: "1760216414",
     dependencies: [
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu.js",
     ],
