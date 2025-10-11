@@ -8,8 +8,8 @@ class CustomContextMenu {
     name: "Context Menu Module",
     description: "Custom context menu management for VRCX dialogs",
     author: "Bluscream",
-    version: "1.2.0",
-    build: "1760218855",
+    version: "1.3.0",
+    build: "1760219132",
     dependencies: [],
   };
   constructor() {
@@ -175,33 +175,49 @@ class CustomContextMenu {
       );
 
       if (button) {
-        // Walk up from the button to find the dialog element
-        const dialog = button.closest(
+        // Find ALL dialogs that contain this button
+        const allDialogs = document.querySelectorAll(
           ".x-user-dialog, .x-avatar-dialog, .x-world-dialog, .x-group-dialog"
         );
+        const containingDialogs = [];
 
-        if (dialog) {
+        for (const dialog of allDialogs) {
+          if (dialog.contains(button)) {
+            const zIndex =
+              parseInt(window.getComputedStyle(dialog.parentElement).zIndex) ||
+              0;
+            containingDialogs.push({ dialog, zIndex });
+          }
+        }
+
+        // Sort by z-index descending (topmost first)
+        containingDialogs.sort((a, b) => b.zIndex - a.zIndex);
+
+        if (containingDialogs.length > 0) {
+          const topDialog = containingDialogs[0].dialog;
+
           // Extract dialog type from class
           let dialogType = null;
-          if (dialog.classList.contains("x-user-dialog")) dialogType = "user";
-          else if (dialog.classList.contains("x-avatar-dialog"))
+          if (topDialog.classList.contains("x-user-dialog"))
+            dialogType = "user";
+          else if (topDialog.classList.contains("x-avatar-dialog"))
             dialogType = "avatar";
-          else if (dialog.classList.contains("x-world-dialog"))
+          else if (topDialog.classList.contains("x-world-dialog"))
             dialogType = "world";
-          else if (dialog.classList.contains("x-group-dialog"))
+          else if (topDialog.classList.contains("x-group-dialog"))
             dialogType = "group";
 
           if (dialogType) {
             console.log(
-              `[Context Menu] Found ${dialogType} dialog via button[aria-controls="${menuId}"] lookup`
+              `[Context Menu] ${dialogType} dialog (z-index: ${containingDialogs[0].zIndex}) for menu ${menuId}`
             );
             return dialogType;
           }
-        } else {
-          console.warn(
-            `[Context Menu] Button found for menu ${menuId} but no dialog parent found`
-          );
         }
+
+        console.warn(
+          `[Context Menu] Button found but no containing dialog for menu ${menuId}`
+        );
       } else {
         console.warn(
           `[Context Menu] No button found with aria-controls="${menuId}"`
@@ -209,27 +225,6 @@ class CustomContextMenu {
       }
     }
 
-    // FALLBACK: If button lookup failed, try Pinia store visibility
-    const visibleDialogs = [];
-    if (window.$pinia?.avatar?.avatarDialog?.visible)
-      visibleDialogs.push("avatar");
-    if (window.$pinia?.world?.worldDialog?.visible)
-      visibleDialogs.push("world");
-    if (window.$pinia?.group?.groupDialog?.visible)
-      visibleDialogs.push("group");
-    if (window.$pinia?.user?.userDialog?.visible) visibleDialogs.push("user");
-
-    if (visibleDialogs.length === 1) {
-      console.log(
-        `[Context Menu] Fallback: Single visible dialog (${visibleDialogs[0]})`
-      );
-      return visibleDialogs[0];
-    }
-
-    console.warn(
-      `[Context Menu] Could not reliably detect menu type for menu ${menuId}`,
-      { visibleDialogs }
-    );
     return null;
   }
 
