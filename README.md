@@ -185,7 +185,25 @@ registry: {
 
 ## 🌐 Global Namespace
 
-All functionality is available through the `window.customjs.*` namespace:
+### Plugin Management (`window.plugins.*`)
+
+```javascript
+// Dynamic plugin management
+plugins.loadPlugin(url); // Load a plugin from URL
+plugins.unloadPlugin(url); // Unload a plugin
+plugins.reloadPlugin(url); // Reload a specific plugin
+plugins.reloadAllPlugins(); // Reload all plugins
+plugins.startPlugin(name); // Start/restart a plugin
+plugins.stopPlugin(name); // Stop a plugin
+plugins.list(); // List all plugins
+plugins.getPlugins(); // Get detailed plugin info
+
+// Convenience aliases
+plugins.reload(url); // Alias for reloadPlugin
+plugins.reloadAll(); // Alias for reloadAllPlugins
+```
+
+### Module Instances (`window.customjs.*`)
 
 ```javascript
 // Core modules
@@ -197,6 +215,7 @@ window.customjs.location; // Location management
 
 // Feature modules
 window.customjs.contextMenu; // Context menu instance
+window.customjs.protocolLinks; // Protocol links instance
 window.customjs.registryOverrides; // Registry overrides instance
 window.customjs.tagManager; // Tag manager instance
 window.customjs.bioUpdater; // Bio updater instance
@@ -206,7 +225,12 @@ window.customjs.autoInviteManager; // Auto invite manager instance
 window.customjs.instanceMonitor; // Instance monitor instance
 window.customjs.notificationHandler; // Notification handler instance
 window.customjs.debugTools; // Debug tools instance
-window.customjs.debug; // Debug functions
+window.customjs.debug; // Debug plugin (when enabled)
+
+// Lifecycle
+window.customjs.lifecycle; // Lifecycle manager
+window.on_startup(callback); // Register startup hook
+window.on_login(callback); // Register login hook
 
 // Utility functions
 window.customjs.clearProcessedMenus; // Clear processed menus registry
@@ -258,6 +282,37 @@ When enabled, the debug plugin will automatically log:
 - ✓ Button clicks on dialogs and links
 - ✓ Pinia store state changes (dialog visibility, location)
 - ✓ All logs are saved to `%APPDATA%\VRCX\logs\VRCX*.log`
+
+### Plugin Management Commands
+
+```javascript
+// Load a plugin dynamically
+await plugins.loadPlugin("https://example.com/my-plugin.js");
+
+// Unload a plugin (marks as unloaded, refresh VRCX for full removal)
+plugins.unloadPlugin("https://example.com/my-plugin.js");
+
+// Reload a specific plugin
+await plugins.reloadPlugin("https://example.com/my-plugin.js");
+// or use the alias
+await plugins.reload("https://example.com/my-plugin.js");
+
+// Reload all plugins at once
+await plugins.reloadAllPlugins();
+// or use the alias
+await plugins.reloadAll();
+
+// Start a plugin (calls on_startup hook)
+plugins.startPlugin("debug");
+
+// Stop a plugin (calls cleanup method)
+plugins.stopPlugin("debug");
+
+// List all plugins
+plugins.list();
+// or
+plugins.getPlugins();
+```
 
 ### Debug Commands
 

@@ -312,9 +312,142 @@ class ModuleLoader {
       // Each module will register itself in the window.customjs namespace
 
       console.log("custom.js END - All systems initialized");
+      console.log(`
+═══════════════════════════════════════════════════════════
+  Plugin Management Commands (use 'plugins' prefix):
+  
+  plugins.list()                  - List all loaded plugins
+  plugins.loadPlugin(url)         - Load a new plugin
+  plugins.unloadPlugin(url)       - Unload a plugin
+  plugins.reloadPlugin(url)       - Reload a specific plugin
+  plugins.reloadAllPlugins()      - Reload all plugins
+  plugins.startPlugin(name)       - Restart a plugin
+  plugins.stopPlugin(name)        - Stop a plugin
+  
+  Example: plugins.loadPlugin("https://example.com/my-plugin.js")
+═══════════════════════════════════════════════════════════
+      `);
     } catch (error) {
       console.error("Error initializing systems:", error);
     }
+  }
+
+  // ============================================================================
+  // DYNAMIC PLUGIN MANAGEMENT
+  // ============================================================================
+
+  async loadPlugin(url) {
+    if (this.loadedModules.has(url)) {
+      console.warn(`[Plugins] Already loaded: ${url}`);
+      return { success: false, message: "Already loaded" };
+    }
+
+    try {
+      await this.loadModule(url);
+      console.log(`[Plugins] ✓ Successfully loaded: ${url}`);
+      return { success: true, message: "Loaded successfully" };
+    } catch (error) {
+      console.error(`[Plugins] ✗ Failed to load: ${url}`, error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  unloadPlugin(url) {
+    if (!this.loadedModules.has(url)) {
+      console.warn(`[Plugins] Not loaded: ${url}`);
+      return { success: false, message: "Not loaded" };
+    }
+
+    // Note: JavaScript doesn't allow true unloading of code
+    // We can only mark it as unloaded and remove references
+    this.loadedModules.delete(url);
+    console.log(`[Plugins] Marked as unloaded: ${url}`);
+    console.warn(
+      `[Plugins] Note: Code remains in memory. Refresh VRCX for full removal.`
+    );
+    return {
+      success: true,
+      message: "Marked as unloaded (refresh to fully remove)",
+    };
+  }
+
+  getPlugins() {
+    return {
+      loaded: Array.from(this.loadedModules),
+      failed: Array.from(this.failedModules),
+      total: this.loadedModules.size + this.failedModules.size,
+      modules: Object.keys(window.customjs || {}).filter(
+        (k) => k !== "config" && k !== "lifecycle" && k !== "script"
+      ),
+    };
+  }
+
+  startPlugin(name) {
+    const instance = window.customjs?.[name];
+    if (!instance) {
+      console.error(`[Plugins] Plugin not found: ${name}`);
+      return { success: false, message: "Plugin not found" };
+    }
+
+    if (typeof instance.on_startup === "function") {
+      instance.on_startup();
+      console.log(`[Plugins] ✓ Started: ${name}`);
+      return { success: true, message: "Started" };
+    } else {
+      console.warn(`[Plugins] Plugin ${name} has no on_startup method`);
+      return { success: false, message: "No on_startup method" };
+    }
+  }
+
+  stopPlugin(name) {
+    const instance = window.customjs?.[name];
+    if (!instance) {
+      console.error(`[Plugins] Plugin not found: ${name}`);
+      return { success: false, message: "Plugin not found" };
+    }
+
+    if (typeof instance.cleanup === "function") {
+      instance.cleanup();
+      console.log(`[Plugins] ✓ Stopped: ${name}`);
+      return { success: true, message: "Stopped" };
+    } else {
+      console.warn(`[Plugins] Plugin ${name} has no cleanup method`);
+      return { success: false, message: "No cleanup method" };
+    }
+  }
+
+  async reloadPlugin(url) {
+    console.log(`[Plugins] Reloading: ${url}`);
+    this.unloadPlugin(url);
+    return await this.loadPlugin(url);
+  }
+
+  async reloadAllPlugins() {
+    console.log(
+      `[Plugins] Reloading all ${this.loadedModules.size} plugins...`
+    );
+    const urls = Array.from(this.loadedModules);
+    const results = {
+      success: [],
+      failed: [],
+    };
+
+    for (const url of urls) {
+      this.loadedModules.delete(url);
+      try {
+        await this.loadModule(url);
+        results.success.push(url);
+        console.log(`[Plugins] ✓ Reloaded: ${url}`);
+      } catch (error) {
+        results.failed.push({ url, error: error.message });
+        console.error(`[Plugins] ✗ Failed to reload: ${url}`, error);
+      }
+    }
+
+    console.log(
+      `[Plugins] Reload complete. Success: ${results.success.length}, Failed: ${results.failed.length}`
+    );
+    return results;
   }
 }
 
@@ -322,14 +455,82 @@ class ModuleLoader {
 // INITIALIZATION
 // ============================================================================
 
+// Create global plugin management interface
+window.plugins = {
+  loader: null,
+
+  loadPlugin: async (url) => {
+    if (!window.plugins.loader) {
+      console.error("[Plugins] Loader not initialized");
+      return { success: false, message: "Loader not initialized" };
+    }
+    return await window.plugins.loader.loadPlugin(url);
+  },
+
+  unloadPlugin: (url) => {
+    if (!window.plugins.loader) {
+      console.error("[Plugins] Loader not initialized");
+      return { success: false, message: "Loader not initialized" };
+    }
+    return window.plugins.loader.unloadPlugin(url);
+  },
+
+  startPlugin: (name) => {
+    if (!window.plugins.loader) {
+      console.error("[Plugins] Loader not initialized");
+      return { success: false, message: "Loader not initialized" };
+    }
+    return window.plugins.loader.startPlugin(name);
+  },
+
+  stopPlugin: (name) => {
+    if (!window.plugins.loader) {
+      console.error("[Plugins] Loader not initialized");
+      return { success: false, message: "Loader not initialized" };
+    }
+    return window.plugins.loader.stopPlugin(name);
+  },
+
+  getPlugins: () => {
+    if (!window.plugins.loader) {
+      console.error("[Plugins] Loader not initialized");
+      return { loaded: [], failed: [], total: 0, modules: [] };
+    }
+    return window.plugins.loader.getPlugins();
+  },
+
+  reloadPlugin: async (url) => {
+    if (!window.plugins.loader) {
+      console.error("[Plugins] Loader not initialized");
+      return { success: false, message: "Loader not initialized" };
+    }
+    return await window.plugins.loader.reloadPlugin(url);
+  },
+
+  reloadAllPlugins: async () => {
+    if (!window.plugins.loader) {
+      console.error("[Plugins] Loader not initialized");
+      return { success: false, message: "Loader not initialized" };
+    }
+    return await window.plugins.loader.reloadAllPlugins();
+  },
+
+  // Convenience aliases
+  list: () => window.plugins.getPlugins(),
+  reload: async (url) => window.plugins.reloadPlugin(url),
+  reloadAll: async () => window.plugins.reloadAllPlugins(),
+};
+
 // Start loading modules when DOM is ready
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
     const loader = new ModuleLoader();
+    window.plugins.loader = loader;
     loader.loadAllModules();
   });
 } else {
   // DOM is already ready
   const loader = new ModuleLoader();
+  window.plugins.loader = loader;
   loader.loadAllModules();
 }
