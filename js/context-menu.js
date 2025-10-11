@@ -8,8 +8,8 @@ class CustomContextMenu {
     name: "Context Menu Module",
     description: "Custom context menu management for VRCX dialogs",
     author: "Bluscream",
-    version: "1.3.1",
-    build: "1760219480",
+     version: "1.4.0",
+     build: "1760220194",
     dependencies: [],
   };
   constructor() {
@@ -30,6 +30,44 @@ class CustomContextMenu {
 
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
+        // Handle attribute changes (style, aria-hidden, etc.)
+        if (mutation.type === 'attributes' && mutation.target) {
+          const node = mutation.target;
+          
+          // Check if this is an el-popper dropdown becoming visible
+          if (node.classList && node.classList.contains('el-dropdown__popper')) {
+            const isVisible = node.style.display !== 'none' && node.getAttribute('aria-hidden') !== 'true';
+            
+            if (isVisible) {
+              // Find the dropdown menu inside this popper
+              const menuContainer = node.querySelector('.el-dropdown-menu');
+              if (menuContainer && menuContainer.id) {
+                const menuId = menuContainer.id;
+                
+                // Skip if already processed
+                if (this.processedMenus.has(menuId)) {
+                  return;
+                }
+                
+                // Detect and process the menu
+                const menuType = this.detectMenuType(menuContainer);
+                if (menuType && this.items.get(menuType).size > 0) {
+                  window.Logger?.log(
+                    `Menu became visible: ${JSON.stringify({
+                      menuId,
+                      menuType,
+                      hasItems: this.items.get(menuType).size,
+                    })}`,
+                    { console: true },
+                    "info"
+                  );
+                  this.debouncedMenuDetection(menuId, menuType, menuContainer);
+                }
+              }
+            }
+          }
+        }
+        
         // Handle added nodes
         if (mutation.addedNodes.length) {
           mutation.addedNodes.forEach((node) => {
@@ -125,6 +163,8 @@ class CustomContextMenu {
     this.observer.observe(document.body, {
       childList: true,
       subtree: true,
+      attributes: true, // Watch for attribute changes (style, class, etc.)
+      attributeFilter: ['style', 'aria-hidden', 'class'], // Only watch relevant attributes
     });
   }
 
