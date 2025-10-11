@@ -100,7 +100,12 @@ function Convert-BuildTimestamps {
     return $Content
 }
 
+function Get-UnixTime {
+    return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds)
+}
+
 Write-Host "=== VRCX Custom Update Script ===" -ForegroundColor Cyan
+Write-Host "Unix Time: $(Get-UnixTime)" -ForegroundColor Gray
 Write-Host "Source Directory: $SourceDir" -ForegroundColor Gray
 Write-Host "Target Directory: $TargetDir" -ForegroundColor Gray
 
