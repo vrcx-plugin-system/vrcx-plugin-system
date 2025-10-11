@@ -134,11 +134,12 @@ class ApiHelpers {
 
       // VRCX event logging - Note: eventVrcxMessage is now internal to vrcx store
       // These event types may not work the same way in new VRCX
+      // SendIpc now expects (string type, string data) parameters
       if (opts.event.noty && window.$pinia?.vrcx) {
         // Try sending via IPC if available
         if (window.AppApi?.SendIpc) {
           try {
-            window.AppApi.SendIpc({ MsgType: "Noty", Data: timestampedMsg });
+            window.AppApi.SendIpc("Noty", timestampedMsg);
           } catch (error) {
             console.warn("Failed to send Noty event:", error);
           }
@@ -150,11 +151,8 @@ class ApiHelpers {
         window.AppApi?.SendIpc
       ) {
         try {
-          window.AppApi.SendIpc({
-            MsgType: "External",
-            UserId: window.$pinia.user.currentUser?.id,
-            Data: timestampedMsg,
-          });
+          const userId = window.$pinia.user.currentUser?.id || "";
+          window.AppApi.SendIpc("External", `${userId}:${timestampedMsg}`);
         } catch (error) {
           console.warn("Failed to send External event:", error);
         }
@@ -172,10 +170,17 @@ class ApiHelpers {
       }
 
       // XSOverlay notifications
+      // XSNotification expects: (string title, string content, int timeout, double opacity, string image = "")
       if (opts.xsoverlay) {
         setTimeout(async () => {
           try {
-            await AppApi.XSNotification("VRCX Addon", timestampedMsg, 5000);
+            await AppApi.XSNotification(
+              "VRCX Addon",
+              timestampedMsg,
+              5000,
+              1.0,
+              ""
+            );
           } catch (error) {
             console.error("Error sending XSOverlay notification:", error);
           }

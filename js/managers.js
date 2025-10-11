@@ -60,15 +60,20 @@ class Managers {
 
   static NotificationHandler = class {
     constructor() {
-      this.setupNotificationOverride();
+      // Try immediately, but retry if not available
+      if (!this.setupNotificationOverride()) {
+        // Retry after a delay
+        setTimeout(() => {
+          if (!this.setupNotificationOverride()) {
+            console.warn("$app.playNoty still not available after delay");
+          }
+        }, 2000);
+      }
     }
 
     setupNotificationOverride() {
-      if (!$app || !$app.playNoty) {
-        console.warn(
-          "$app.playNoty not available yet, skipping notification override"
-        );
-        return;
+      if (!window.$app || !window.$app.playNoty) {
+        return false; // Not ready yet
       }
 
       const originalPlayNoty = $app.playNoty;
@@ -117,6 +122,9 @@ class Managers {
             break;
         }
       };
+
+      console.log("✓ Notification override enabled");
+      return true; // Successfully set up
     }
 
     handleTaggedPlayerJoined(noty) {
