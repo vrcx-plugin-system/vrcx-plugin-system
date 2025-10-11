@@ -1,53 +1,144 @@
 // ============================================================================
-// NAVIGATION MENU API
+// NAVIGATION MENU API PLUGIN
+// Version: 2.0.0
+// Build: 1728668400
 // ============================================================================
 
-class NavMenuAPI {
-  static SCRIPT = {
-    name: "Navigation Menu API",
-    description: "API for adding custom navigation menu items to VRCX",
-    author: "Bluscream",
-    version: "1.2.0",
-    build: "{BUILD}",
-    dependencies: [],
-  };
-
+/**
+ * Navigation Menu API Plugin
+ * Provides API for adding custom navigation menu items to VRCX
+ * Supports automatic content management and Pinia integration
+ */
+class NavMenuApiPlugin extends Plugin {
   constructor() {
-    this.customItems = new Map(); // Map of itemId -> item config
-    this.contentContainers = new Map(); // Map of itemId -> content element
-    this.observer = null;
+    super({
+      id: "nav-menu-api",
+      name: "Navigation Menu API",
+      description: "API for adding custom navigation menu items to VRCX",
+      author: "Bluscream",
+      version: "2.0.0",
+      build: "1728668400",
+      dependencies: [
+        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/Plugin.js",
+      ],
+    });
+
+    // Map of itemId -> item config
+    this.customItems = new Map();
+
+    // Map of itemId -> content element
+    this.contentContainers = new Map();
+
+    // Navigation menu element
     this.navMenu = null;
+
+    // Content parent element
     this.contentParent = null;
-    this.on_startup();
   }
 
-  on_startup() {
-    // Wait for nav menu and content area to be available
-    this.waitForNavMenu();
-    this.setupContentArea();
+  async load() {
+    // Expose to global namespace
+    window.customjs.navMenu = this;
 
-    // Register login hook to setup watcher after login
-    window.on_login(() => this.on_login());
+    // Legacy compatibility
+    window.NavMenuAPI = this.constructor;
+
+    this.log("Navigation Menu API ready");
+    this.loaded = true;
   }
 
-  on_login() {
+  async start() {
+    // Wait for nav menu to be available
+    await this.waitForNavMenu();
+
+    // Setup content area
+    await this.setupContentArea();
+
+    // Setup mutation observer
+    this.setupObserver();
+
+    // Render any items that were added before start
+    this.renderAllItems();
+
+    this.enabled = true;
+    this.started = true;
+    this.log("Navigation Menu API started");
+  }
+
+  async onLogin(currentUser) {
+    this.log(`Setting up menu watcher for user: ${currentUser?.displayName}`);
+
+    // Setup Pinia watcher
     this.watchMenuChanges();
   }
 
-  setupContentArea() {
-    // Find the main content area where views are rendered
-    const findContentArea = () => {
-      // Look for the el-splitter that contains all views
-      this.contentParent = document.querySelector(".el-splitter");
+  async stop() {
+    this.log("Stopping Navigation Menu API");
 
-      if (this.contentParent) {
-        console.log("[NavMenu] Found content area, ready to add tab content");
-      } else {
-        setTimeout(findContentArea, 500);
+    // Remove all items
+    this.clearAllItems();
+
+    // Parent cleanup (will disconnect observer automatically)
+    await super.stop();
+  }
+
+  // ============================================================================
+  // SETUP & INITIALIZATION
+  // ============================================================================
+
+  async waitForNavMenu() {
+    return new Promise((resolve) => {
+      const checkNav = () => {
+        this.navMenu = document.querySelector(".el-menu");
+
+        if (this.navMenu) {
+          this.log("Navigation menu found");
+          resolve();
+        } else {
+          setTimeout(checkNav, 500);
+        }
+      };
+
+      setTimeout(checkNav, 1000);
+    });
+  }
+
+  async setupContentArea() {
+    return new Promise((resolve) => {
+      const findContentArea = () => {
+        this.contentParent = document.querySelector(".el-splitter");
+
+        if (this.contentParent) {
+          this.log("Content area found, ready to add tab content");
+          resolve();
+        } else {
+          setTimeout(findContentArea, 500);
+        }
+      };
+
+      setTimeout(findContentArea, 1000);
+    });
+  }
+
+  setupObserver() {
+    // Watch for nav menu changes to re-render custom items if needed
+    const observer = new MutationObserver(() => {
+      if (this.navMenu && !document.contains(this.navMenu)) {
+        // Nav menu was removed, wait for it to come back
+        this.navMenu = null;
+        this.waitForNavMenu().then(() => this.renderAllItems());
       }
-    };
+    });
 
-    setTimeout(findContentArea, 1000);
+    // Register observer for automatic cleanup
+    this.registerObserver(observer);
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    this.log("Mutation observer setup complete");
   }
 
   watchMenuChanges() {
@@ -55,17 +146,22 @@ class NavMenuAPI {
       if (window.$pinia?.ui?.$subscribe) {
         try {
           // Subscribe to UI store changes
-          window.$pinia.ui.$subscribe((mutation, state) => {
-            // Read directly from the store, not from the state parameter
+          const unsubscribe = window.$pinia.ui.$subscribe((mutation, state) => {
+            // Read directly from the store
             const activeIndex = window.$pinia.ui.menuActiveIndex;
             this.updateContentVisibility(activeIndex);
           });
 
+          // Register subscription for automatic cleanup
+          this.registerSubscription(unsubscribe);
+
           // Call immediately with current value
           const currentIndex = window.$pinia.ui.menuActiveIndex;
           this.updateContentVisibility(currentIndex);
+
+          this.log("Pinia menu watcher setup complete");
         } catch (error) {
-          console.error("[NavMenu] Error setting up watcher:", error);
+          this.error("Error setting up menu watcher:", error);
         }
       } else {
         setTimeout(setupWatch, 500);
@@ -96,37 +192,9 @@ class NavMenuAPI {
     });
   }
 
-  waitForNavMenu() {
-    const checkNav = () => {
-      this.navMenu = document.querySelector(".el-menu");
-
-      if (this.navMenu) {
-        console.log("[NavMenu] Navigation menu found, ready to add items");
-        this.setupObserver();
-        this.renderAllItems();
-      } else {
-        setTimeout(checkNav, 500);
-      }
-    };
-
-    setTimeout(checkNav, 1000);
-  }
-
-  setupObserver() {
-    // Watch for nav menu changes to re-render custom items if needed
-    this.observer = new MutationObserver(() => {
-      if (this.navMenu && !document.contains(this.navMenu)) {
-        // Nav menu was removed, wait for it to come back
-        this.navMenu = null;
-        this.waitForNavMenu();
-      }
-    });
-
-    this.observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-  }
+  // ============================================================================
+  // PUBLIC API
+  // ============================================================================
 
   /**
    * Add a custom navigation menu item with optional content container
@@ -135,7 +203,7 @@ class NavMenuAPI {
    * @param {string} config.label - Display label (or i18n key)
    * @param {string} config.icon - Remix icon class (e.g., 'ri-plugin-line')
    * @param {function} config.onClick - Click handler (optional if using content)
-   * @param {HTMLElement|function} config.content - Content element or function that returns content
+   * @param {HTMLElement|function|string} config.content - Content element, function, or HTML string
    * @param {string} config.before - Insert before this item index (optional)
    * @param {string} config.after - Insert after this item index (optional)
    * @param {boolean} config.enabled - Whether the item is enabled (default: true)
@@ -153,7 +221,7 @@ class NavMenuAPI {
     };
 
     this.customItems.set(id, item);
-    console.log(`[NavMenu] Added item: ${id}`);
+    this.log(`Added item: ${id}`);
 
     if (this.navMenu) {
       this.renderItem(item);
@@ -177,11 +245,11 @@ class NavMenuAPI {
   /**
    * Create a content container for a nav item
    * @param {string} id - Item identifier
-   * @param {HTMLElement|function} content - Content element or generator function
+   * @param {HTMLElement|function|string} content - Content element, generator function, or HTML string
    */
   createContentContainer(id, content) {
     if (!this.contentParent) {
-      console.warn(`[NavMenu] Content parent not ready for ${id}`);
+      this.warn(`Content parent not ready for ${id}`);
       return;
     }
 
@@ -215,7 +283,7 @@ class NavMenuAPI {
     if (panel) {
       panel.appendChild(container);
       this.contentContainers.set(id, container);
-      console.log(`[NavMenu] Created content container for: ${id}`);
+      this.log(`Created content container for: ${id}`);
     }
   }
 
@@ -225,7 +293,7 @@ class NavMenuAPI {
    */
   removeItem(id) {
     if (!this.customItems.has(id)) {
-      console.warn(`[NavMenu] Item not found: ${id}`);
+      this.warn(`Item not found: ${id}`);
       return false;
     }
 
@@ -246,7 +314,7 @@ class NavMenuAPI {
       this.contentContainers.delete(id);
     }
 
-    console.log(`[NavMenu] Removed item: ${id}`);
+    this.log(`Removed item: ${id}`);
     return true;
   }
 
@@ -258,7 +326,7 @@ class NavMenuAPI {
   updateItem(id, updates) {
     const item = this.customItems.get(id);
     if (!item) {
-      console.warn(`[NavMenu] Item not found: ${id}`);
+      this.warn(`Item not found: ${id}`);
       return false;
     }
 
@@ -273,9 +341,37 @@ class NavMenuAPI {
       this.renderItem(item);
     }
 
-    console.log(`[NavMenu] Updated item: ${id}`);
+    this.log(`Updated item: ${id}`);
     return true;
   }
+
+  /**
+   * Check if an item exists
+   * @param {string} id - Item identifier
+   */
+  hasItem(id) {
+    return this.customItems.has(id);
+  }
+
+  /**
+   * Get all custom items
+   */
+  getAllItems() {
+    return Array.from(this.customItems.values());
+  }
+
+  /**
+   * Clear all custom items
+   */
+  clearAllItems() {
+    const ids = Array.from(this.customItems.keys());
+    ids.forEach((id) => this.removeItem(id));
+    this.log(`Cleared all ${ids.length} custom items`);
+  }
+
+  // ============================================================================
+  // RENDERING
+  // ============================================================================
 
   renderItem(item) {
     if (!this.navMenu || !item.enabled) return;
@@ -312,8 +408,8 @@ class NavMenuAPI {
     menuItem.appendChild(icon);
     menuItem.appendChild(tooltip);
 
-    // Add click handler
-    menuItem.addEventListener("click", (e) => {
+    // Add click handler with automatic cleanup
+    const clickHandler = (e) => {
       e.preventDefault();
       e.stopPropagation();
 
@@ -339,12 +435,16 @@ class NavMenuAPI {
       if (item.onClick) {
         item.onClick();
       }
-    });
+    };
+
+    this.registerListener(menuItem, "click", clickHandler);
 
     // Add hover effect to show tooltip
-    menuItem.addEventListener("mouseenter", () => {
+    const hoverHandler = () => {
       menuItem.setAttribute("title", item.label);
-    });
+    };
+
+    this.registerListener(menuItem, "mouseenter", hoverHandler);
 
     // Determine insertion position
     let referenceNode = null;
@@ -379,7 +479,7 @@ class NavMenuAPI {
       this.navMenu.appendChild(menuItem);
     }
 
-    console.log(`[NavMenu] Rendered item: ${item.id}`);
+    this.log(`Rendered item: ${item.id}`);
   }
 
   renderAllItems() {
@@ -387,40 +487,7 @@ class NavMenuAPI {
       this.renderItem(item);
     });
   }
-
-  /**
-   * Check if an item exists
-   * @param {string} id - Item identifier
-   */
-  hasItem(id) {
-    return this.customItems.has(id);
-  }
-
-  /**
-   * Get all custom items
-   */
-  getAllItems() {
-    return Array.from(this.customItems.values());
-  }
-
-  /**
-   * Clear all custom items
-   */
-  clearAllItems() {
-    const ids = Array.from(this.customItems.keys());
-    ids.forEach((id) => this.removeItem(id));
-    console.log(`[NavMenu] Cleared all ${ids.length} custom items`);
-  }
 }
 
-// Auto-initialize the module
-(function () {
-  window.customjs = window.customjs || {};
-  window.customjs.navMenu = new NavMenuAPI();
-  window.customjs.script = window.customjs.script || {};
-  window.customjs.script.navMenu = NavMenuAPI.SCRIPT;
-
-  console.log(
-    `✓ Loaded ${NavMenuAPI.SCRIPT.name} v${NavMenuAPI.SCRIPT.version} by ${NavMenuAPI.SCRIPT.author}`
-  );
-})();
+// Export plugin class for PluginLoader
+window.__LAST_PLUGIN_CLASS__ = NavMenuApiPlugin;
