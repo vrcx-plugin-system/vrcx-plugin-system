@@ -8,8 +8,8 @@ class CustomContextMenu {
     name: "Context Menu Module",
     description: "Custom context menu management for VRCX dialogs",
     author: "Bluscream",
-    version: "1.0.1",
-    build: "1760216821",
+    version: "1.1.0",
+    build: "1760217655",
     dependencies: [],
   };
   constructor() {
@@ -19,6 +19,7 @@ class CustomContextMenu {
     this.menuContainers = new Map(); // Map of menuId -> { menuType, container }
     this.processedMenus = new Set();
     this.debounceTimers = new Map(); // Map of menuId -> timer
+    this.pendingMenus = new Map(); // Map of menuId -> dialogType
     this.init();
   }
 
@@ -27,6 +28,45 @@ class CustomContextMenu {
     this.menuTypes.forEach((menuType) => {
       this.items.set(menuType, new Map());
     });
+
+    // Listen for button clicks to capture dialog context BEFORE menu appears
+    document.body.addEventListener(
+      "click",
+      (e) => {
+        const button = e.target.closest(
+          'button[aria-haspopup="menu"][aria-controls]'
+        );
+        if (!button) return;
+
+        const menuId = button.getAttribute("aria-controls");
+        if (!menuId) return;
+
+        // Find the dialog this button belongs to
+        const dialog = button.closest(
+          ".x-user-dialog, .x-avatar-dialog, .x-world-dialog, .x-group-dialog"
+        );
+        if (!dialog) return;
+
+        // Extract dialog type from class
+        let dialogType = null;
+        if (dialog.classList.contains("x-user-dialog")) dialogType = "user";
+        else if (dialog.classList.contains("x-avatar-dialog"))
+          dialogType = "avatar";
+        else if (dialog.classList.contains("x-world-dialog"))
+          dialogType = "world";
+        else if (dialog.classList.contains("x-group-dialog"))
+          dialogType = "group";
+
+        if (dialogType) {
+          // Store the mapping for when the menu appears
+          this.pendingMenus.set(menuId, dialogType);
+          console.log(
+            `[Context Menu] Button clicked in ${dialogType} dialog, expecting menu ID: ${menuId}`
+          );
+        }
+      },
+      true
+    ); // Use capture phase to catch the event early
 
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -165,10 +205,19 @@ class CustomContextMenu {
       return null;
     }
 
-    // Element Plus teleports dropdown menus to body, so we can't use .closest('.x-dialog')
-    // Instead, check which dialogs are currently visible in Pinia stores
+    // FIRST: Check if we have a pending menu detection from the button click
+    const menuId = menuContainer.id;
+    if (menuId && this.pendingMenus.has(menuId)) {
+      const dialogType = this.pendingMenus.get(menuId);
+      console.log(
+        `[Context Menu] Using stored dialog type "${dialogType}" for menu ${menuId}`
+      );
+      // Clean up the pending entry
+      this.pendingMenus.delete(menuId);
+      return dialogType;
+    }
 
-    // Get all visible dialog states (priority order: most recently opened first)
+    // FALLBACK: Try to detect from dialog visibility states
     const visibleDialogs = [];
 
     if (window.$pinia?.avatar?.avatarDialog?.visible) {
@@ -198,17 +247,6 @@ class CustomContextMenu {
     // World dialogs typically have 8-15 items
     // Group dialogs typically have 1-8 items
     // User dialogs typically have 20+ items
-
-    // Debug logging
-    console.log("[Context Menu Detection]", {
-      visibleDialogs,
-      itemCount,
-      menuId: menuContainer.id,
-      avatarVisible: window.$pinia?.avatar?.avatarDialog?.visible,
-      worldVisible: window.$pinia?.world?.worldDialog?.visible,
-      groupVisible: window.$pinia?.group?.groupDialog?.visible,
-      userVisible: window.$pinia?.user?.userDialog?.visible,
-    });
 
     // If multiple dialogs are open OR if dialog state detection failed, use heuristics
     if (visibleDialogs.length > 1 || visibleDialogs.length === 0) {
