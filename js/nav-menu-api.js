@@ -58,8 +58,12 @@ class NavMenuAPI {
         try {
           // Subscribe to UI store changes
           window.$pinia.ui.$subscribe((mutation, state) => {
-            const activeIndex = state.menuActiveIndex;
-            console.log(`[NavMenu] Menu changed to: ${activeIndex}`);
+            // Read directly from the store, not from the state parameter
+            const activeIndex = window.$pinia.ui.menuActiveIndex;
+            console.log(`[NavMenu] Menu changed to: ${activeIndex}`, {
+              fromState: state.menuActiveIndex,
+              fromStore: activeIndex,
+            });
             this.updateContentVisibility(activeIndex);
           });
 
