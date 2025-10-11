@@ -48,20 +48,37 @@ class NavMenuAPI {
     // Watch for active menu changes to show/hide content
     setTimeout(() => {
       if (window.$app && typeof window.$app.$watch === "function") {
+        console.log("[NavMenu] Setting up menu watcher");
         window.$app.$watch(
           () => window.$pinia?.ui?.menuActiveIndex,
           (activeIndex) => {
+            console.log(`[NavMenu] Menu changed to: ${activeIndex}`);
             this.updateContentVisibility(activeIndex);
-          }
+          },
+          { immediate: true } // Call immediately with current value
+        );
+      } else {
+        console.warn(
+          "[NavMenu] $watch not available, content visibility won't work"
         );
       }
     }, 1000);
   }
 
   updateContentVisibility(activeIndex) {
+    console.log(
+      `[NavMenu] updateContentVisibility called with: ${activeIndex}`
+    );
+    console.log(
+      `[NavMenu] Custom containers:`,
+      Array.from(this.contentContainers.keys())
+    );
+
     // Show/hide custom content containers based on active menu
     this.contentContainers.forEach((container, itemId) => {
-      container.style.display = activeIndex === itemId ? "block" : "none";
+      const shouldShow = activeIndex === itemId;
+      console.log(`[NavMenu] ${itemId}: ${shouldShow ? "SHOW" : "hide"}`);
+      container.style.display = shouldShow ? "block" : "none";
     });
   }
 
