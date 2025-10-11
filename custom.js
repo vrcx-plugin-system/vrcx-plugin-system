@@ -105,6 +105,8 @@ const MODULE_CONFIG = {
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/bio-updater.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/auto-invite.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/managers.js",
+    // Uncomment below to enable comprehensive debug logging:
+    // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/debug.js",
   ],
   // Load timeout in milliseconds
   loadTimeout: 10000,

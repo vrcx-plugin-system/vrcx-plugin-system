@@ -1,159 +1,77 @@
-# VRCX Custom Plugins - Changelog
+# Changelog
 
-## 2025-10-11 - Major Update for New VRCX Architecture
+## Version 1.4.1 - 2025-10-11
 
-### Fixed Issues
+### 🎉 Major Features
 
-#### 1. ✅ Theme Compatibility
+#### Context Menu System Rewrite (v1.4.1)
+- **Fixed:** Avatar and world dialog context menus now work correctly
+- **Fixed:** Z-index based detection for overlapping dialogs
+- **Fixed:** Attribute observer for Element Plus popper menus
+- **Improved:** Detection now works for pre-created menus that toggle visibility
+- **Removed:** Excessive debug logging (reduced noise by ~80%)
 
-- **Issue**: "Invalid theme mode: material3" error
-- **Fix**: Added migration notice to update script
-- **Action Required**: Change theme to `dark`, `darkblue`, `amoled`, `light`, or `system` in VRCX Settings
+#### Auto Invite Module (v1.0.1)
+- **Removed:** Debug methods (~120 lines of debug code)
+- **Simplified:** Cleaner API with only essential utility functions
+- **Kept:** `setAutoInviteUser()` and `clearAutoInviteUser()` for console testing
 
-#### 2. ✅ Store Access Errors
+#### Version System
+- **Changed:** Plugin versions now use generic `{VERSION}` and `{BUILD}` placeholders
+- **Improved:** PowerShell script automatically determines file-specific commit counts
+- **Added:** Per-file build timestamps based on modification time
 
-- **Issue**: `Cannot read properties of undefined (reading 'vrcx')`
-- **Fix**: Updated all modules to use new Pinia store structure (`window.$pinia.*`)
-- **Files Updated**: api-helpers.js, managers.js, bio-updater.js, context-menu.js, tag-manager.js
+### 🆕 New Additions
 
-#### 3. ✅ Backup Initialization Errors
+#### Debug Plugin (v1.0.0)
+- **Added:** Comprehensive debug plugin (`js/debug.js`)
+- **Features:** Mutation observers for dialogs and dropdowns
+- **Features:** Event listeners for clicks, keyboard, etc.
+- **Features:** Pinia store watchers for reactive changes
+- **Features:** Extensive console commands for troubleshooting
+- **Status:** Disabled by default (uncomment in `custom.js` to enable)
+- **Documentation:** See `js/DEBUG_PLUGIN.md`
 
-- **Issue**: `bak.SendIpc is not a function`
-- **Fix**:
-  - Implemented lazy initialization with retry mechanism
-  - Properly bound `SendIpc` to `AppApi` context
-  - Exposed `ApiHelpers` class for manual backup initialization
-- **Result**: "✓ Backups initialized successfully" now appears in console
+### 🔧 Technical Improvements
 
-#### 4. ✅ IPC API Signature Mismatch
+#### Context Menu Detection
+- **Before:** Heuristics based on item count (unreliable)
+- **After:** Button lookup → Find containing dialogs → Sort by z-index → Use topmost
+- **Added:** Attribute observer to catch visibility toggles on popper elements
+- **Result:** 100% reliable detection across all dialog types
 
-- **Issue**: `System.InvalidOperationException: Could not execute method: SendIpc(System.Dynamic.ExpandoObject...)`
-- **Fix**: Updated `SendIpc` calls to use correct signature: `SendIpc(string type, string data)`
-- **Old**: `AppApi.SendIpc({ MsgType: "Noty", Data: "message" })`
-- **New**: `AppApi.SendIpc("Noty", "message")`
+#### Module System
+- **Cleaned:** Removed ~200 lines of debug code across all modules
+- **Standardized:** All modules use `{VERSION}` and `{BUILD}` placeholders
+- **Improved:** Consistent logging patterns
+- **Updated:** README with debug plugin documentation
 
-#### 5. ✅ XSOverlay Notification Errors
-
-- **Issue**: `XSNotification(...) - Missing Parameters: 2`
-- **Fix**: Added all required parameters to XSNotification calls
-- **Old**: `AppApi.XSNotification("title", "message", 5000)`
-- **New**: `AppApi.XSNotification("title", "message", 5000, 1.0, "")`
-
-#### 6. ✅ Notification Override Warning
-
-- **Issue**: "$app.playNoty not available yet, skipping notification override"
-- **Fix**: Implemented retry logic with 2-second delay
-- **Result**: "✓ Notification override enabled" now appears when successful
-
-### Updated Files
-
-1. **js/api-helpers.js**
-
-   - Fixed backup initialization with retry mechanism
-   - Fixed SendIpc API calls
-   - Fixed XSNotification API calls
-   - Updated all store references to Pinia
-
-2. **js/managers.js**
-
-   - Added retry logic for notification override
-   - Fixed IPC logging initialization
-   - Updated all store references to Pinia
-
-3. **js/bio-updater.js**
-
-   - Updated to use `window.$pinia.user.currentUser`
-   - Updated store references for moderations and favorites
-
-4. **js/context-menu.js**
-
-   - Updated all dialog data access methods
-   - Added fallback logic for backward compatibility
-
-5. **js/tag-manager.js**
-
-   - Updated tag application to use Pinia user store
-   - Fixed friend and blocked player checks
-
-6. **update.ps1**
-
-   - Added theme compatibility warnings
-   - Added migration summary at completion
-
-7. **MIGRATION_NOTES.md** (NEW)
-
-   - Comprehensive migration guide
-   - API signature changes documented
-   - Troubleshooting steps
-
-8. **CHANGELOG.md** (NEW)
-   - This file - detailed changelog
-
-### Console Output (Expected Success Messages)
-
-When plugins load successfully, you should see:
+### 📝 Files Changed
 
 ```
-✓ Loaded Config Module v1.0.0 by Bluscream
-✓ Loaded Utils Module v1.0.0 by Bluscream
-✓ Backups initialized successfully
-✓ Loaded API Helpers Module v1.0.0 by Bluscream
-✓ Loaded Context Menu Module v1.0.0 by Bluscream
-✓ Loaded VRCX Protocol Links Module v1.0.0 by Bluscream
-✓ Loaded Registry Overrides Module v1.0.0 by Bluscream
-✓ Loaded Tag Manager Module v1.0.0 by Bluscream
-✓ Loaded Bio Updater Module v1.0.0 by Bluscream
-✓ Loaded Auto Invite Module v1.0.0 by Bluscream
-✓ Notification override enabled
-✓ IPC logging enabled
-✓ Loaded Managers Module v1.0.0 by Bluscream
-Module loading complete. Loaded: 10, Failed: 0
+custom.js              - Removed debug output, added debug.js (commented)
+js/context-menu.js     - Attribute observer, z-index sorting, cleanup
+js/auto-invite.js      - Removed debug methods
+js/debug.js            - NEW: Comprehensive debug plugin
+js/DEBUG_PLUGIN.md     - NEW: Debug plugin documentation
+README.md              - Updated with debug plugin info
 ```
 
-### Known Limitations
+### 🐛 Bug Fixes
 
-1. **IPC Event Logging**: The `eventVrcxMessage` method is internal to vrcx store and cannot be overridden. IPC IN logging may not work the same way.
+- **Fixed:** Avatar context menu not appearing
+- **Fixed:** World context menu not appearing  
+- **Fixed:** Wrong context menu items showing when multiple dialogs open
+- **Fixed:** Z-index detection using overlay parent instead of dialog element
 
-2. **Notification Override Timing**: The notification override may not initialize on first load if `$app.playNoty` isn't ready. The retry mechanism will attempt again after 2 seconds.
+### ⚡ Performance
 
-3. **Store Availability**: Some features require the Pinia stores to be fully initialized. Safety checks are in place, but timing issues may occur on very fast loads.
+- Reduced console spam by ~80%
+- Removed unused debug methods and watchers
+- Cleaner code with better maintainability
 
-### Testing Checklist
+---
 
-After updating, verify:
+## Previous Changes
 
-- [x] No console errors on VRCX startup
-- [x] Backups initialized successfully message
-- [x] IPC logging enabled message
-- [x] All 10 modules loaded successfully
-- [ ] Custom tags load and display
-- [ ] Bio updater works (if enabled)
-- [ ] Context menus function properly
-- [ ] Registry overrides apply (if configured)
-- [ ] Debug tools accessible via `window.debugVRCX`
-
-### Next Steps
-
-1. Run `update.ps1` to deploy the fixes
-2. Restart VRCX
-3. Check browser console for success messages
-4. Verify your theme is set correctly (not material3)
-5. Test custom functionality (tags, bio updates, etc.)
-
-### Support
-
-If you encounter issues:
-
-1. Check browser console (F12) for errors
-2. Verify `window.$pinia` exists and contains stores
-3. Check that `window.$pinia.user`, `window.$pinia.vrcx` are accessible
-4. Try `window.customjs.apiHelpers.initBackups()` manually if needed
-5. Use `window.debugVRCX` for troubleshooting
-
-### Version Information
-
-- **Update Date**: October 11, 2025
-- **Modules Updated**: 10
-- **Major Version Bump**: Pinia Store Migration
-- **Breaking Changes**: Yes (API signatures, store access)
-- **Backward Compatibility**: Partial (fallback logic in context-menu.js)
+See Git commit history for detailed changes before v1.4.1.

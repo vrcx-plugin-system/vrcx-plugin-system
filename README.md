@@ -28,11 +28,14 @@ vrcx-custom/
 │   ├── utils.js           # Utility functions and helpers
 │   ├── api-helpers.js     # API wrappers and logging
 │   ├── context-menu.js    # Context menu enhancements
+│   ├── protocol-links.js  # VRCX protocol link utilities
 │   ├── registry-overrides.js # VRChat registry management
 │   ├── tag-manager.js     # Custom user tags system
 │   ├── bio-updater.js     # Automatic bio updates
 │   ├── auto-invite.js     # Auto-invite functionality
-│   └── managers.js        # Core management classes
+│   ├── managers.js        # Core management classes
+│   ├── debug.js           # Debug plugin (disabled by default)
+│   └── DEBUG_PLUGIN.md    # Debug plugin documentation
 └── README.md              # This file
 ```
 
@@ -46,12 +49,14 @@ vrcx-custom/
 
 ### Feature Modules
 
-- **`context-menu.js`** - Enhanced context menu system with custom items
+- **`context-menu.js`** - Enhanced context menu system with custom items for user/avatar/world/group dialogs
+- **`protocol-links.js`** - VRCX protocol link generation and clipboard utilities
 - **`registry-overrides.js`** - VRChat registry settings with event-based application
 - **`tag-manager.js`** - Custom user tags loaded from external JSON sources
 - **`bio-updater.js`** - Automatic bio updates with dynamic content templates
-- **`auto-invite.js`** - Automatic user invitation system
+- **`auto-invite.js`** - Automatic user invitation system with location tracking
 - **`managers.js`** - Instance monitoring, notifications, and debug tools
+- **`debug.js`** - Comprehensive debug plugin (disabled by default, see DEBUG_PLUGIN.md)
 
 ## ⚙️ Configuration
 
@@ -238,24 +243,40 @@ The update script will:
 
 ## 🐛 Debugging
 
+### Debug Plugin
+
+Enable comprehensive debugging by uncommenting the debug module in `custom.js`:
+
+```javascript
+// Uncomment below to enable comprehensive debug logging:
+"https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/debug.js",
+```
+
+See `js/DEBUG_PLUGIN.md` for full documentation on debug commands.
+
 ### Console Logs
 
 Check the browser console for detailed loading information:
 
 ```
-Module loading complete. Loaded: 9, Failed: 0
-Available modules: (16) ['utils', 'config', 'tagManager', ...]
-✓ Loaded Tag Manager Module v1.0.0 by Bluscream
+Module loading complete. Loaded: 10, Failed: 0
+✓ Loaded Context Menu Module v1.4.1 by Bluscream
 ```
 
-### Debug Tools
-
-Access debug functionality through:
+### Debug Commands
 
 ```javascript
-window.customjs.debugTools; // Debug tools instance
-window.customjs.debug; // Debug functions
-window.customjs.clearProcessedMenus; // Clear processed menus
+// VRCX state inspection
+window.logVRCXState();
+
+// Find elements
+window.debugFindElements(".x-dialog");
+
+// Get recent logs (when debug plugin enabled)
+window.getDebugLogs("Dialog", 50);
+
+// Clear processed menus
+window.customjs.clearProcessedMenus();
 ```
 
 ### Common Issues
