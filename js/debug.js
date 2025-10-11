@@ -442,7 +442,7 @@ class DebugPlugin {
       console.log(
         `FULL PAGE HTML DUMP )${html.length.toLocaleString()} characters)`
       );
-      console.log(html);
+      console.log(html.toString());
 
       // Copy to clipboard using Utils
       await Utils.copyToClipboard(html, "Page HTML");
