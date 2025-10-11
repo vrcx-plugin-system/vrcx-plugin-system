@@ -152,7 +152,8 @@ class Managers {
         }
 
         // Check if the player has custom tags - updated for new Pinia store structure
-        const customTags = window.$pinia?.user?.customTags;
+        // Note: it's customUserTags, not customTags!
+        const customTags = window.$pinia?.user?.customUserTags;
         if (!customTags || customTags.size === 0) {
           return; // No custom tags loaded
         }

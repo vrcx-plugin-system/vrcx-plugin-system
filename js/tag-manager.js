@@ -240,8 +240,8 @@ class CustomTagManager {
 
     for (const tag of tags) {
       try {
-        // Check if tag already exists to avoid duplicates
-        const existingTags = userStore.customTags || new Map();
+        // Check if tag already exists to avoid duplicates - use customUserTags!
+        const existingTags = userStore.customUserTags || new Map();
         const tagKey = `${tag.UserId}_${tag.Tag}`;
 
         if (!existingTags.has(tagKey)) {
@@ -274,6 +274,7 @@ class CustomTagManager {
       );
 
       // Check friends - Updated for new Pinia store structure
+      // NOTE: friends array contains userId strings directly, not objects!
       const friends = window.$pinia?.user?.currentUser?.friends || [];
       window.Logger?.log(
         `Checking ${friends.length} friends for tags...`,
@@ -283,17 +284,17 @@ class CustomTagManager {
 
       // Debug: Show first friend and customTags structure
       if (friends.length > 0) {
-        const firstFriend = friends[0];
+        const firstFriendId = friends[0]; // Friends are just userId strings
         window.Logger?.log(
-          `[DEBUG] First friend ID: ${firstFriend.id}, Name: ${firstFriend.displayName}`,
+          `[DEBUG] First friend ID: ${firstFriendId}`,
           { console: true },
           "info"
         );
 
-        const customTags = window.$pinia?.user?.customTags;
+        const customTags = window.$pinia?.user?.customUserTags; // Note: customUserTags not customTags!
         if (customTags) {
           window.Logger?.log(
-            `[DEBUG] CustomTags map size: ${customTags.size}`,
+            `[DEBUG] CustomUserTags map size: ${customTags.size}`,
             { console: true },
             "info"
           );
@@ -315,13 +316,16 @@ class CustomTagManager {
       }
 
       let taggedFriendsCount = 0;
-      for (const friend of friends) {
-        const friendTags = this.getUserTags(friend.id);
+      for (const friendId of friends) {
+        // Friends array contains userId strings directly
+        const friendTags = this.getUserTags(friendId);
         if (friendTags.length > 0) {
           taggedFriendsCount++;
           const tagText = friendTags.map((tag) => tag.Tag).join(", ");
+          // Look up friend name if available
+          const friendName = this.getFriendName(friendId);
           window.Logger?.log(
-            `👥 Friend: ${friend.displayName} (${friend.id}) - Tags: ${tagText}`,
+            `👥 Friend: ${friendName} (${friendId}) - Tags: ${tagText}`,
             { console: true },
             "info"
           );
@@ -382,8 +386,8 @@ class CustomTagManager {
   }
 
   getUserTags(userId) {
-    // Updated for new Pinia store structure
-    const customTags = window.$pinia?.user?.customTags;
+    // Updated for new Pinia store structure - use customUserTags not customTags!
+    const customTags = window.$pinia?.user?.customUserTags;
     if (!customTags || customTags.size === 0) {
       return [];
     }
@@ -418,6 +422,12 @@ class CustomTagManager {
     }
 
     return userTags;
+  }
+
+  getFriendName(userId) {
+    // Helper to get friend display name from cached users
+    const cachedUser = window.$pinia?.user?.cachedUsers?.get(userId);
+    return cachedUser?.displayName || userId;
   }
 
   startPeriodicUpdates() {

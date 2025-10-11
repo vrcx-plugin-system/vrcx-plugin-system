@@ -15,6 +15,14 @@ These plugins have been updated to work with the new VRCX source structure that 
 **Old:** `$app.playNoty(notification)`  
 **New:** `window.$pinia.notification.playNoty(notification)` - Now part of notification store
 
+**Custom Tags Change:**  
+**Old:** `$app.store.user.customTags`  
+**New:** `window.$pinia.user.customUserTags` - Renamed property
+
+**Friends Array Change:**  
+**Old:** `friends[i].id` - Array of friend objects  
+**New:** `friends[i]` - Array of userId strings directly
+
 ### 2. Removed Theme
 
 The `material3` theme has been removed from the new VRCX. Available themes are:
@@ -76,10 +84,14 @@ The `eventVrcxMessage` function is now internal to the vrcx store and cannot be 
 
 ### 5. `js/tag-manager.js`
 
-- Updated `applyTags()` to use `window.$pinia.user`
+- **CRITICAL FIX**: Changed all `customTags` references to `customUserTags`
+- **CRITICAL FIX**: Updated to handle friends as userId strings instead of objects
+- Updated `applyTags()` to use `window.$pinia.user.customUserTags`
 - Updated `checkFriendsAndBlockedForTags()` to use new store structure
-- Updated `getUserTags()` to access `window.$pinia.user.customTags`
+- Updated `getUserTags()` to access `window.$pinia.user.customUserTags`
 - Updated `addTag()` with safety checks for store availability
+- Added `getFriendName()` helper to look up display names from cached users
+- Added extensive debug logging to identify structure differences
 
 ### 6. `update.ps1`
 
