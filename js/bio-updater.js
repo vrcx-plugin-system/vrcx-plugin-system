@@ -21,13 +21,6 @@ class BioUpdater {
   }
 
   on_startup() {
-    // Runs immediately when module loads (before login)
-    window.Logger?.log(
-      "Bio updater loaded (waiting for login)",
-      { console: true },
-      "info"
-    );
-
     // Register the on_login hook (lifecycle manager is guaranteed to be ready)
     window.on_login((currentUser) => this.on_login(currentUser));
   }
@@ -36,26 +29,9 @@ class BioUpdater {
     // Runs after successful VRChat login (receives currentUser object)
     const config = window.CONFIG || window.customjs?.config;
     if (!config || !config.bio) {
-      window.Logger?.log(
-        "Bio config not available",
-        { console: true },
-        "warning"
-      );
+      console.warn("Bio config not available");
       return;
     }
-
-    window.Logger?.log(
-      `Bio updater initialized for user: ${
-        currentUser?.displayName || "Unknown"
-      }`,
-      { console: true },
-      "success"
-    );
-    window.Logger?.log(
-      `Bio template: ${config.bio.template}`,
-      { console: true },
-      "info"
-    );
 
     // Start periodic updates
     this.updateInterval = setInterval(async () => {

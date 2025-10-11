@@ -132,7 +132,6 @@ class Managers {
         }
       };
 
-      console.log("✓ Notification override enabled");
       return true; // Successfully set up
     }
 
@@ -208,16 +207,9 @@ class Managers {
       ) {
         const originalSendIpc = window.bak.SendIpc;
         window.AppApi.SendIpc = (...args) => {
-          window.Logger?.log(
-            `[IPC OUT] ${JSON.stringify(args)}`,
-            { console: true },
-            "info"
-          );
+          console.log(`[IPC OUT] ${JSON.stringify(args)}`);
           return originalSendIpc(...args);
         };
-        console.log("✓ IPC logging enabled");
-      } else {
-        console.warn("⚠ Could not enable IPC logging - backup not available");
       }
 
       // Note: eventVrcxMessage is now internal to the vrcx store and cannot be easily overridden

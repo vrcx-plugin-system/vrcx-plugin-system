@@ -136,7 +136,6 @@ class LifecycleManager {
   }
 
   triggerStartup() {
-    console.log("Triggering startup hooks...");
     for (const callback of this.startupCallbacks) {
       try {
         callback();
@@ -149,12 +148,12 @@ class LifecycleManager {
   triggerLogin(currentUser) {
     if (this.hasTriggeredLogin) return; // Only trigger once
 
-    console.log("Triggering login hooks...");
     this.hasTriggeredLogin = true;
     this.isLoggedIn = true;
 
     // Get current user if not provided
     const user = currentUser || window.$pinia?.user?.currentUser;
+    console.log(`✓ User logged in: ${user?.displayName || "Unknown"}`);
 
     for (const callback of this.loginCallbacks) {
       try {
@@ -171,16 +170,11 @@ class LifecycleManager {
       const setupWatch = () => {
         // Try to use Vue's watch API for reactive login detection
         if (window.$app && typeof window.$app.$watch === "function") {
-          console.log("Using Vue watch API for login detection");
-
           // Watch for currentUser changes (indicates login/logout)
           window.$app.$watch(
             () => window.$pinia?.user?.currentUser,
             (currentUser) => {
               if (currentUser && currentUser.id && !this.hasTriggeredLogin) {
-                console.log(
-                  `Login detected: ${currentUser.displayName} (${currentUser.id})`
-                );
                 this.triggerLogin(currentUser);
               }
             },
@@ -188,11 +182,9 @@ class LifecycleManager {
           );
         } else {
           // Fallback to polling if watch API not available
-          console.warn("Vue watch API not available, using polling (fallback)");
           const checkLogin = () => {
             const currentUser = window.$pinia?.user?.currentUser;
             if (currentUser && currentUser.id && !this.hasTriggeredLogin) {
-              console.log("User already logged in on plugin startup");
               this.triggerLogin(currentUser);
             } else {
               setTimeout(checkLogin, 500);
@@ -214,6 +206,19 @@ class ModuleLoader {
     this.loadedModules = new Set();
     this.failedModules = new Set();
     this.lifecycle = new LifecycleManager();
+
+    // Expose lifecycle hooks IMMEDIATELY before loading any modules
+    this.setupLifecycleHooks();
+  }
+
+  setupLifecycleHooks() {
+    // Create global customjs namespace early
+    window.customjs = window.customjs || {};
+
+    // Expose lifecycle manager and hooks BEFORE modules load
+    window.customjs.lifecycle = this.lifecycle;
+    window.on_startup = this.lifecycle.onStartup.bind(this.lifecycle);
+    window.on_login = this.lifecycle.onLogin.bind(this.lifecycle);
   }
 
   async loadAllModules() {
@@ -287,16 +292,8 @@ class ModuleLoader {
     try {
       console.log("Initializing VRCX systems...");
 
-      // Create global customjs namespace
-      window.customjs = window.customjs || {};
-
-      // Pass user config to global namespace
+      // Pass user config to global namespace (customjs already created in setupLifecycleHooks)
       window.customjs.config = USER_CONFIG;
-
-      // Expose lifecycle manager
-      window.customjs.lifecycle = this.lifecycle;
-      window.on_startup = this.lifecycle.onStartup.bind(this.lifecycle);
-      window.on_login = this.lifecycle.onLogin.bind(this.lifecycle);
 
       // Initialize all systems
       setTimeout(async () => {

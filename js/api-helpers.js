@@ -302,24 +302,11 @@ class ApiHelpers {
 
 // Auto-initialize the module
 (function () {
-  // Try to initialize backups immediately, or set up a retry mechanism
-  const tryInitBackups = () => {
-    if (ApiHelpers.initBackups()) {
-      console.log("✓ Backups initialized successfully");
-      return true;
-    }
-    return false;
-  };
-
-  // Try immediately
-  if (!tryInitBackups()) {
-    // If it fails, retry after a short delay
+  // Initialize backups silently
+  if (!ApiHelpers.initBackups()) {
+    // Retry after a short delay if needed
     setTimeout(() => {
-      if (!tryInitBackups()) {
-        console.warn(
-          "⚠ Backups not initialized yet - will initialize on first use"
-        );
-      }
+      ApiHelpers.initBackups();
     }, 1000);
   }
 

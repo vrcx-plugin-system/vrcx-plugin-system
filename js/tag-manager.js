@@ -21,13 +21,6 @@ class CustomTagManager {
   }
 
   on_startup() {
-    // Runs immediately when module loads (before login)
-    window.Logger?.log(
-      "Tag manager loaded (waiting for login)",
-      { console: true },
-      "info"
-    );
-
     // Register the on_login hook (lifecycle manager is guaranteed to be ready)
     window.on_login((currentUser) => this.on_login(currentUser));
   }
@@ -36,14 +29,6 @@ class CustomTagManager {
     // Runs after successful VRChat login - load tags now (receives currentUser object)
     const tagConfig = window.customjs?.config?.tags;
     const initialDelay = tagConfig?.initialDelay || 5000;
-
-    window.Logger?.log(
-      `Tag manager initialized for user: ${
-        currentUser?.displayName || "Unknown"
-      }`,
-      { console: true },
-      "success"
-    );
 
     setTimeout(async () => {
       await this.loadAllTags();
@@ -67,40 +52,21 @@ class CustomTagManager {
     const tagConfig = window.customjs?.config?.tags;
 
     if (!tagConfig?.urls || tagConfig.urls.length === 0) {
-      window.Logger?.log(
-        "No tag URLs configured",
-        { console: true },
-        "warning"
-      );
+      console.warn("No tag URLs configured");
       return;
     }
-
-    window.Logger?.log(
-      `Loading tags from ${tagConfig.urls.length} URL(s)...`,
-      { console: true },
-      "info"
-    );
 
     for (const url of tagConfig.urls) {
       try {
         await this.loadTagsFromUrl(url);
       } catch (error) {
-        window.Logger?.log(
-          `Failed to load tags from ${url}: ${error.message}`,
-          { console: true },
-          "error"
-        );
+        console.error(`Failed to load tags from ${url}:`, error.message);
       }
     }
   }
 
   async loadTagsFromUrl(url) {
     try {
-      window.Logger?.log(
-        `Fetching tags from: ${url}`,
-        { console: true },
-        "info"
-      );
       const response = await fetch(url);
 
       if (!response.ok) {
@@ -113,24 +79,9 @@ class CustomTagManager {
       if (tags.length > 0) {
         this.loadedTags.set(url, new Set(tags));
         await this.applyTags(tags);
-        window.Logger?.log(
-          `Loaded ${tags.length} tags from ${url}`,
-          { console: true },
-          "success"
-        );
-      } else {
-        window.Logger?.log(
-          `No valid tags found in ${url}`,
-          { console: true },
-          "warning"
-        );
       }
     } catch (error) {
-      window.Logger?.log(
-        `Error loading tags from ${url}: ${error.message}`,
-        { console: true },
-        "error"
-      );
+      console.error(`Error loading tags from ${url}:`, error.message);
       throw error;
     }
   }
@@ -285,53 +236,9 @@ class CustomTagManager {
 
   checkFriendsAndBlockedForTags() {
     try {
-      window.Logger?.log(
-        "=== Checking Friends and Blocked Players for Tags ===",
-        { console: true },
-        "info"
-      );
-
       // Check friends - Updated for new Pinia store structure
       // NOTE: friends array contains userId strings directly, not objects!
       const friends = window.$pinia?.user?.currentUser?.friends || [];
-      window.Logger?.log(
-        `Checking ${friends.length} friends for tags...`,
-        { console: true },
-        "info"
-      );
-
-      // Debug: Show first friend and customTags structure
-      if (friends.length > 0) {
-        const firstFriendId = friends[0]; // Friends are just userId strings
-        window.Logger?.log(
-          `[DEBUG] First friend ID: ${firstFriendId}`,
-          { console: true },
-          "info"
-        );
-
-        const customTags = window.$pinia?.user?.customUserTags; // Note: customUserTags not customTags!
-        if (customTags) {
-          window.Logger?.log(
-            `[DEBUG] CustomUserTags map size: ${customTags.size}`,
-            { console: true },
-            "info"
-          );
-          // Show first few tag keys to see the format
-          let count = 0;
-          for (const [tagKey, tagData] of customTags.entries()) {
-            if (count < 3) {
-              window.Logger?.log(
-                `[DEBUG] Sample tag key: "${tagKey}", tag: "${tagData.tag}", colour: "${tagData.colour}"`,
-                { console: true },
-                "info"
-              );
-              count++;
-            } else {
-              break;
-            }
-          }
-        }
-      }
 
       let taggedFriendsCount = 0;
       for (const friendId of friends) {
@@ -349,14 +256,9 @@ class CustomTagManager {
         }
       }
 
-      // Check blocked players - Updated for new Pinia store structure
+      // Check moderated players - Updated for new Pinia store structure
       const moderations = Array.from(
         window.$pinia?.moderation?.cachedPlayerModerations?.values() || []
-      );
-      window.Logger?.log(
-        `Checking ${moderations.length} moderated players for tags...`,
-        { console: true },
-        "info"
       );
 
       let taggedBlockedCount = 0;
@@ -375,7 +277,7 @@ class CustomTagManager {
       // Summary - Single line format
       const totalTagged = taggedFriendsCount + taggedBlockedCount;
       window.Logger?.log(
-        `${totalTagged} Tagged Users > Friends: ${taggedFriendsCount}/${friends.length} | Moderated: ${taggedBlockedCount}/${blockedPlayers.length}`,
+        `${totalTagged} Tagged Users > Friends: ${taggedFriendsCount}/${friends.length} | Moderated: ${taggedBlockedCount}/${moderations.length}`,
         { console: true },
         "success"
       );
@@ -395,22 +297,6 @@ class CustomTagManager {
     const customTags = window.$pinia?.user?.customUserTags;
     if (!customTags || customTags.size === 0) {
       return null;
-    }
-
-    // Debug logging for first call only
-    if (!this._debugLogged) {
-      this._debugLogged = true;
-      window.Logger?.log(
-        `[DEBUG getUserTag] Looking for userId: "${userId}"`,
-        { console: true },
-        "info"
-      );
-      const tag = customTags.get(userId);
-      window.Logger?.log(
-        `[DEBUG getUserTag] Found tag: ${tag ? `"${tag.tag}"` : "null"}`,
-        { console: true },
-        "info"
-      );
     }
 
     return customTags.get(userId) || null;
