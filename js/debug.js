@@ -10,7 +10,9 @@ class DebugPlugin {
     author: "Bluscream",
     version: "1.1.0",
     build: "1760223471",
-    dependencies: [],
+    dependencies: [
+      "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
+    ],
   };
 
   constructor() {
@@ -434,27 +436,33 @@ class DebugPlugin {
       return observer;
     };
 
-    // Dump entire page HTML to console and clipboard
+    // Dump entire page HTML to clipboard and return it
     window.debugDumpHTML = async () => {
       const html = document.documentElement.outerHTML;
 
       console.log("=".repeat(80));
       console.log("FULL PAGE HTML DUMP");
-      console.log("=".repeat(80));
-      console.log(html);
-      console.log("=".repeat(80));
-      console.log(`Total length: ${html.length} characters`);
+      console.log(`Total length: ${html.length.toLocaleString()} characters`);
       console.log("=".repeat(80));
 
-      // Copy to clipboard
-      try {
-        await navigator.clipboard.writeText(html);
-        console.log("✓ HTML copied to clipboard");
-      } catch (error) {
-        console.error("✗ Failed to copy to clipboard:", error);
-        console.log("You can manually copy from the log above");
+      // Copy to clipboard using Utils
+      const success = await Utils.copyToClipboard(html, "Page HTML");
+
+      if (success) {
+        console.log("✓ HTML copied to clipboard - paste it into a text editor");
+        console.log(
+          "Tip: The returned value below is the full HTML (click the arrow to expand)"
+        );
+      } else {
+        console.log("✗ Failed to copy to clipboard");
+        console.log(
+          "Check the returned value below for the HTML (click arrow to expand)"
+        );
       }
 
+      console.log("=".repeat(80));
+
+      // Return the HTML so user can access it via the console's return value
       return html;
     };
 

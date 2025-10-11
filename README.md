@@ -377,6 +377,15 @@ Check the browser console or log files for detailed information:
 ### Utils Module
 
 ```javascript
+// Clipboard operations (v1.1.0+)
+await Utils.copyToClipboard(text, "Description"); // Returns true/false, works even when unfocused
+// Handles both modern API and fallback for unfocused documents
+
+// Notifications (v1.1.0+)
+Utils.showSuccess("Success message"); // Green notification
+Utils.showError("Error message"); // Red notification
+Utils.showInfo("Info message"); // Blue notification
+
 // Time formatting
 Utils.timeToText(ms); // Convert milliseconds to readable text
 Utils.getTimestamp(); // Get formatted timestamp
@@ -401,25 +410,26 @@ window.customjs.navMenu.addItem("myPlugin", {
   label: "My Plugin",
   icon: "ri-plugin-line",
   content: () => {
-    const container = document.createElement('div');
-    container.innerHTML = '<h1>My Plugin Content</h1><p>This content automatically shows/hides!</p>';
+    const container = document.createElement("div");
+    container.innerHTML =
+      "<h1>My Plugin Content</h1><p>This content automatically shows/hides!</p>";
     return container;
   },
   before: "settings", // Optional: insert before settings
-  after: "tools",     // Optional: insert after tools
+  after: "tools", // Optional: insert after tools
 });
 
 // Or use HTML string directly
 window.customjs.navMenu.addItem("myPlugin", {
   label: "My Plugin",
   icon: "ri-plugin-line",
-  content: '<h1>My Plugin</h1><p>Tab content here!</p>',
+  content: "<h1>My Plugin</h1><p>Tab content here!</p>",
   before: "settings",
 });
 
 // Or use an existing HTMLElement
-const myContent = document.createElement('div');
-myContent.innerHTML = '<h1>Hello!</h1>';
+const myContent = document.createElement("div");
+myContent.innerHTML = "<h1>Hello!</h1>";
 window.customjs.navMenu.addItem("myPlugin", {
   label: "My Plugin",
   icon: "ri-plugin-line",
@@ -453,6 +463,7 @@ window.customjs.navMenu.clearAllItems();
 ```
 
 **How it works:**
+
 - Nav Menu API automatically creates content containers
 - Watches `menuActiveIndex` and shows/hides content
 - Integrates seamlessly with VRCX's tab system

@@ -11,6 +11,7 @@ class VRCXProtocolLinks {
     version: "1.0.0",
     build: "1760216414",
     dependencies: [
+      "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu-api.js",
     ],
   };
@@ -160,50 +161,20 @@ class VRCXProtocolLinks {
 
   // Utility functions
   async copyToClipboard(text, description) {
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        // Fallback for non-secure contexts
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        textArea.style.left = "-999999px";
-        textArea.style.top = "-999999px";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        document.execCommand("copy");
-        textArea.remove();
-      }
-
-      this.showSuccess(`${description} copied to clipboard: ${text}`);
-    } catch (error) {
-      window.Logger?.log(
-        `Failed to copy to clipboard: ${error.message}`,
-        { console: true },
-        "error"
-      );
-      this.showError(`Failed to copy ${description.toLowerCase()}`);
+    const success = await Utils.copyToClipboard(text, description);
+    if (success) {
+      Utils.showSuccess(`${description} copied to clipboard: ${text}`);
+    } else {
+      Utils.showError(`Failed to copy ${description.toLowerCase()}`);
     }
   }
 
   showSuccess(message) {
-    // Use VRCX's notification system if available
-    if (window.$app && window.$app.$message) {
-      window.$app.$message.success(message);
-    } else {
-      console.log(`✓ ${message}`);
-    }
+    Utils.showSuccess(message);
   }
 
   showError(message) {
-    // Use VRCX's notification system if available
-    if (window.$app && window.$app.$message) {
-      window.$app.$message.error(message);
-    } else {
-      console.error(`✗ ${message}`);
-    }
+    Utils.showError(message);
   }
 
   // Method to add custom avatar database provider link

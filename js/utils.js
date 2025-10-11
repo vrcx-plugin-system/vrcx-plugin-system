@@ -8,8 +8,8 @@ class Utils {
     name: "Utils Module",
     description: "Utility classes and helper functions for VRCX custom modules",
     author: "Bluscream",
-    version: "1.0.0",
-    build: "1760216414",
+    version: "1.1.0",
+    build: "1760224151",
     dependencies: [],
   };
   static isEmpty(v) {
@@ -133,6 +133,95 @@ class Utils {
       { console: true },
       "info"
     );
+  }
+
+  /**
+   * Copy text to clipboard with fallback for unfocused documents
+   * @param {string} text - Text to copy
+   * @param {string} description - Description for logging (optional)
+   * @returns {Promise<boolean>} - True if successful, false otherwise
+   */
+  static async copyToClipboard(text, description = "Text") {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        // Modern clipboard API
+        await navigator.clipboard.writeText(text);
+      } else {
+        // Fallback for non-secure contexts or when document isn't focused
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-999999px";
+        textArea.style.top = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand("copy");
+        textArea.remove();
+      }
+
+      window.Logger?.log(
+        `${description} copied to clipboard`,
+        { console: true },
+        "info"
+      );
+      return true;
+    } catch (error) {
+      window.Logger?.log(
+        `Failed to copy to clipboard: ${error.message}`,
+        { console: true },
+        "error"
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Show success notification
+   * @param {string} message - Message to display
+   */
+  static showSuccess(message) {
+    // Use VRCX's notification system if available
+    if (window.$app?.playNoty) {
+      window.$app.playNoty({
+        message,
+        type: "success",
+      });
+    } else {
+      console.log(`✓ ${message}`);
+    }
+  }
+
+  /**
+   * Show error notification
+   * @param {string} message - Message to display
+   */
+  static showError(message) {
+    // Use VRCX's notification system if available
+    if (window.$app?.playNoty) {
+      window.$app.playNoty({
+        message,
+        type: "error",
+      });
+    } else {
+      console.error(`✗ ${message}`);
+    }
+  }
+
+  /**
+   * Show info notification
+   * @param {string} message - Message to display
+   */
+  static showInfo(message) {
+    // Use VRCX's notification system if available
+    if (window.$app?.playNoty) {
+      window.$app.playNoty({
+        message,
+        type: "info",
+      });
+    } else {
+      console.log(`ℹ ${message}`);
+    }
   }
 }
 
