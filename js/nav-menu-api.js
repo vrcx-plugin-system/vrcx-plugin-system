@@ -25,6 +25,13 @@ class NavMenuAPI {
     // Wait for nav menu and content area to be available
     this.waitForNavMenu();
     this.setupContentArea();
+
+    // Register login hook to setup watcher after login
+    window.on_login(() => this.on_login());
+  }
+
+  on_login() {
+    console.log("[NavMenu] on_login called, setting up menu watcher");
     this.watchMenuChanges();
   }
 
@@ -45,10 +52,9 @@ class NavMenuAPI {
   }
 
   watchMenuChanges() {
-    // Watch for active menu changes to show/hide content
-    setTimeout(() => {
-      if (window.$app && typeof window.$app.$watch === "function") {
-        console.log("[NavMenu] Setting up menu watcher");
+    if (window.$app && typeof window.$app.$watch === "function") {
+      console.log("[NavMenu] Setting up menu watcher");
+      try {
         window.$app.$watch(
           () => window.$pinia?.ui?.menuActiveIndex,
           (activeIndex) => {
@@ -57,12 +63,16 @@ class NavMenuAPI {
           },
           { immediate: true } // Call immediately with current value
         );
-      } else {
-        console.warn(
-          "[NavMenu] $watch not available, content visibility won't work"
-        );
+        console.log("[NavMenu] Watcher setup complete");
+      } catch (error) {
+        console.error("[NavMenu] Error setting up watcher:", error);
       }
-    }, 1000);
+    } else {
+      console.error("[NavMenu] $watch not available even after login!", {
+        hasApp: !!window.$app,
+        watchType: typeof window.$app?.$watch,
+      });
+    }
   }
 
   updateContentVisibility(activeIndex) {
