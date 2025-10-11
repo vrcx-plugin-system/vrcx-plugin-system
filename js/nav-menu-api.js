@@ -52,27 +52,35 @@ class NavMenuAPI {
   }
 
   watchMenuChanges() {
-    if (window.$app && typeof window.$app.$watch === "function") {
-      console.log("[NavMenu] Setting up menu watcher");
-      try {
-        window.$app.$watch(
-          () => window.$pinia?.ui?.menuActiveIndex,
-          (activeIndex) => {
-            console.log(`[NavMenu] Menu changed to: ${activeIndex}`);
-            this.updateContentVisibility(activeIndex);
-          },
-          { immediate: true } // Call immediately with current value
+    const setupWatch = () => {
+      if (window.$app && typeof window.$app.$watch === "function") {
+        console.log("[NavMenu] Setting up menu watcher");
+        try {
+          window.$app.$watch(
+            () => window.$pinia?.ui?.menuActiveIndex,
+            (activeIndex) => {
+              console.log(`[NavMenu] Menu changed to: ${activeIndex}`);
+              this.updateContentVisibility(activeIndex);
+            },
+            { immediate: true } // Call immediately with current value
+          );
+          console.log("[NavMenu] Watcher setup complete");
+        } catch (error) {
+          console.error("[NavMenu] Error setting up watcher:", error);
+        }
+      } else {
+        console.log(
+          "[NavMenu] $watch not available yet, retrying in 500ms...",
+          {
+            hasApp: !!window.$app,
+            watchType: typeof window.$app?.$watch,
+          }
         );
-        console.log("[NavMenu] Watcher setup complete");
-      } catch (error) {
-        console.error("[NavMenu] Error setting up watcher:", error);
+        setTimeout(setupWatch, 500);
       }
-    } else {
-      console.error("[NavMenu] $watch not available even after login!", {
-        hasApp: !!window.$app,
-        watchType: typeof window.$app?.$watch,
-      });
-    }
+    };
+
+    setupWatch();
   }
 
   updateContentVisibility(activeIndex) {
