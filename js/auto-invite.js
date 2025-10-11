@@ -7,8 +7,8 @@ class AutoInviteManager {
     name: "Auto Invite Module",
     description: "Automatic user invitation system with location tracking",
     author: "Bluscream",
-    version: "1.0.0",
-    build: "{build:auto-invite.js}",
+    version: "{VERSION}",
+    build: "{BUILD}",
     dependencies: [
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu.js",

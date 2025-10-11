@@ -7,8 +7,8 @@ class CustomTagManager {
     name: "Tag Manager Module",
     description: "Custom user tags management with URL-based loading",
     author: "Bluscream",
-    version: "1.0.0",
-    build: "{build:tag-manager.js}",
+    version: "{VERSION}",
+    build: "{BUILD}",
     dependencies: [
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",

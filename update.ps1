@@ -61,59 +61,41 @@ function Convert-BuildTimestamps {
         [string]$FilePath
     )
     
-    # Replace {VERSION} with git commit count
+    # Extract filename from FilePath for determining git path
+    $fileName = Split-Path $FilePath -Leaf
+    $isInJsDir = $FilePath -match '[\\/]js[\\/]'
+    
+    # Determine the relative git path for this file
+    $gitPath = if ($isInJsDir) { "js/$fileName" } else { $fileName }
+    
+    # Replace {VERSION} with commit count for this specific file
     if ($Content -match '\{VERSION\}') {
-        $commitCount = Get-GitCommitCount
-        $Content = $Content -replace '\{VERSION\}', $commitCount
-        Write-Host "  Replaced {VERSION} with $commitCount (total commits)" -ForegroundColor Cyan
+        try {
+            $commitCount = git rev-list --count HEAD -- $gitPath 2>$null
+            if ($LASTEXITCODE -eq 0 -and $commitCount) {
+                $commitCount = $commitCount.Trim()
+                $Content = $Content -replace '\{VERSION\}', $commitCount
+                Write-Host "  Replaced {VERSION} with $commitCount commits for $gitPath" -ForegroundColor Cyan
+            }
+            else {
+                Write-Host "  Warning: Could not get commit count for $gitPath" -ForegroundColor Yellow
+                $Content = $Content -replace '\{VERSION\}', "0"
+            }
+        }
+        catch {
+            Write-Host "  Warning: Error getting commit count for $gitPath" -ForegroundColor Yellow
+            $Content = $Content -replace '\{VERSION\}', "0"
+        }
     }
     
-    # Replace {BUILD} (without filename) with current file's timestamp
-    if ($Content -match '\{BUILD\}' -and -not ($Content -match '\{BUILD:[^}]+\}')) {
+    # Replace {BUILD} with file's last modification timestamp
+    if ($Content -match '\{BUILD\}') {
         $lastWrite = (Get-Item $FilePath).LastWriteTime
         $unixEpoch = [DateTime]::new(1970, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
         $unixTimestamp = [Math]::Floor(($lastWrite.ToUniversalTime() - $unixEpoch).TotalSeconds)
         
         $Content = $Content -replace '\{BUILD\}', $unixTimestamp
         Write-Host "  Replaced {BUILD} with $unixTimestamp ($lastWrite)" -ForegroundColor Cyan
-    }
-    
-    # Find all {build:filename.js} patterns and replace with Unix timestamp of that file's modification time
-    $pattern = '\{build:([^}]+)\}'
-    $buildMatches = [regex]::Matches($Content, $pattern)
-    
-    foreach ($match in $buildMatches) {
-        $fullMatch = $match.Value  # e.g., "{build:custom.js}"
-        $fileName = $match.Groups[1].Value  # e.g., "custom.js"
-        
-        # Determine the file path to check
-        $fileToCheck = $null
-        if ($fileName -eq "custom.js") {
-            $fileToCheck = Join-Path $SourceDir $fileName
-        }
-        else {
-            # Check if it's in the js subdirectory
-            $jsFilePath = Join-Path $SourceDir "js\$fileName"
-            if (Test-Path $jsFilePath) {
-                $fileToCheck = $jsFilePath
-            }
-            else {
-                $fileToCheck = Join-Path $SourceDir $fileName
-            }
-        }
-        
-        if (Test-Path $fileToCheck) {
-            # Get the file's last write time and convert to Unix timestamp
-            $lastWrite = (Get-Item $fileToCheck).LastWriteTime
-            $unixEpoch = [DateTime]::new(1970, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
-            $unixTimestamp = [Math]::Floor(($lastWrite.ToUniversalTime() - $unixEpoch).TotalSeconds)
-            
-            $Content = $Content -replace [regex]::Escape($fullMatch), $unixTimestamp
-            Write-Host "  Replaced $fullMatch with $unixTimestamp ($lastWrite)" -ForegroundColor Cyan
-        }
-        else {
-            Write-Host "  Warning: File $fileName not found for build timestamp" -ForegroundColor Yellow
-        }
     }
     
     return $Content
