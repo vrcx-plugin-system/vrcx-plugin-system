@@ -436,31 +436,16 @@ class DebugPlugin {
       return observer;
     };
 
-    // Dump entire page HTML to clipboard and return it
+    // Dump entire page HTML to clipboard and console
     window.debugDumpHTML = async () => {
       const html = document.documentElement.outerHTML;
-
-      console.log("=".repeat(80));
-      console.log("FULL PAGE HTML DUMP");
-      console.log(`Total length: ${html.length.toLocaleString()} characters`);
-      console.log("=".repeat(80));
+      console.log(
+        `FULL PAGE HTML DUMP )${html.length.toLocaleString()} characters)`
+      );
+      console.log(html);
 
       // Copy to clipboard using Utils
-      const success = await Utils.copyToClipboard(html, "Page HTML");
-
-      if (success) {
-        console.log("✓ HTML copied to clipboard - paste it into a text editor");
-        console.log(
-          "Tip: The returned value below is the full HTML (click the arrow to expand)"
-        );
-      } else {
-        console.log("✗ Failed to copy to clipboard");
-        console.log(
-          "Check the returned value below for the HTML (click arrow to expand)"
-        );
-      }
-
-      console.log("=".repeat(80));
+      await Utils.copyToClipboard(html, "Page HTML");
 
       // Return the HTML so user can access it via the console's return value
       return html;
