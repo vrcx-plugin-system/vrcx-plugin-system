@@ -7,8 +7,8 @@ class NavMenuAPI {
     name: "Navigation Menu API",
     description: "API for adding custom navigation menu items to VRCX",
     author: "Bluscream",
-    version: "1.1.0",
-    build: "1760222919",
+    version: "1.2.0",
+    build: "{BUILD}",
     dependencies: [],
   };
 

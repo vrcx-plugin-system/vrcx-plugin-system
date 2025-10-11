@@ -1,20 +1,44 @@
 # VRCX Custom Modules
 
-A comprehensive modular JavaScript system for VRCX that provides enhanced functionality through dynamically loaded modules. The system features automatic module loading from GitHub, self-initializing components, and a clean global namespace architecture.
+> **A comprehensive plugin system for VRCX with dynamic loading, lifecycle management, and visual UI.**
+
+A modular JavaScript framework that extends VRCX with powerful features including custom navigation tabs, plugin management UI, context menu enhancements, user tagging, bio automation, and comprehensive debugging tools. Built with modern JavaScript, Pinia integration, and Element Plus UI components.
+
+**🎯 Current Status:** Production Ready ✅ | **📦 Total Plugins:** 13 | **📊 Total Lines:** ~6000+
 
 ## 🚀 Features
 
-- **Modular Architecture**: Clean separation of concerns with individual feature modules
-- **GitHub-Based Loading**: Modules are automatically loaded from the GitHub repository
-- **Self-Initializing**: All modules register themselves automatically
-- **Base64 Support**: Automatic decoding of base64-encoded Steam credentials
-- **Custom Tags**: Load and manage user tags from external JSON sources
-- **Bio Automation**: Automatic bio updates with dynamic content
-- **Registry Management**: VRChat registry settings with event-based triggers
-- **Context Menus**: Enhanced context menu functionality
-- **Auto-Invite System**: Automatic user invitation management
-- **Instance Monitoring**: Real-time instance and player monitoring
-- **Debug Tools**: Comprehensive debugging and logging utilities
+### Core System
+
+- **🔧 Modular Architecture**: Clean separation of concerns with individual feature modules
+- **📡 GitHub-Based Loading**: Modules automatically loaded from GitHub repository with cache busting
+- **🔄 Dynamic Plugin Management**: Load, unload, reload plugins at runtime via console commands
+- **🎯 Lifecycle Hooks**: `on_startup()` and `on_login()` for proper initialization timing
+- **🌐 Global Namespace**: Clean `window.customjs.*` and `window.plugins.*` APIs
+- **🔐 Environment Variables**: Support for `{env:VARIABLE}` substitution
+- **📦 Base64 Support**: Automatic decoding of base64-encoded credentials
+
+### UI Extensions
+
+- **🎨 Navigation Menu API**: Add custom tabs to VRCX with automatic content management
+- **🎛️ Plugin Manager UI**: Beautiful dashboard for managing plugins with stats and actions
+- **📋 Context Menu API**: Add custom items to user/avatar/world/group dialogs
+- **🔗 Protocol Links**: Copy VRCX protocol links for easy sharing
+
+### Feature Plugins
+
+- **🏷️ Custom Tags**: Load and manage user tags from external JSON sources (supports 6000+ tags)
+- **📝 Bio Automation**: Automatic bio updates with dynamic placeholders and Steam integration
+- **⚙️ Registry Management**: VRChat registry settings with event-based triggers
+- **🤝 Auto-Invite System**: Location-based automatic user invitation management
+- **👁️ Instance Monitoring**: Real-time player tracking and invisible player detection
+- **🔔 Enhanced Notifications**: Custom notification handling and IPC integration
+
+### Development Tools
+
+- **🐛 Debug Plugin**: Comprehensive debugging with mutation observers, event hooks, and state logging
+- **📊 Utils Library**: Shared clipboard, notifications, time formatting, Steam API integration
+- **🔍 API Helpers**: Unified API wrappers with backup/restore functionality
 
 ## 📁 Project Structure
 
@@ -244,15 +268,43 @@ window.customjs.clearProcessedMenus; // Clear processed menus registry
 
 ## 📦 Installation
 
-1. **Copy `custom.js`** to your VRCX AppData directory
-2. **Configure `USER_CONFIG`** with your settings
-3. **Set environment variables** (optional):
+### Quick Start
+
+1. **Clone or download** this repository
+2. **Edit `vrcx-custom/custom.js`** and configure `USER_CONFIG` with your settings
+3. **Set environment variables** (optional but recommended):
    ```powershell
-   $env:STEAM_ID64 = "your_steam_id"
-   $env:STEAM_API_KEY = "your_api_key"
+   [System.Environment]::SetEnvironmentVariable("STEAM_ID64", "your_steam_id", "User")
+   [System.Environment]::SetEnvironmentVariable("STEAM_API_KEY", "your_api_key", "User")
    ```
-4. **Restart VRCX** - modules will be automatically loaded from GitHub
-5. **Check console** for loading status and any errors
+4. **Run the update script** to deploy:
+   ```powershell
+   cd vrcx-custom
+   .\update.ps1
+   ```
+5. **Restart VRCX** - modules will be automatically loaded from GitHub
+6. **Open DevTools** (if debug plugin enabled) or check logs at `%APPDATA%\VRCX\logs\`
+
+### What the Update Script Does
+
+- ✅ Commits and pushes changes to your GitHub repo
+- ✅ Replaces `{VERSION}` with git commit count per file
+- ✅ Replaces `{BUILD}` with file modification timestamp
+- ✅ Substitutes environment variables like `{env:STEAM_ID64}`
+- ✅ Clears old log files for fresh debugging
+- ✅ Copies `custom.js` and `custom.css` to `%APPDATA%\VRCX\`
+
+### Manual Installation
+
+If you don't want to use the update script:
+
+1. Manually copy `custom.js` to `%APPDATA%\VRCX\custom.js`
+2. Manually replace placeholders:
+   - `{env:STEAM_ID64}` → your Steam ID
+   - `{env:STEAM_API_KEY}` → your Steam API key
+   - `{VERSION}` → any version string
+   - `{BUILD}` → any build string
+3. Restart VRCX
 
 ## 🔄 Updates
 
@@ -265,10 +317,12 @@ The system includes an automated update mechanism:
 
 The update script will:
 
-- Backup your current configuration
-- Download the latest modules from GitHub
-- Preserve your custom settings
-- Restart VRCX automatically
+- Switch to main branch and check for changes
+- Commit and push changes to GitHub
+- Process build timestamps (`{VERSION}` and `{BUILD}` placeholders)
+- Replace environment variables (`{env:VARIABLE}`)
+- Clear logs directory for fresh debugging
+- Copy `custom.js` and `custom.css` to AppData with all replacements applied
 
 ## 🐛 Debugging
 
@@ -281,13 +335,16 @@ Enable comprehensive debugging by uncommenting the debug module in `custom.js`:
 "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/debug.js",
 ```
 
-When enabled, the debug plugin will automatically log:
+When enabled, the debug plugin will:
 
-- ✓ All dialog additions/removals (user, avatar, world, group)
-- ✓ All dropdown menu visibility changes
-- ✓ Button clicks on dialogs and links
-- ✓ Pinia store state changes (dialog visibility, location)
-- ✓ All logs are saved to `%APPDATA%\VRCX\logs\VRCX*.log`
+- ✅ **Auto-open DevTools** on startup
+- ✅ **Log all dialog changes** (user, avatar, world, group)
+- ✅ **Monitor dropdown menus** with visibility tracking
+- ✅ **Track button clicks** on dialogs and links
+- ✅ **Watch Pinia stores** (dialog visibility, location changes)
+- ✅ **Log VRCX state** on startup and login
+- ✅ **Deduplicate logs** to prevent spam (500ms window)
+- ✅ **Save all logs** to `%APPDATA%\VRCX\logs\VRCX*.log`
 
 ### Plugin Management Commands
 
@@ -325,6 +382,12 @@ plugins.getPlugins();
 ```javascript
 // Inspect current VRCX state
 window.logVRCXState();
+
+// Dump entire page HTML to console + clipboard (v1.1.0+)
+await window.debugDumpHTML();
+// - Outputs raw HTML to console
+// - Copies to clipboard (with fallback for unfocused documents)
+// - Returns HTML as function result
 
 // Find elements in DOM
 window.debugFindElements(".x-dialog");
@@ -471,14 +534,82 @@ window.customjs.navMenu.clearAllItems();
 
 ### Plugin Manager UI
 
-The Plugin Manager UI adds a "Plugins" menu item to the navigation bar. Click it to:
+The Plugin Manager UI adds a "Plugins" menu item with a beautiful, comprehensive management interface:
 
-- View all loaded and failed plugins
-- Reload individual plugins
-- Reload all plugins at once
-- Unload plugins
-- Retry failed plugins
-- See active module instances
+**✨ Features (v1.2.0):**
+
+- 📊 **Dashboard** - Visual stat cards showing loaded, active, and failed plugin counts
+- 🔌 **Load from URL** - Input field to dynamically load new plugins (supports Enter key)
+- 📦 **Enhanced Cards** - Show plugin version, build, author, description, dependencies
+- 🎨 **Status Badges** - Color-coded indicators (green=loaded, red=failed)
+- ⚡ **Quick Actions** - Individual Reload, Start, Stop, Unload buttons per plugin
+- 🔍 **Module Inspector** - Click module instances to view full details in console
+- 📋 **Copy URLs** - Click any plugin URL to copy to clipboard
+- 🎯 **Hover Effects** - Interactive cards with smooth transitions and highlights
+
+**Interface sections:**
+
+1. Summary dashboard with gradient stat cards (green/blue/red)
+2. Load plugin section with URL input and validation
+3. Loaded plugins with full metadata and 4 action buttons each
+4. Failed plugins section with retry capability
+5. Active module instances grid (clickable for console inspection)
+
+### Context Menu API
+
+Add custom items to user, avatar, world, and group dialog context menus:
+
+```javascript
+// Add item to user dialog context menu
+window.customjs.contextMenu.addUserItem("my-action", {
+  text: "My Action",
+  icon: "el-icon-star",
+  onClick: (userData) => {
+    console.log("User:", userData);
+    // userData contains full user object from dialog
+  },
+});
+
+// Add item to avatar dialog context menu
+window.customjs.contextMenu.addAvatarItem("my-avatar-action", {
+  text: "Avatar Action",
+  icon: "el-icon-picture",
+  onClick: (avatarData) => {
+    console.log("Avatar:", avatarData);
+  },
+});
+
+// Add item to world dialog context menu
+window.customjs.contextMenu.addWorldItem("my-world-action", {
+  text: "World Action",
+  icon: "el-icon-map-location",
+  onClick: (worldData) => {
+    console.log("World:", worldData);
+  },
+});
+
+// Add item to group dialog context menu
+window.customjs.contextMenu.addGroupItem("my-group-action", {
+  text: "Group Action",
+  icon: "el-icon-user",
+  onClick: (groupData) => {
+    console.log("Group:", groupData);
+  },
+});
+
+// Remove context menu items
+window.customjs.contextMenu.removeUserItem("my-action");
+window.customjs.contextMenu.removeAvatarItem("my-avatar-action");
+window.customjs.contextMenu.removeWorldItem("my-world-action");
+window.customjs.contextMenu.removeGroupItem("my-group-action");
+```
+
+**How it works:**
+
+- Uses MutationObserver to detect Element Plus dropdown menus
+- Watches for both `childList` and `attributes` changes (style, aria-hidden)
+- Identifies dialog type via z-index sorting and `aria-controls` button lookup
+- 100% reliable detection for all dialog types
 
 ### Tag Manager
 
@@ -527,6 +658,24 @@ For issues and support:
 
 ---
 
-**Version**: 2.0  
+**Version**: 1.5.0  
 **Author**: Bluscream  
-**Last Updated**: 2024
+**Last Updated**: October 11, 2025
+
+## 🎉 Recent Updates
+
+### v1.5.0 (October 11, 2025)
+
+- **Navigation Menu API**: Automatic tab content management with Pinia integration
+- **Plugin Manager UI**: Complete redesign with dashboard, enhanced cards, and module inspector
+- **Utils Module**: Added clipboard, notification helpers used across all plugins
+- **Debug Plugin**: Added `debugDumpHTML()` command and auto-open DevTools
+- **Nav Menu API**: Fixed content visibility using Pinia `$subscribe` instead of Vue `$watch`
+- **Update Script**: Now clears logs directory and processes `{VERSION}`/`{BUILD}` placeholders
+
+### v1.4.1 (October 11, 2025)
+
+- **Context Menu API**: Fixed avatar/world dialog detection with z-index sorting and attribute observers
+- **Tag Manager**: Fixed custom tags lookup and friends array iteration
+- **Steam API**: Fixed playtime endpoint to use correct API version
+- **Lifecycle System**: Implemented `on_startup()` and `on_login()` hooks for all plugins
