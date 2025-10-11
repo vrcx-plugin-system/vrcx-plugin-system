@@ -17,16 +17,41 @@ class CustomTagManager {
   constructor() {
     this.loadedTags = new Map(); // Map of URL -> Set of tag objects
     this.updateInterval = null;
-    this.init();
+    this.on_startup();
   }
 
-  init() {
-    // Start the tag loading process
+  on_startup() {
+    // Runs immediately when module loads (before login)
+    window.Logger?.log("Tag manager loaded (waiting for login)", { console: true }, "info");
+    
+    // Register the on_login hook
+    if (window.on_login) {
+      window.on_login(() => this.on_login());
+    } else {
+      // Fallback: wait for lifecycle manager to be ready
+      const waitForLifecycle = () => {
+        if (window.on_login) {
+          window.on_login(() => this.on_login());
+        } else {
+          setTimeout(waitForLifecycle, 500);
+        }
+      };
+      setTimeout(waitForLifecycle, 500);
+    }
+  }
+
+  on_login() {
+    // Runs after successful VRChat login - load tags now
+    const tagConfig = window.customjs?.config?.tags;
+    const initialDelay = tagConfig?.initialDelay || 5000;
+    
+    window.Logger?.log("Tag manager initialized (user logged in)", { console: true }, "success");
+    
     setTimeout(async () => {
       await this.loadAllTags();
       this.startPeriodicUpdates();
 
-      // Log startup message if Utils and Logger are available
+      // Log startup message
       try {
         const timestamp = window.Utils?.getTimestamp
           ? window.Utils.getTimestamp()
@@ -37,7 +62,7 @@ class CustomTagManager {
       } catch (error) {
         console.log("VRCX-Utils started at", new Date().toISOString());
       }
-    }, window.customjs?.config?.tags?.initialDelay || 5000);
+    }, initialDelay);
   }
 
   async loadAllTags() {

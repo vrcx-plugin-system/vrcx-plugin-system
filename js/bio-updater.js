@@ -17,34 +17,49 @@ class BioUpdater {
   };
   constructor() {
     this.updateInterval = null;
-    this.init();
+    this.on_startup();
   }
 
-  init() {
-    // Wait for cmake sureonfig to be available
-    const checkConfig = () => {
-      if (window.CONFIG && window.CONFIG.bio) {
-        window.Logger?.log(
-          "Bio updater initialized",
-          { console: true },
-          "info"
-        );
-        window.Logger?.log(
-          `Bio template: ${window.CONFIG.bio.template}`,
-          { console: true },
-          "info"
-        );
-        this.updateInterval = setInterval(async () => {
-          await this.updateBio();
-        }, window.CONFIG.bio.updateInterval);
-        setTimeout(async () => {
-          await this.updateBio();
-        }, window.CONFIG.bio.initialDelay);
-      } else {
-        setTimeout(checkConfig, 100);
-      }
-    };
-    checkConfig();
+  on_startup() {
+    // Runs immediately when module loads (before login)
+    window.Logger?.log("Bio updater loaded (waiting for login)", { console: true }, "info");
+    
+    // Register the on_login hook
+    if (window.on_login) {
+      window.on_login(() => this.on_login());
+    } else {
+      // Fallback: wait for lifecycle manager to be ready
+      const waitForLifecycle = () => {
+        if (window.on_login) {
+          window.on_login(() => this.on_login());
+        } else {
+          setTimeout(waitForLifecycle, 500);
+        }
+      };
+      setTimeout(waitForLifecycle, 500);
+    }
+  }
+
+  on_login() {
+    // Runs after successful VRChat login
+    const config = window.CONFIG || window.customjs?.config;
+    if (!config || !config.bio) {
+      window.Logger?.log("Bio config not available", { console: true }, "warning");
+      return;
+    }
+    
+    window.Logger?.log("Bio updater initialized (user logged in)", { console: true }, "success");
+    window.Logger?.log(`Bio template: ${config.bio.template}`, { console: true }, "info");
+    
+    // Start periodic updates
+    this.updateInterval = setInterval(async () => {
+      await this.updateBio();
+    }, config.bio.updateInterval);
+    
+    // Do initial update after delay
+    setTimeout(async () => {
+      await this.updateBio();
+    }, config.bio.initialDelay);
   }
 
   async updateBio() {
