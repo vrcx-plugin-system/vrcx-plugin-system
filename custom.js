@@ -70,14 +70,23 @@ Oculus ID: {oculusId}`,
  * on_startup() - Called immediately when the module loads (before login)
  *   Use for: Setting up overrides, UI modifications, event listeners
  *   Examples: context-menu, protocol-links, managers
+ *   Signature: () => void
  *
- * on_login() - Called after successful VRChat login
+ * on_login(currentUser) - Called after successful VRChat login
  *   Use for: Loading user data, API calls requiring authentication
  *   Examples: bio-updater, tag-manager
+ *   Signature: (currentUser) => void
+ *   Parameters:
+ *     - currentUser: The logged-in user object from window.$pinia.user.currentUser
  *
  * Usage in your module:
- *   window.on_startup(() => { ... });
- *   window.on_login(() => { ... });
+ *   window.on_startup(() => {
+ *       console.log('Module starting...');
+ *   });
+ *
+ *   window.on_login((currentUser) => {
+ *       console.log(`User ${currentUser.displayName} logged in!`);
+ *   });
  */
 
 // Configuration for module loading
@@ -114,9 +123,10 @@ class LifecycleManager {
 
   onLogin(callback) {
     if (this.isLoggedIn && this.hasTriggeredLogin) {
-      // Already logged in, execute immediately
+      // Already logged in, execute immediately with current user
       try {
-        callback();
+        const currentUser = window.$pinia?.user?.currentUser;
+        callback(currentUser);
       } catch (error) {
         console.error("Error in login callback:", error);
       }
@@ -136,16 +146,19 @@ class LifecycleManager {
     }
   }
 
-  triggerLogin() {
+  triggerLogin(currentUser) {
     if (this.hasTriggeredLogin) return; // Only trigger once
 
     console.log("Triggering login hooks...");
     this.hasTriggeredLogin = true;
     this.isLoggedIn = true;
 
+    // Get current user if not provided
+    const user = currentUser || window.$pinia?.user?.currentUser;
+
     for (const callback of this.loginCallbacks) {
       try {
-        callback();
+        callback(user);
       } catch (error) {
         console.error("Error in login callback:", error);
       }
@@ -153,43 +166,45 @@ class LifecycleManager {
   }
 
   startLoginMonitoring() {
-    // Check if already logged in (e.g., on reload)
-    const checkIfAlreadyLoggedIn = () => {
-      const currentUser = window.$pinia?.user?.currentUser;
-      if (currentUser && currentUser.id && !this.hasTriggeredLogin) {
-        console.log("User already logged in on plugin startup");
-        this.triggerLogin();
-        return true;
-      }
-      return false;
-    };
+    // Delay setup to ensure $app is fully initialized
+    setTimeout(() => {
+      const setupWatch = () => {
+        // Try to use Vue's watch API for reactive login detection
+        if (window.$app && typeof window.$app.$watch === "function") {
+          console.log("Using Vue watch API for login detection");
 
-    // Try to use Vue's watch API for reactive login detection
-    if (window.$app && typeof window.$app.$watch === "function") {
-      console.log("Using Vue watch API for login detection");
+          // Watch for currentUser changes (indicates login/logout)
+          window.$app.$watch(
+            () => window.$pinia?.user?.currentUser,
+            (currentUser) => {
+              if (currentUser && currentUser.id && !this.hasTriggeredLogin) {
+                console.log(
+                  `Login detected: ${currentUser.displayName} (${currentUser.id})`
+                );
+                this.triggerLogin(currentUser);
+              }
+            },
+            { immediate: true } // Check immediately in case already logged in
+          );
+        } else {
+          // Fallback to polling if watch API not available
+          console.warn("Vue watch API not available, using polling (fallback)");
+          const checkLogin = () => {
+            const currentUser = window.$pinia?.user?.currentUser;
+            if (currentUser && currentUser.id && !this.hasTriggeredLogin) {
+              console.log("User already logged in on plugin startup");
+              this.triggerLogin(currentUser);
+            } else {
+              setTimeout(checkLogin, 500);
+            }
+          };
 
-      // Watch for currentUser changes (indicates login/logout)
-      window.$app.$watch(
-        () => window.$pinia?.user?.currentUser,
-        (currentUser) => {
-          if (currentUser && currentUser.id && !this.hasTriggeredLogin) {
-            console.log("Login detected via Vue watch");
-            this.triggerLogin();
-          }
-        },
-        { immediate: true } // Check immediately in case already logged in
-      );
-    } else {
-      // Fallback to polling if watch API not available
-      console.warn("Vue watch API not available, using polling (fallback)");
-      const checkLogin = () => {
-        if (!checkIfAlreadyLoggedIn()) {
           setTimeout(checkLogin, 500);
         }
       };
 
-      setTimeout(checkLogin, 1000); // Start checking after 1 second
-    }
+      setupWatch();
+    }, 100); // Small delay to ensure $app is ready
   }
 }
 

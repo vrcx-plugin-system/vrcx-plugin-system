@@ -22,31 +22,29 @@ class CustomTagManager {
 
   on_startup() {
     // Runs immediately when module loads (before login)
-    window.Logger?.log("Tag manager loaded (waiting for login)", { console: true }, "info");
-    
-    // Register the on_login hook
-    if (window.on_login) {
-      window.on_login(() => this.on_login());
-    } else {
-      // Fallback: wait for lifecycle manager to be ready
-      const waitForLifecycle = () => {
-        if (window.on_login) {
-          window.on_login(() => this.on_login());
-        } else {
-          setTimeout(waitForLifecycle, 500);
-        }
-      };
-      setTimeout(waitForLifecycle, 500);
-    }
+    window.Logger?.log(
+      "Tag manager loaded (waiting for login)",
+      { console: true },
+      "info"
+    );
+
+    // Register the on_login hook (lifecycle manager is guaranteed to be ready)
+    window.on_login((currentUser) => this.on_login(currentUser));
   }
 
-  on_login() {
-    // Runs after successful VRChat login - load tags now
+  on_login(currentUser) {
+    // Runs after successful VRChat login - load tags now (receives currentUser object)
     const tagConfig = window.customjs?.config?.tags;
     const initialDelay = tagConfig?.initialDelay || 5000;
-    
-    window.Logger?.log("Tag manager initialized (user logged in)", { console: true }, "success");
-    
+
+    window.Logger?.log(
+      `Tag manager initialized for user: ${
+        currentUser?.displayName || "Unknown"
+      }`,
+      { console: true },
+      "success"
+    );
+
     setTimeout(async () => {
       await this.loadAllTags();
       this.startPeriodicUpdates();
@@ -355,48 +353,35 @@ class CustomTagManager {
       const moderations = Array.from(
         window.$pinia?.moderation?.cachedPlayerModerations?.values() || []
       );
-      const blockedPlayers = moderations.filter(
-        (item) => item.type === "block"
-      );
       window.Logger?.log(
-        `Checking ${blockedPlayers.length} blocked players for tags...`,
+        `Checking ${moderations.length} moderated players for tags...`,
         { console: true },
         "info"
       );
 
       let taggedBlockedCount = 0;
-      for (const blocked of blockedPlayers) {
-        const blockedTag = this.getUserTag(blocked.targetUserId);
-        if (blockedTag) {
+      for (const moderated of moderations) {
+        const moderatedTag = this.getUserTag(moderated.targetUserId);
+        if (moderatedTag) {
           taggedBlockedCount++;
           window.Logger?.log(
-            `🚫 Blocked: ${blocked.targetDisplayName} (${blocked.targetUserId}) - Tag: ${blockedTag.tag}`,
+            `🚫 Moderated: ${moderated.targetDisplayName} (${moderated.targetUserId}) - Tag: ${moderatedTag.tag}`,
             { console: true },
             "info"
           );
         }
       }
 
-      // Summary
-      window.Logger?.log("=== Tag Summary ===", { console: true }, "info");
+      // Summary - Single line format
+      const totalTagged = taggedFriendsCount + taggedBlockedCount;
       window.Logger?.log(
-        `Tagged Friends: ${taggedFriendsCount}/${friends.length}`,
+        `${totalTagged} Tagged Users > Friends: ${taggedFriendsCount}/${friends.length} | Moderated: ${taggedBlockedCount}/${blockedPlayers.length}`,
         { console: true },
-        "info"
-      );
-      window.Logger?.log(
-        `Tagged Blocked: ${taggedBlockedCount}/${blockedPlayers.length}`,
-        { console: true },
-        "info"
-      );
-      window.Logger?.log(
-        `Total Tagged Users: ${taggedFriendsCount + taggedBlockedCount}`,
-        { console: true },
-        "info"
+        "success"
       );
     } catch (error) {
       window.Logger?.log(
-        `Error checking friends and blocked players for tags: ${error.message}`,
+        `Error checking friends and moderated players for tags: ${error.message}`,
         { console: true },
         "error"
       );
