@@ -8,13 +8,15 @@ class DebugPlugin {
     description:
       "Comprehensive debugging plugin with mutation observers, event hooks, and logging",
     author: "Bluscream",
-    version: "1.0.2",
-    build: "1760221370",
+    version: "1.0.3",
+    build: "1760221585",
     dependencies: [],
   };
 
   constructor() {
     this.observers = [];
+    this.recentLogs = new Map(); // For deduplication: key -> timestamp
+    this.dedupeTimeout = 500; // ms - don't log same thing within this timeframe
     this.on_startup();
   }
 
@@ -27,12 +29,12 @@ class DebugPlugin {
     this.setupPiniaWatchers();
     this.exposeDebugMethods();
     console.log("[Debug] Debug plugin initialized - monitoring started");
-    
+
     // Log initial state
     setTimeout(() => {
       this.logVRCXState("on_startup");
     }, 1000);
-    
+
     // Setup login hook
     window.on_login((currentUser) => this.on_login(currentUser));
   }
@@ -42,7 +44,7 @@ class DebugPlugin {
       userId: currentUser?.id,
       friendCount: currentUser?.friends?.length,
     });
-    
+
     // Log state after login
     setTimeout(() => {
       this.logVRCXState("on_login");
@@ -88,6 +90,27 @@ class DebugPlugin {
   }
 
   log(category, message, data = null) {
+    // Deduplication: prevent logging the same thing multiple times in quick succession
+    const logKey = `${category}:${message}:${JSON.stringify(data)}`;
+    const now = Date.now();
+    const lastLogged = this.recentLogs.get(logKey);
+
+    if (lastLogged && now - lastLogged < this.dedupeTimeout) {
+      return; // Skip duplicate log
+    }
+
+    this.recentLogs.set(logKey, now);
+
+    // Clean up old entries periodically
+    if (this.recentLogs.size > 100) {
+      const cutoff = now - this.dedupeTimeout;
+      for (const [key, timestamp] of this.recentLogs.entries()) {
+        if (timestamp < cutoff) {
+          this.recentLogs.delete(key);
+        }
+      }
+    }
+
     const dataStr = data ? ` | ${JSON.stringify(data)}` : "";
     console.log(`[Debug:${category}] ${message}${dataStr}`);
   }
