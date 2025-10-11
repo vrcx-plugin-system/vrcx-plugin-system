@@ -8,8 +8,8 @@ class CustomContextMenu {
     name: "Context Menu Module",
     description: "Custom context menu management for VRCX dialogs",
     author: "Bluscream",
-     version: "1.4.0",
-     build: "1760220194",
+    version: "1.4.1",
+    build: "1760220444",
     dependencies: [],
   };
   constructor() {
@@ -31,43 +31,39 @@ class CustomContextMenu {
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
         // Handle attribute changes (style, aria-hidden, etc.)
-        if (mutation.type === 'attributes' && mutation.target) {
+        if (mutation.type === "attributes" && mutation.target) {
           const node = mutation.target;
-          
+
           // Check if this is an el-popper dropdown becoming visible
-          if (node.classList && node.classList.contains('el-dropdown__popper')) {
-            const isVisible = node.style.display !== 'none' && node.getAttribute('aria-hidden') !== 'true';
-            
+          if (
+            node.classList &&
+            node.classList.contains("el-dropdown__popper")
+          ) {
+            const isVisible =
+              node.style.display !== "none" &&
+              node.getAttribute("aria-hidden") !== "true";
+
             if (isVisible) {
               // Find the dropdown menu inside this popper
-              const menuContainer = node.querySelector('.el-dropdown-menu');
+              const menuContainer = node.querySelector(".el-dropdown-menu");
               if (menuContainer && menuContainer.id) {
                 const menuId = menuContainer.id;
-                
+
                 // Skip if already processed
                 if (this.processedMenus.has(menuId)) {
                   return;
                 }
-                
+
                 // Detect and process the menu
                 const menuType = this.detectMenuType(menuContainer);
                 if (menuType && this.items.get(menuType).size > 0) {
-                  window.Logger?.log(
-                    `Menu became visible: ${JSON.stringify({
-                      menuId,
-                      menuType,
-                      hasItems: this.items.get(menuType).size,
-                    })}`,
-                    { console: true },
-                    "info"
-                  );
                   this.debouncedMenuDetection(menuId, menuType, menuContainer);
                 }
               }
             }
           }
         }
-        
+
         // Handle added nodes
         if (mutation.addedNodes.length) {
           mutation.addedNodes.forEach((node) => {
@@ -100,20 +96,6 @@ class CustomContextMenu {
 
               // Determine menu type and process if we have items for it
               const menuType = this.detectMenuType(menuContainer);
-              const dialogElement = menuContainer?.closest(".x-dialog");
-              window.Logger?.log(
-                `Menu Detection: ${JSON.stringify({
-                  menuId: menuId,
-                  menuType: menuType,
-                  hasItems: menuType ? this.items.get(menuType).size : 0,
-                  nodeClasses: node.classList.toString(),
-                  menuContainerClasses: menuContainer?.classList?.toString(),
-                  hasDialogElement: !!dialogElement,
-                  dialogClasses: dialogElement?.classList?.toString(),
-                })}`,
-                { console: true },
-                "info"
-              );
               if (menuType && this.items.get(menuType).size > 0) {
                 this.debouncedMenuDetection(menuId, menuType, menuContainer);
               }
@@ -147,11 +129,6 @@ class CustomContextMenu {
                   }
                   this.processedMenus.delete(menuId);
                   this.menuContainers.delete(menuId);
-                  window.Logger?.log(
-                    `Cleaned up processed menu: ${menuId}`,
-                    { console: true },
-                    "info"
-                  );
                 }
               }
             }
@@ -164,7 +141,7 @@ class CustomContextMenu {
       childList: true,
       subtree: true,
       attributes: true, // Watch for attribute changes (style, class, etc.)
-      attributeFilter: ['style', 'aria-hidden', 'class'], // Only watch relevant attributes
+      attributeFilter: ["style", "aria-hidden", "class"], // Only watch relevant attributes
     });
   }
 
@@ -178,18 +155,6 @@ class CustomContextMenu {
     const timer = setTimeout(() => {
       // Double-check that the menu still exists and hasn't been processed
       if (!this.processedMenus.has(menuId) && document.contains(menuElement)) {
-        const dialogElement = menuElement?.closest(".x-dialog");
-        window.Logger?.log(
-          `Menu type ${menuType} detected for menu: ${JSON.stringify({
-            menuType: menuType,
-            hasMenuElement: !!menuElement,
-            hasDialogElement: !!dialogElement,
-            dialogClasses: dialogElement?.classList?.toString(),
-            menuId: menuId,
-          })}`,
-          { console: true },
-          "info"
-        );
         // Mark this menu as processed
         this.processedMenus.add(menuId);
         this.onMenuDetected(menuType, menuElement);
@@ -250,20 +215,9 @@ class CustomContextMenu {
             dialogType = "group";
 
           if (dialogType) {
-            console.log(
-              `[Context Menu] ${dialogType} dialog (z-index: ${containingDialogs[0].zIndex}) for menu ${menuId}`
-            );
             return dialogType;
           }
         }
-
-        console.warn(
-          `[Context Menu] Button found but no containing dialog for menu ${menuId}`
-        );
-      } else {
-        console.warn(
-          `[Context Menu] No button found with aria-controls="${menuId}"`
-        );
       }
     }
 
@@ -276,15 +230,10 @@ class CustomContextMenu {
       container: menuContainer,
     });
     this.renderItems(menuType, menuContainer);
-    window.Logger?.log(
-      `${menuType} context menu detected, items initialized: ${JSON.stringify({
-        menuType: menuType,
-        hasMenuContainer: !!menuContainer,
-        menuId: menuContainer?.id,
-        itemCount: this.items.get(menuType).size,
-      })}`,
-      { console: true },
-      "info"
+    console.log(
+      `[Context Menu] Initialized ${
+        this.items.get(menuType).size
+      } items for ${menuType} dialog`
     );
   }
 

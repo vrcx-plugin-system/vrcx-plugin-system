@@ -7,8 +7,8 @@ class AutoInviteManager {
     name: "Auto Invite Module",
     description: "Automatic user invitation system with location tracking",
     author: "Bluscream",
-    version: "1.0.0",
-    build: "1760216414",
+    version: "1.0.1",
+    build: "1760220507",
     dependencies: [
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu.js",
@@ -341,10 +341,6 @@ class AutoInviteManager {
           );
           worldName = "Unknown World";
         }
-
-        console.info(
-          `Inviting user ${userName} to "${worldName}" (${instanceId})`
-        );
         window.Logger?.log(
           `Inviting user ${userName} to "${worldName}" (${instanceId})`,
           { console: true },
@@ -437,10 +433,6 @@ class AutoInviteManager {
             );
             worldName = "Unknown World";
           }
-
-          console.info(
-            `Inviting user ${userName} to "${worldName}" (${instanceId})`
-          );
           window.Logger?.log(
             `Inviting user ${userName} to "${worldName}" (${instanceId})`,
             { console: true },
@@ -545,105 +537,6 @@ class AutoInviteManager {
   getAutoInviteUser() {
     return this.autoInviteUser;
   }
-
-  // Debug method to check if the menu item is properly registered
-  debugMenuStatus() {
-    const status = {
-      hasCustomMenu: !!this.customMenu,
-      hasAutoInviteItem: !!this.autoInviteItem,
-      userItemsCount: this.customMenu?.items?.get("user")?.size || 0,
-      hasUserItems: this.customMenu?.hasItem("user", "autoInvite") || false,
-      processedMenus: this.customMenu?.processedMenus?.size || 0,
-      menuContainers: this.customMenu?.menuContainers?.size || 0,
-      autoInviteUser: this.autoInviteUser?.displayName || "None",
-      lastInvitedTo: this.lastInvitedTo || "None",
-      lastJoined: this.lastJoined || "None",
-    };
-
-    console.log("Auto Invite Debug Status:", status);
-    window.Logger?.log(
-      `Auto Invite Debug: ${JSON.stringify(status)}`,
-      { console: true },
-      "info"
-    );
-
-    return status;
-  }
-
-  // Debug method to manually test location change
-  debugLocationChange(location, travelingTo) {
-    console.log(`Manual location change test: ${location} -> ${travelingTo}`);
-    this.onCurrentUserLocationChanged(location, travelingTo);
-  }
-
-  // Debug method to inspect VRCX structure
-  debugVRCXStructure() {
-    const structure = {
-      // Legacy structure
-      hasApp: !!window.$app,
-      hasAppData: !!window.$app?.data,
-      appDataKeys: window.$app?.data ? Object.keys(window.$app.data) : [],
-
-      // Pinia structure (current VRCX)
-      hasPinia: !!window.$pinia,
-      piniaKeys: window.$pinia ? Object.keys(window.$pinia) : [],
-      hasGameLogStore: !!window.$pinia?.gameLog,
-      hasLocationStore: !!window.$pinia?.location,
-
-      // Location store details
-      locationStoreKeys: window.$pinia?.location
-        ? Object.keys(window.$pinia.location)
-        : [],
-      currentLocation:
-        window.$pinia?.location?.lastLocation?.location || "unknown",
-      locationDestination:
-        window.$pinia?.location?.lastLocationDestination || "none",
-
-      // Game log store details
-      gameLogStoreKeys: window.$pinia?.gameLog
-        ? Object.keys(window.$pinia.gameLog)
-        : [],
-    };
-
-    console.log("VRCX Structure Debug:", structure);
-    window.Logger?.log(
-      `VRCX Structure: ${JSON.stringify(structure, null, 2)}`,
-      { console: true },
-      "info"
-    );
-
-    return structure;
-  }
-
-  // Method to manually trigger menu setup (for debugging)
-  reinitializeMenu() {
-    window.Logger?.log(
-      "Manually reinitializing Auto Invite menu...",
-      { console: true },
-      "info"
-    );
-    this.setupUserButton();
-    return this.debugMenuStatus();
-  }
-
-  // Cleanup method
-  cleanup() {
-    if (this.locationMonitorInterval) {
-      clearInterval(this.locationMonitorInterval);
-      this.locationMonitorInterval = null;
-    }
-
-    // Restore original functions (if any were hooked)
-    if (window.bak?.setCurrentUserLocation && $app?.setCurrentUserLocation) {
-      $app.setCurrentUserLocation = window.bak.setCurrentUserLocation;
-    }
-
-    window.Logger?.log(
-      "Auto Invite cleanup completed",
-      { console: true },
-      "info"
-    );
-  }
 }
 
 // Auto-initialize the module
@@ -657,31 +550,17 @@ class AutoInviteManager {
   // Also make AutoInviteManager available globally for backward compatibility
   window.AutoInviteManager = AutoInviteManager;
 
-  // Add debug functions to global scope for easy console access
-  window.debugAutoInvite = () =>
-    window.customjs.autoInviteManager.debugMenuStatus();
-  window.debugVRCXStructure = () =>
-    window.customjs.autoInviteManager.debugVRCXStructure();
-  window.reinitAutoInvite = () =>
-    window.customjs.autoInviteManager.reinitializeMenu();
-  window.testAutoInviteLocation = (location, travelingTo) =>
-    window.customjs.autoInviteManager.debugLocationChange(
-      location,
-      travelingTo
-    );
-  window.testAutoInviteDestination = (destination) =>
-    window.customjs.autoInviteManager.onLocationDestinationDetected(
-      destination
-    );
-  window.cleanupAutoInvite = () => window.customjs.autoInviteManager.cleanup();
+  // Expose utility functions for console testing
+  window.setAutoInviteUser = (userId) => {
+    const user = window.$pinia?.user?.cachedUsers?.get(userId);
+    if (user) {
+      window.customjs.autoInviteManager.setUser(user);
+    }
+  };
+  window.clearAutoInviteUser = () =>
+    window.customjs.autoInviteManager.clearUser();
 
   console.log(
     `✓ Loaded ${AutoInviteManager.SCRIPT.name} v${AutoInviteManager.SCRIPT.version} by ${AutoInviteManager.SCRIPT.author}`
   );
-
-  // Run initial debug check after a short delay
-  setTimeout(() => {
-    window.customjs.autoInviteManager.debugMenuStatus();
-    window.customjs.autoInviteManager.debugVRCXStructure();
-  }, 1000);
 })();

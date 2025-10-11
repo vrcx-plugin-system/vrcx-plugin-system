@@ -274,7 +274,6 @@ class ModuleLoader {
         setTimeout(() => {
           clearTimeout(timeout);
           this.loadedModules.add(modulePath);
-          // console.log(`✓ Loaded module: ${modulePath}`);
           resolve();
         }, 10);
       });
@@ -312,7 +311,6 @@ class ModuleLoader {
       // Each module will register itself in the window.customjs namespace
 
       console.log("custom.js END - All systems initialized");
-      console.log("Available modules:", Object.keys(window.customjs));
     } catch (error) {
       console.error("Error initializing systems:", error);
     }
