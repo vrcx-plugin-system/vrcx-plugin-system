@@ -8,8 +8,8 @@ class DebugPlugin {
     description:
       "Comprehensive debugging plugin with mutation observers, event hooks, and logging",
     author: "Bluscream",
-    version: "1.0.3",
-    build: "1760221585",
+    version: "1.1.0",
+    build: "1760223471",
     dependencies: [],
   };
 
@@ -434,7 +434,46 @@ class DebugPlugin {
       return observer;
     };
 
+    // Dump entire page HTML to console and clipboard
+    window.debugDumpHTML = async () => {
+      const html = document.documentElement.outerHTML;
+      const formatted = this.formatHTML(html);
+
+      console.log("=".repeat(80));
+      console.log("FULL PAGE HTML DUMP");
+      console.log("=".repeat(80));
+      console.log(formatted);
+      console.log("=".repeat(80));
+      console.log(`Total length: ${html.length} characters`);
+      console.log("=".repeat(80));
+
+      // Copy to clipboard
+      try {
+        await navigator.clipboard.writeText(html);
+        console.log("✓ HTML copied to clipboard");
+      } catch (error) {
+        console.error("✗ Failed to copy to clipboard:", error);
+        console.log("You can manually copy from the log above");
+      }
+
+      return html;
+    };
+
     this.log("Init", "Debug methods exposed to window object");
+  }
+
+  // Format HTML with basic indentation for readability
+  formatHTML(html) {
+    try {
+      // Basic formatting - add newlines after tags
+      return html
+        .replace(/></g, ">\n<")
+        .split("\n")
+        .map((line, index) => `${String(index + 1).padStart(6, " ")} | ${line}`)
+        .join("\n");
+    } catch (error) {
+      return html; // Return original if formatting fails
+    }
   }
 
   cleanup() {
@@ -463,6 +502,7 @@ class DebugPlugin {
   window.logVRCXState()                   - Log current VRCX state
   window.debugFindElements(selector)      - Find and log elements
   window.debugWatchElement(selector)      - Watch element mutations
+  window.debugDumpHTML()                  - Dump full page HTML to console + clipboard
   window.debugPlugin.cleanup()            - Stop all observers
   `);
 })();
