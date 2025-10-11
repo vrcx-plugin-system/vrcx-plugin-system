@@ -8,8 +8,8 @@ class CustomContextMenu {
     name: "Context Menu Module",
     description: "Custom context menu management for VRCX dialogs",
     author: "Bluscream",
-    version: "1.3.0",
-    build: "1760219132",
+    version: "1.3.1",
+    build: "1760219480",
     dependencies: [],
   };
   constructor() {
@@ -183,9 +183,11 @@ class CustomContextMenu {
 
         for (const dialog of allDialogs) {
           if (dialog.contains(button)) {
-            const zIndex =
-              parseInt(window.getComputedStyle(dialog.parentElement).zIndex) ||
-              0;
+            // The z-index is on the .el-overlay parent element
+            const overlay = dialog.closest(".el-overlay");
+            const zIndex = overlay
+              ? parseInt(window.getComputedStyle(overlay).zIndex) || 0
+              : 0;
             containingDialogs.push({ dialog, zIndex });
           }
         }
