@@ -8,8 +8,8 @@ class CustomContextMenu {
     name: "Context Menu Module",
     description: "Custom context menu management for VRCX dialogs",
     author: "Bluscream",
-    version: "1.1.0",
-    build: "1760217655",
+    version: "1.1.1",
+    build: "1760217885",
     dependencies: [],
   };
   constructor() {
@@ -29,9 +29,10 @@ class CustomContextMenu {
       this.items.set(menuType, new Map());
     });
 
-    // Listen for button clicks to capture dialog context BEFORE menu appears
+    // Listen for mousedown to capture dialog context BEFORE menu appears
+    // mousedown fires before click, giving us time to store the context
     document.body.addEventListener(
-      "click",
+      "mousedown",
       (e) => {
         const button = e.target.closest(
           'button[aria-haspopup="menu"][aria-controls]'
@@ -61,12 +62,12 @@ class CustomContextMenu {
           // Store the mapping for when the menu appears
           this.pendingMenus.set(menuId, dialogType);
           console.log(
-            `[Context Menu] Button clicked in ${dialogType} dialog, expecting menu ID: ${menuId}`
+            `[Context Menu] Button mousedown in ${dialogType} dialog, expecting menu ID: ${menuId}`
           );
         }
       },
       true
-    ); // Use capture phase to catch the event early
+    ); // Use capture phase to catch the event as early as possible
 
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
