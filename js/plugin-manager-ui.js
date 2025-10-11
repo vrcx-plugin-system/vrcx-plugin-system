@@ -7,16 +7,15 @@ class PluginManagerUI {
     name: "Plugin Manager UI",
     description: "Visual UI for managing VRCX custom plugins",
     author: "Bluscream",
-    version: "1.0.0",
-    build: "1760222453",
+    version: "1.1.0",
+    build: "1760222919",
     dependencies: [
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/nav-menu-api.js",
     ],
   };
 
   constructor() {
-    this.panelVisible = false;
-    this.panel = null;
+    this.contentContainer = null;
     this.on_startup();
   }
 
@@ -24,7 +23,20 @@ class PluginManagerUI {
     // Wait for nav menu API to be ready
     setTimeout(() => {
       this.setupNavMenuItem();
-      this.createPanel();
+    }, 2000);
+
+    // Watch for menu selection to refresh plugin list
+    setTimeout(() => {
+      if (window.$app && typeof window.$app.$watch === "function") {
+        window.$app.$watch(
+          () => window.$pinia?.ui?.menuActiveIndex,
+          (activeIndex) => {
+            if (activeIndex === "plugins") {
+              this.refreshPluginList();
+            }
+          }
+        );
+      }
     }, 2000);
   }
 
@@ -38,44 +50,28 @@ class PluginManagerUI {
     navMenu.addItem("plugins", {
       label: "Plugin Manager",
       icon: "ri-plug-line",
-      onClick: () => this.togglePanel(),
+      content: () => this.createPanelContent(),
       before: "settings", // Insert before settings
     });
 
-    console.log("[PluginManager] Added navigation menu item");
+    console.log("[PluginManager] Added navigation menu item with content");
   }
 
-  createPanel() {
-    // Create panel container
-    this.panel = document.createElement("div");
-    this.panel.id = "custom-plugin-manager-panel";
-    this.panel.style.cssText = `
-      position: fixed;
-      top: 60px;
-      left: 65px;
-      right: 0;
-      bottom: 0;
-      background: var(--color-background);
-      z-index: 1000;
-      overflow-y: auto;
-      display: none;
-      padding: 20px;
-    `;
+  createPanelContent() {
+    // Create the main container
+    const container = document.createElement("div");
+    container.style.cssText = "padding: 20px;";
 
-    document.body.appendChild(this.panel);
-    this.renderPanelContent();
+    // Store reference for refreshing
+    this.contentContainer = container;
+
+    // Render the content
+    this.renderContent(container);
+
+    return container;
   }
 
-  togglePanel() {
-    this.panelVisible = !this.panelVisible;
-    this.panel.style.display = this.panelVisible ? "block" : "none";
-
-    if (this.panelVisible) {
-      this.refreshPluginList();
-    }
-  }
-
-  renderPanelContent() {
+  renderContent(container) {
     const header = document.createElement("div");
     header.style.cssText = "margin-bottom: 20px;";
     header.innerHTML = `
@@ -113,9 +109,9 @@ class PluginManagerUI {
     const pluginList = document.createElement("div");
     pluginList.id = "plugin-list-container";
 
-    this.panel.appendChild(header);
-    this.panel.appendChild(controls);
-    this.panel.appendChild(pluginList);
+    container.appendChild(header);
+    container.appendChild(controls);
+    container.appendChild(pluginList);
   }
 
   createButton(label, icon, onClick) {
@@ -127,7 +123,11 @@ class PluginManagerUI {
   }
 
   refreshPluginList() {
-    const container = this.panel.querySelector("#plugin-list-container");
+    if (!this.contentContainer) return;
+
+    const container = this.contentContainer.querySelector(
+      "#plugin-list-container"
+    );
     if (!container) return;
 
     const info = plugins.list();
@@ -274,14 +274,6 @@ class PluginManagerUI {
   }
 
   cleanup() {
-    if (this.observer) {
-      this.observer.disconnect();
-    }
-
-    if (this.panel) {
-      this.panel.remove();
-    }
-
     window.customjs?.navMenu?.removeItem("plugins");
     console.log("[PluginManager] Cleaned up");
   }

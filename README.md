@@ -393,17 +393,47 @@ Utils.clearProcessedMenus(); // Clear processed menus registry
 
 ### Navigation Menu API
 
+The Nav Menu API now **automatically manages tab content** - just provide a `content` parameter!
+
 ```javascript
-// Add a custom nav menu item
+// Add nav item with automatic tab content management
 window.customjs.navMenu.addItem("myPlugin", {
   label: "My Plugin",
   icon: "ri-plugin-line",
-  onClick: () => console.log("Clicked!"),
+  content: () => {
+    const container = document.createElement('div');
+    container.innerHTML = '<h1>My Plugin Content</h1><p>This content automatically shows/hides!</p>';
+    return container;
+  },
   before: "settings", // Optional: insert before settings
-  after: "tools", // Optional: insert after tools
+  after: "tools",     // Optional: insert after tools
 });
 
-// Remove a nav menu item
+// Or use HTML string directly
+window.customjs.navMenu.addItem("myPlugin", {
+  label: "My Plugin",
+  icon: "ri-plugin-line",
+  content: '<h1>My Plugin</h1><p>Tab content here!</p>',
+  before: "settings",
+});
+
+// Or use an existing HTMLElement
+const myContent = document.createElement('div');
+myContent.innerHTML = '<h1>Hello!</h1>';
+window.customjs.navMenu.addItem("myPlugin", {
+  label: "My Plugin",
+  icon: "ri-plugin-line",
+  content: myContent,
+});
+
+// Add nav item without content (just onClick)
+window.customjs.navMenu.addItem("myAction", {
+  label: "Do Something",
+  icon: "ri-play-line",
+  onClick: () => console.log("Action triggered!"),
+});
+
+// Remove a nav menu item (removes both button and content)
 window.customjs.navMenu.removeItem("myPlugin");
 
 // Update an existing item
@@ -421,6 +451,12 @@ window.customjs.navMenu.getAllItems();
 // Clear all custom items
 window.customjs.navMenu.clearAllItems();
 ```
+
+**How it works:**
+- Nav Menu API automatically creates content containers
+- Watches `menuActiveIndex` and shows/hides content
+- Integrates seamlessly with VRCX's tab system
+- No manual visibility management needed!
 
 ### Plugin Manager UI
 

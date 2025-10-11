@@ -7,21 +7,62 @@ class NavMenuAPI {
     name: "Navigation Menu API",
     description: "API for adding custom navigation menu items to VRCX",
     author: "Bluscream",
-    version: "1.0.0",
-    build: "1760222453",
+    version: "1.1.0",
+    build: "1760222919",
     dependencies: [],
   };
 
   constructor() {
     this.customItems = new Map(); // Map of itemId -> item config
+    this.contentContainers = new Map(); // Map of itemId -> content element
     this.observer = null;
     this.navMenu = null;
+    this.contentParent = null;
     this.on_startup();
   }
 
   on_startup() {
-    // Wait for nav menu to be available
+    // Wait for nav menu and content area to be available
     this.waitForNavMenu();
+    this.setupContentArea();
+    this.watchMenuChanges();
+  }
+
+  setupContentArea() {
+    // Find the main content area where views are rendered
+    const findContentArea = () => {
+      // Look for the el-splitter that contains all views
+      this.contentParent = document.querySelector(".el-splitter");
+
+      if (this.contentParent) {
+        console.log("[NavMenu] Found content area, ready to add tab content");
+      } else {
+        setTimeout(findContentArea, 500);
+      }
+    };
+
+    setTimeout(findContentArea, 1000);
+  }
+
+  watchMenuChanges() {
+    // Watch for active menu changes to show/hide content
+    setTimeout(() => {
+      if (window.$app && typeof window.$app.$watch === "function") {
+        window.$app.$watch(
+          () => window.$pinia?.ui?.menuActiveIndex,
+          (activeIndex) => {
+            this.updateContentVisibility(activeIndex);
+          }
+        );
+      }
+    }, 1000);
+  }
+
+  updateContentVisibility(activeIndex) {
+    // Show/hide custom content containers based on active menu
+    this.contentContainers.forEach((container, itemId) => {
+      container.style.display = activeIndex === itemId ? "block" : "none";
+    });
   }
 
   waitForNavMenu() {
@@ -57,12 +98,13 @@ class NavMenuAPI {
   }
 
   /**
-   * Add a custom navigation menu item
+   * Add a custom navigation menu item with optional content container
    * @param {string} id - Unique identifier for the item
    * @param {object} config - Item configuration
    * @param {string} config.label - Display label (or i18n key)
    * @param {string} config.icon - Remix icon class (e.g., 'ri-plugin-line')
-   * @param {function} config.onClick - Click handler
+   * @param {function} config.onClick - Click handler (optional if using content)
+   * @param {HTMLElement|function} config.content - Content element or function that returns content
    * @param {string} config.before - Insert before this item index (optional)
    * @param {string} config.after - Insert after this item index (optional)
    * @param {boolean} config.enabled - Whether the item is enabled (default: true)
@@ -72,7 +114,8 @@ class NavMenuAPI {
       id,
       label: config.label || id,
       icon: config.icon || "ri-plugin-line",
-      onClick: config.onClick || (() => console.log(`Nav item clicked: ${id}`)),
+      onClick: config.onClick || null,
+      content: config.content || null,
       before: config.before || null,
       after: config.after || null,
       enabled: config.enabled !== false,
@@ -85,7 +128,64 @@ class NavMenuAPI {
       this.renderItem(item);
     }
 
+    // Create content container if content is provided
+    if (item.content && this.contentParent) {
+      this.createContentContainer(id, item.content);
+    } else if (item.content && !this.contentParent) {
+      // Content parent not ready yet, retry later
+      setTimeout(() => {
+        if (this.contentParent) {
+          this.createContentContainer(id, item.content);
+        }
+      }, 2000);
+    }
+
     return item;
+  }
+
+  /**
+   * Create a content container for a nav item
+   * @param {string} id - Item identifier
+   * @param {HTMLElement|function} content - Content element or generator function
+   */
+  createContentContainer(id, content) {
+    if (!this.contentParent) {
+      console.warn(`[NavMenu] Content parent not ready for ${id}`);
+      return;
+    }
+
+    // Create container div
+    const container = document.createElement("div");
+    container.id = `custom-nav-content-${id}`;
+    container.className = "x-container";
+    container.style.cssText = `
+      display: none;
+      padding: 20px;
+      height: 100%;
+      overflow-y: auto;
+    `;
+
+    // Set content
+    if (typeof content === "function") {
+      const result = content();
+      if (result instanceof HTMLElement) {
+        container.appendChild(result);
+      } else if (typeof result === "string") {
+        container.innerHTML = result;
+      }
+    } else if (content instanceof HTMLElement) {
+      container.appendChild(content);
+    } else if (typeof content === "string") {
+      container.innerHTML = content;
+    }
+
+    // Find the first el-splitter-panel and append to it
+    const panel = this.contentParent.querySelector(".el-splitter-panel");
+    if (panel) {
+      panel.appendChild(container);
+      this.contentContainers.set(id, container);
+      console.log(`[NavMenu] Created content container for: ${id}`);
+    }
   }
 
   /**
@@ -106,9 +206,16 @@ class NavMenuAPI {
     );
     if (element) {
       element.remove();
-      console.log(`[NavMenu] Removed item: ${id}`);
     }
 
+    // Remove content container
+    const container = this.contentContainers.get(id);
+    if (container) {
+      container.remove();
+      this.contentContainers.delete(id);
+    }
+
+    console.log(`[NavMenu] Removed item: ${id}`);
     return true;
   }
 
@@ -178,7 +285,16 @@ class NavMenuAPI {
     menuItem.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      item.onClick();
+
+      // If item has content, use VRCX's selectMenu to switch tabs
+      if (item.content && window.$pinia?.ui?.selectMenu) {
+        window.$pinia.ui.selectMenu(item.id);
+      }
+
+      // Call custom onClick if provided
+      if (item.onClick) {
+        item.onClick();
+      }
     });
 
     // Add hover effect to show tooltip
