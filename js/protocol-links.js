@@ -11,7 +11,7 @@ class VRCXProtocolLinks {
     version: "1.0.0",
     build: "1760216414",
     dependencies: [
-      "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu.js",
+      "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu-api.js",
     ],
   };
 

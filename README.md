@@ -27,8 +27,10 @@ vrcx-custom/
 │   ├── config.js          # Configuration management
 │   ├── utils.js           # Utility functions and helpers
 │   ├── api-helpers.js     # API wrappers and logging
-│   ├── context-menu.js    # Context menu enhancements
+│   ├── context-menu-api.js # Context menu API enhancements
+│   ├── nav-menu-api.js    # Navigation menu API
 │   ├── protocol-links.js  # VRCX protocol link utilities
+│   ├── plugin-manager-ui.js # Plugin manager UI
 │   ├── registry-overrides.js # VRChat registry management
 │   ├── tag-manager.js     # Custom user tags system
 │   ├── bio-updater.js     # Automatic bio updates
@@ -48,8 +50,10 @@ vrcx-custom/
 
 ### Feature Modules
 
-- **`context-menu.js`** - Enhanced context menu system with custom items for user/avatar/world/group dialogs
+- **`context-menu-api.js`** - Enhanced context menu system with custom items for user/avatar/world/group dialogs
+- **`nav-menu-api.js`** - API for adding custom navigation menu items
 - **`protocol-links.js`** - VRCX protocol link generation and clipboard utilities
+- **`plugin-manager-ui.js`** - Visual UI for managing plugins (adds "Plugins" nav menu item)
 - **`registry-overrides.js`** - VRChat registry settings with event-based application
 - **`tag-manager.js`** - Custom user tags loaded from external JSON sources
 - **`bio-updater.js`** - Automatic bio updates with dynamic content templates
@@ -214,8 +218,10 @@ window.customjs.logger; // Logging functions
 window.customjs.location; // Location management
 
 // Feature modules
-window.customjs.contextMenu; // Context menu instance
+window.customjs.contextMenu; // Context menu API instance
+window.customjs.navMenu; // Navigation menu API instance
 window.customjs.protocolLinks; // Protocol links instance
+window.customjs.pluginManagerUI; // Plugin manager UI instance
 window.customjs.registryOverrides; // Registry overrides instance
 window.customjs.tagManager; // Tag manager instance
 window.customjs.bioUpdater; // Bio updater instance
@@ -384,6 +390,48 @@ Utils.tryDecodeBase64(str); // Decode base64 strings
 Utils.isEmpty(v); // Check if value is empty
 Utils.clearProcessedMenus(); // Clear processed menus registry
 ```
+
+### Navigation Menu API
+
+```javascript
+// Add a custom nav menu item
+window.customjs.navMenu.addItem("myPlugin", {
+  label: "My Plugin",
+  icon: "ri-plugin-line",
+  onClick: () => console.log("Clicked!"),
+  before: "settings", // Optional: insert before settings
+  after: "tools", // Optional: insert after tools
+});
+
+// Remove a nav menu item
+window.customjs.navMenu.removeItem("myPlugin");
+
+// Update an existing item
+window.customjs.navMenu.updateItem("myPlugin", {
+  label: "New Label",
+  icon: "ri-star-line",
+});
+
+// Check if item exists
+window.customjs.navMenu.hasItem("myPlugin");
+
+// Get all custom items
+window.customjs.navMenu.getAllItems();
+
+// Clear all custom items
+window.customjs.navMenu.clearAllItems();
+```
+
+### Plugin Manager UI
+
+The Plugin Manager UI adds a "Plugins" menu item to the navigation bar. Click it to:
+
+- View all loaded and failed plugins
+- Reload individual plugins
+- Reload all plugins at once
+- Unload plugins
+- Retry failed plugins
+- See active module instances
 
 ### Tag Manager
 

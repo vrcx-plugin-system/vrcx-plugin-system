@@ -11,7 +11,7 @@ class AutoInviteManager {
     build: "1760220507",
     dependencies: [
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
-      "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu.js",
+      "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/context-menu-api.js",
       "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
     ],
   };
