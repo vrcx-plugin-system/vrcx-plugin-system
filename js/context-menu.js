@@ -8,8 +8,8 @@ class CustomContextMenu {
     name: "Context Menu Module",
     description: "Custom context menu management for VRCX dialogs",
     author: "Bluscream",
-    version: "1.1.1",
-    build: "1760217885",
+    version: "1.1.2",
+    build: "1760218084",
     dependencies: [],
   };
   constructor() {
@@ -29,45 +29,80 @@ class CustomContextMenu {
       this.items.set(menuType, new Map());
     });
 
-    // Listen for mousedown to capture dialog context BEFORE menu appears
-    // mousedown fires before click, giving us time to store the context
-    document.body.addEventListener(
-      "mousedown",
-      (e) => {
-        const button = e.target.closest(
-          'button[aria-haspopup="menu"][aria-controls]'
-        );
-        if (!button) return;
+    // Pre-register dialog buttons when dialogs appear
+    // This ensures we have the context BEFORE the menu is created
+    const registerDialogButtons = (dialogElement) => {
+      if (!dialogElement) return;
 
+      // Extract dialog type from class
+      let dialogType = null;
+      if (dialogElement.classList.contains("x-user-dialog"))
+        dialogType = "user";
+      else if (dialogElement.classList.contains("x-avatar-dialog"))
+        dialogType = "avatar";
+      else if (dialogElement.classList.contains("x-world-dialog"))
+        dialogType = "world";
+      else if (dialogElement.classList.contains("x-group-dialog"))
+        dialogType = "group";
+
+      if (!dialogType) return;
+
+      // Find all dropdown buttons in this dialog
+      const buttons = dialogElement.querySelectorAll(
+        'button[aria-haspopup="menu"][aria-controls]'
+      );
+
+      buttons.forEach((button) => {
         const menuId = button.getAttribute("aria-controls");
-        if (!menuId) return;
-
-        // Find the dialog this button belongs to
-        const dialog = button.closest(
-          ".x-user-dialog, .x-avatar-dialog, .x-world-dialog, .x-group-dialog"
-        );
-        if (!dialog) return;
-
-        // Extract dialog type from class
-        let dialogType = null;
-        if (dialog.classList.contains("x-user-dialog")) dialogType = "user";
-        else if (dialog.classList.contains("x-avatar-dialog"))
-          dialogType = "avatar";
-        else if (dialog.classList.contains("x-world-dialog"))
-          dialogType = "world";
-        else if (dialog.classList.contains("x-group-dialog"))
-          dialogType = "group";
-
-        if (dialogType) {
-          // Store the mapping for when the menu appears
+        if (menuId) {
           this.pendingMenus.set(menuId, dialogType);
           console.log(
-            `[Context Menu] Button mousedown in ${dialogType} dialog, expecting menu ID: ${menuId}`
+            `[Context Menu] Pre-registered menu ${menuId} for ${dialogType} dialog`
           );
         }
-      },
-      true
-    ); // Use capture phase to catch the event as early as possible
+      });
+    };
+
+    // Watch for dialog appearances
+    const dialogObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType !== 1) return;
+
+          // Check if this is a dialog
+          if (
+            node.classList &&
+            (node.classList.contains("x-user-dialog") ||
+              node.classList.contains("x-avatar-dialog") ||
+              node.classList.contains("x-world-dialog") ||
+              node.classList.contains("x-group-dialog"))
+          ) {
+            registerDialogButtons(node);
+          }
+
+          // Also check for dialogs in child nodes
+          if (node.querySelectorAll) {
+            const dialogs = node.querySelectorAll(
+              ".x-user-dialog, .x-avatar-dialog, .x-world-dialog, .x-group-dialog"
+            );
+            dialogs.forEach((dialog) => registerDialogButtons(dialog));
+          }
+        });
+      });
+    });
+
+    dialogObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    // Also register any existing dialogs immediately
+    setTimeout(() => {
+      const existingDialogs = document.querySelectorAll(
+        ".x-user-dialog, .x-avatar-dialog, .x-world-dialog, .x-group-dialog"
+      );
+      existingDialogs.forEach((dialog) => registerDialogButtons(dialog));
+    }, 100);
 
     this.observer = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
