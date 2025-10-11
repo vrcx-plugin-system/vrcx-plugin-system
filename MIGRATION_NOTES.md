@@ -11,6 +11,10 @@ These plugins have been updated to work with the new VRCX source structure that 
 **Old:** `$app.store.user`, `$app.store.vrcx`, etc.  
 **New:** `window.$pinia.user`, `window.$pinia.vrcx`, etc.
 
+**Notification System Change:**  
+**Old:** `$app.playNoty(notification)`  
+**New:** `window.$pinia.notification.playNoty(notification)` - Now part of notification store
+
 ### 2. Removed Theme
 
 The `material3` theme has been removed from the new VRCX. Available themes are:
@@ -50,11 +54,13 @@ The `eventVrcxMessage` function is now internal to the vrcx store and cannot be 
 
 ### 2. `js/managers.js`
 
-- Updated `NotificationHandler` to safely override `$app.playNoty`
+- **IMPORTANT**: Changed notification override from `$app.playNoty` to `window.$pinia.notification.playNoty`
+- Updated `NotificationHandler` to work with Pinia notification store
 - Changed `handleTaggedPlayerJoined()` to use `window.$pinia.user.customTags`
 - Updated `DebugTools.setupIPCLogging()` to work with new structure
 - Updated debug console functions to access `window.$pinia` stores
 - Added `getStores()` helper to inspect all Pinia stores
+- Fixed `autoInviteManager` references to use `window.customjs.autoInviteManager`
 
 ### 3. `js/bio-updater.js`
 

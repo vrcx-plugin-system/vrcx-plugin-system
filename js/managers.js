@@ -65,21 +65,27 @@ class Managers {
         // Retry after a delay
         setTimeout(() => {
           if (!this.setupNotificationOverride()) {
-            console.warn("$app.playNoty still not available after delay");
+            console.warn(
+              "Notification store still not available - notification features may be limited"
+            );
           }
         }, 2000);
       }
     }
 
     setupNotificationOverride() {
-      if (!window.$app || !window.$app.playNoty) {
+      // In new VRCX, playNoty is in the notification store, not on $app
+      const notificationStore = window.$pinia?.notification;
+      if (!notificationStore || !notificationStore.playNoty) {
         return false; // Not ready yet
       }
 
-      const originalPlayNoty = $app.playNoty;
-      $app.playNoty = (json) => {
+      const originalPlayNoty =
+        notificationStore.playNoty.bind(notificationStore);
+      notificationStore.playNoty = (json) => {
+        // Call original first
         setTimeout(() => {
-          originalPlayNoty.call($app, json);
+          originalPlayNoty(json);
         }, 0);
         let noty = json;
         let message, image;
@@ -99,13 +105,16 @@ class Managers {
             break;
           case "BlockedOnPlayerJoined":
             window.Logger?.log(
-              `Notification type: ${noty.type}, Last joined: ${autoInviteManager.lastJoined}`,
+              `Notification type: ${noty.type}, Last joined: ${window.customjs?.autoInviteManager?.lastJoined}`,
               { console: true },
               "info"
             );
-            if (Utils.isEmpty(autoInviteManager.lastJoined)) return;
-            const p = $app.parseLocation(autoInviteManager.lastJoined);
-            $app.newInstanceSelfInvite(p.worldId);
+            if (window.customjs?.autoInviteManager?.lastJoined && window.$app) {
+              const p = window.$app.parseLocation(
+                window.customjs.autoInviteManager.lastJoined
+              );
+              window.$app.newInstanceSelfInvite(p.worldId);
+            }
             break;
           case "invite":
             window.Logger?.log(
