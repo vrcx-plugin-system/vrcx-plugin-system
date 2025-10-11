@@ -437,12 +437,11 @@ class DebugPlugin {
     // Dump entire page HTML to console and clipboard
     window.debugDumpHTML = async () => {
       const html = document.documentElement.outerHTML;
-      const formatted = this.formatHTML(html);
 
       console.log("=".repeat(80));
       console.log("FULL PAGE HTML DUMP");
       console.log("=".repeat(80));
-      console.log(formatted);
+      console.log(html);
       console.log("=".repeat(80));
       console.log(`Total length: ${html.length} characters`);
       console.log("=".repeat(80));
@@ -460,20 +459,6 @@ class DebugPlugin {
     };
 
     this.log("Init", "Debug methods exposed to window object");
-  }
-
-  // Format HTML with basic indentation for readability
-  formatHTML(html) {
-    try {
-      // Basic formatting - add newlines after tags
-      return html
-        .replace(/></g, ">\n<")
-        .split("\n")
-        .map((line, index) => `${String(index + 1).padStart(6, " ")} | ${line}`)
-        .join("\n");
-    } catch (error) {
-      return html; // Return original if formatting fails
-    }
   }
 
   cleanup() {
