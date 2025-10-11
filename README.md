@@ -242,25 +242,47 @@ plugins.reloadPlugin(url); // Reload a specific plugin
 plugins.reloadAllPlugins(); // Reload all plugins
 plugins.startPlugin(name); // Start/restart a plugin
 plugins.stopPlugin(name); // Stop a plugin
-plugins.list(); // List all plugins
-plugins.getPlugins(); // Get detailed plugin info
+
+// Plugin information
+plugins.list(); // List all plugins (includes registry)
+plugins.getPlugins(); // Get detailed plugin info with registry
+plugins.getPluginInfo(url); // Get metadata for specific plugin by URL
+plugins.getPluginInfoByName(name); // Get metadata by module name
 
 // Convenience aliases
 plugins.reload(url); // Alias for reloadPlugin
 plugins.reloadAll(); // Alias for reloadAllPlugins
 ```
 
-### Module Instances (`window.customjs.*`)
+**Plugin Registry Structure:**
+
+The `plugins.getPluginInfo(url)` returns:
 
 ```javascript
-// Core modules
+{
+  url: "https://...",
+  moduleName: "utils",          // Key in window.customjs
+  name: "Utils Module",         // Human-readable name from SCRIPT
+  description: "...",           // From SCRIPT.description
+  author: "Bluscream",          // From SCRIPT.author
+  version: "1.1.0",             // From SCRIPT.version
+  build: "1760224151",          // From SCRIPT.build
+  dependencies: [...],          // From SCRIPT.dependencies
+  instance: {...}               // Actual module instance
+}
+```
+
+### Plugin Instances (`window.customjs.*`)
+
+```javascript
+// Core plugins
 window.customjs.config; // Configuration manager
 window.customjs.utils; // Utility functions
 window.customjs.api; // API helpers
 window.customjs.logger; // Logging functions
 window.customjs.location; // Location management
 
-// Feature modules
+// Feature plugins
 window.customjs.contextMenu; // Context menu API instance
 window.customjs.navMenu; // Navigation menu API instance
 window.customjs.protocolLinks; // Protocol links instance
@@ -270,7 +292,7 @@ window.customjs.tagManager; // Tag manager instance
 window.customjs.bioUpdater; // Bio updater instance
 window.customjs.autoInviteManager; // Auto invite manager instance
 
-// Management classes
+// Management plugins
 window.customjs.instanceMonitor; // Instance monitor instance
 window.customjs.notificationHandler; // Notification handler instance
 window.customjs.debugTools; // Debug tools instance
@@ -301,7 +323,7 @@ window.customjs.clearProcessedMenus; // Clear processed menus registry
    cd vrcx-custom
    .\update.ps1
    ```
-5. **Restart VRCX** - modules will be automatically loaded from GitHub
+5. **Restart VRCX** - plugins will be automatically loaded from GitHub
 6. **Open DevTools** (if debug plugin enabled) or check logs at `%APPDATA%\VRCX\logs\`
 
 ### What the Update Script Does
@@ -562,7 +584,7 @@ The Plugin Manager UI adds a "Plugins" menu item with a beautiful, comprehensive
 - 📦 **Enhanced Cards** - Show plugin version, build, author, description, dependencies
 - 🎨 **Status Badges** - Color-coded indicators (green=loaded, red=failed)
 - ⚡ **Quick Actions** - Individual Reload, Start, Stop, Unload buttons per plugin
-- 🔍 **Module Inspector** - Click module instances to view full details in console
+- 🔍 **Plugin Inspector** - Click plugin instances to view full details in console
 - 📋 **Copy URLs** - Click any plugin URL to copy to clipboard
 - 🎯 **Hover Effects** - Interactive cards with smooth transitions and highlights
 
@@ -572,7 +594,7 @@ The Plugin Manager UI adds a "Plugins" menu item with a beautiful, comprehensive
 2. Load plugin section with URL input and validation
 3. Loaded plugins with full metadata and 4 action buttons each
 4. Failed plugins section with retry capability
-5. Active module instances grid (clickable for console inspection)
+5. Plugin instances grid (clickable for console inspection)
 
 ### Context Menu API
 

@@ -63,7 +63,7 @@ Oculus ID: {oculusId}`,
 };
 
 // ============================================================================
-// MODULE LOADER & LIFECYCLE MANAGEMENT
+// PLUGIN LOADER & LIFECYCLE MANAGEMENT
 // ============================================================================
 
 /**
@@ -91,10 +91,10 @@ Oculus ID: {oculusId}`,
  *   });
  */
 
-// Configuration for module loading
-const MODULE_CONFIG = {
-  // GitHub URLs for modules (loaded in dependency order)
-  modules: [
+// Configuration for plugin loading
+const PLUGIN_CONFIG = {
+  // GitHub URLs for plugins (loaded in dependency order)
+  plugins: [
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api-helpers.js",
@@ -205,14 +205,15 @@ class LifecycleManager {
   }
 }
 
-// Module loader class
-class ModuleLoader {
+// Plugin loader class
+class PluginLoader {
   constructor() {
-    this.loadedModules = new Set();
-    this.failedModules = new Set();
+    this.loadedPlugins = new Set();
+    this.failedPlugins = new Set();
+    this.pluginRegistry = new Map(); // Map of URL -> plugin metadata
     this.lifecycle = new LifecycleManager();
 
-    // Expose lifecycle hooks IMMEDIATELY before loading any modules
+    // Expose lifecycle hooks IMMEDIATELY before loading any plugins
     this.setupLifecycleHooks();
   }
 
@@ -226,39 +227,39 @@ class ModuleLoader {
     window.on_login = this.lifecycle.onLogin.bind(this.lifecycle);
   }
 
-  async loadAllModules() {
-    console.log("Loading VRCX custom modules from GitHub...");
+  async loadAllPlugins() {
+    console.log("Loading VRCX custom pluginsHub...");
 
-    // Load GitHub modules
-    for (const module of MODULE_CONFIG.modules) {
-      await this.loadModule(module);
+    // Load GitHub plugins
+    for (const plugin of PLUGIN_CONFIG.plugins) {
+      await this.loadPlugin(plugin);
     }
 
     console.log(
-      `Module loading complete. Loaded: ${this.loadedModules.size}, Failed: ${this.failedModules.size}`
+      `Plugin loading complete. Loaded: ${this.loadedPlugins.size}, Failed: ${this.failedPlugins.size}`
     );
 
-    // Initialize systems after all modules are loaded
+    // Initialize systems after all plugins are loaded
     this.initializeSystems();
   }
 
-  async loadModule(modulePath) {
+  async loadPlugin(pluginPath) {
     try {
       // Add cache-busting parameter to force fresh fetch
-      const url = modulePath + "?v=" + Date.now();
-      console.log(`Loading module: ${modulePath}`);
+      const url = pluginPath + "?v=" + Date.now();
+      console.log(`Loading plugin: ${pluginPath}`);
 
-      // Fetch the module content first to handle MIME type issues
+      // Fetch the plugin content first to handle MIME type issues
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const moduleCode = await response.text();
+      const pluginCode = await response.text();
 
-      // Wrap the module code in an IIFE to create a separate scope
+      // Wrap the plugin code in an IIFE to create a separate scope
       const wrappedCode = `(function() {
-                ${moduleCode}
+                ${pluginCode}
             })();`;
 
       // Create a script element and inject the wrapped code directly
@@ -269,14 +270,14 @@ class ModuleLoader {
       // Set up promise-based loading
       const loadPromise = new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-          reject(new Error(`Module load timeout: ${modulePath}`));
-        }, MODULE_CONFIG.loadTimeout);
+          reject(new Error(`Plugin load timeout: ${pluginPath}`));
+        }, PLUGIN_CONFIG.loadTimeout);
 
         // Since we're injecting code directly, we can resolve immediately
         // but add a small delay to ensure proper execution order
         setTimeout(() => {
           clearTimeout(timeout);
-          this.loadedModules.add(modulePath);
+          this.loadedPlugins.add(pluginPath);
           resolve();
         }, 10);
       });
@@ -286,9 +287,36 @@ class ModuleLoader {
 
       // Wait for load to complete
       await loadPromise;
+
+      // Extract plugin metadata after successful load
+      this.registerPluginMetadata(pluginPath);
     } catch (error) {
-      console.error(`Error loading module ${modulePath}:`, error);
-      this.failedModules.add(modulePath);
+      console.error(`Error loading plugin ${pluginPath}:`, error);
+      this.failedPlugins.add(pluginPath);
+    }
+  }
+
+  registerPluginMetadata(url) {
+    // Extract module name from URL
+    const moduleName = url.split("/").pop().replace(".js", "");
+
+    // Look for SCRIPT metadata in various possible locations
+    const scriptInfo =
+      window.customjs?.script?.[moduleName] ||
+      window.customjs?.[moduleName]?.constructor?.SCRIPT;
+
+    if (scriptInfo) {
+      this.pluginRegistry.set(url, {
+        url,
+        moduleName,
+        name: scriptInfo.name || moduleName,
+        description: scriptInfo.description || "",
+        author: scriptInfo.author || "Unknown",
+        version: scriptInfo.version || "1.0.0",
+        build: scriptInfo.build || "unknown",
+        dependencies: scriptInfo.dependencies || [],
+        instance: window.customjs?.[moduleName],
+      });
     }
   }
 
@@ -310,8 +338,8 @@ class ModuleLoader {
       // Start monitoring for login
       this.lifecycle.startLoginMonitoring();
 
-      // Modules are now self-initializing, so we just need to trigger their initialization
-      // Each module will register itself in the window.customjs namespace
+      // Plugins are now self-initializing, so we just need to trigger their initialization
+      // Each plugin will register itself in the window.customjs namespace
 
       console.log("custom.js END - All systems initialized");
       console.log(`
@@ -319,6 +347,8 @@ class ModuleLoader {
   Plugin Management Commands (use 'plugins' prefix):
   
   plugins.list()                  - List all loaded plugins
+  plugins.getPluginInfo(url)      - Get plugin metadata by URL
+  plugins.getPluginInfoByName(name) - Get plugin metadata by module name
   plugins.loadPlugin(url)         - Load a new plugin
   plugins.unloadPlugin(url)       - Unload a plugin
   plugins.reloadPlugin(url)       - Reload a specific plugin
@@ -338,14 +368,14 @@ class ModuleLoader {
   // DYNAMIC PLUGIN MANAGEMENT
   // ============================================================================
 
-  async loadPlugin(url) {
-    if (this.loadedModules.has(url)) {
+  async addPlugin(url) {
+    if (this.loadedPlugins.has(url)) {
       console.warn(`[Plugins] Already loaded: ${url}`);
       return { success: false, message: "Already loaded" };
     }
 
     try {
-      await this.loadModule(url);
+      await this.loadPlugin(url);
       console.log(`[Plugins] ✓ Successfully loaded: ${url}`);
       return { success: true, message: "Loaded successfully" };
     } catch (error) {
@@ -355,15 +385,19 @@ class ModuleLoader {
   }
 
   unloadPlugin(url) {
-    if (!this.loadedModules.has(url)) {
+    if (!this.loadedPlugins.has(url)) {
       console.warn(`[Plugins] Not loaded: ${url}`);
       return { success: false, message: "Not loaded" };
     }
 
     // Note: JavaScript doesn't allow true unloading of code
     // We can only mark it as unloaded and remove references
-    this.loadedModules.delete(url);
-    console.log(`[Plugins] Marked as unloaded: ${url}`);
+    const pluginInfo = this.pluginRegistry.get(url);
+    this.loadedPlugins.delete(url);
+    this.pluginRegistry.delete(url);
+
+    const displayName = pluginInfo?.name || url;
+    console.log(`[Plugins] Marked as unloaded: ${displayName}`);
     console.warn(
       `[Plugins] Note: Code remains in memory. Refresh VRCX for full removal.`
     );
@@ -375,13 +409,27 @@ class ModuleLoader {
 
   getPlugins() {
     return {
-      loaded: Array.from(this.loadedModules),
-      failed: Array.from(this.failedModules),
-      total: this.loadedModules.size + this.failedModules.size,
+      loaded: Array.from(this.loadedPlugins),
+      failed: Array.from(this.failedPlugins),
+      total: this.loadedPlugins.size + this.failedPlugins.size,
       modules: Object.keys(window.customjs || {}).filter(
         (k) => k !== "config" && k !== "lifecycle" && k !== "script"
       ),
+      registry: Array.from(this.pluginRegistry.values()),
     };
+  }
+
+  getPluginInfo(url) {
+    return this.pluginRegistry.get(url) || null;
+  }
+
+  getPluginInfoByName(moduleName) {
+    for (const [url, info] of this.pluginRegistry.entries()) {
+      if (info.moduleName === moduleName) {
+        return info;
+      }
+    }
+    return null;
   }
 
   startPlugin(name) {
@@ -421,23 +469,24 @@ class ModuleLoader {
   async reloadPlugin(url) {
     console.log(`[Plugins] Reloading: ${url}`);
     this.unloadPlugin(url);
-    return await this.loadPlugin(url);
+    return await this.addPlugin(url);
   }
 
   async reloadAllPlugins() {
     console.log(
-      `[Plugins] Reloading all ${this.loadedModules.size} plugins...`
+      `[Plugins] Reloading all ${this.loadedPlugins.size} plugins...`
     );
-    const urls = Array.from(this.loadedModules);
+    const urls = Array.from(this.loadedPlugins);
     const results = {
       success: [],
       failed: [],
     };
 
     for (const url of urls) {
-      this.loadedModules.delete(url);
+      this.loadedPlugins.delete(url);
+      this.pluginRegistry.delete(url);
       try {
-        await this.loadModule(url);
+        await this.loadPlugin(url);
         results.success.push(url);
         console.log(`[Plugins] ✓ Reloaded: ${url}`);
       } catch (error) {
@@ -466,7 +515,7 @@ window.plugins = {
       console.error("[Plugins] Loader not initialized");
       return { success: false, message: "Loader not initialized" };
     }
-    return await window.plugins.loader.loadPlugin(url);
+    return await window.plugins.loader.addPlugin(url);
   },
 
   unloadPlugin: (url) => {
@@ -517,22 +566,38 @@ window.plugins = {
     return await window.plugins.loader.reloadAllPlugins();
   },
 
+  getPluginInfo: (url) => {
+    if (!window.plugins.loader) {
+      console.error("[Plugins] Loader not initialized");
+      return null;
+    }
+    return window.plugins.loader.getPluginInfo(url);
+  },
+
+  getPluginInfoByName: (moduleName) => {
+    if (!window.plugins.loader) {
+      console.error("[Plugins] Loader not initialized");
+      return null;
+    }
+    return window.plugins.loader.getPluginInfoByName(moduleName);
+  },
+
   // Convenience aliases
   list: () => window.plugins.getPlugins(),
   reload: async (url) => window.plugins.reloadPlugin(url),
   reloadAll: async () => window.plugins.reloadAllPlugins(),
 };
 
-// Start loading modules when DOM is ready
+// Start loading plugins when DOM is ready
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {
-    const loader = new ModuleLoader();
+    const loader = new PluginLoader();
     window.plugins.loader = loader;
-    loader.loadAllModules();
+    loader.loadAllPlugins();
   });
 } else {
   // DOM is already ready
-  const loader = new ModuleLoader();
+  const loader = new PluginLoader();
   window.plugins.loader = loader;
-  loader.loadAllModules();
+  loader.loadAllPlugins();
 }

@@ -139,7 +139,7 @@ class PluginManagerUI {
             ${info.modules.length}
           </div>
           <div style="font-size: 13px; color: var(--color-text-secondary); margin-top: 5px;">
-            Active Modules
+            Plugin Instances
           </div>
         </div>
         
@@ -334,14 +334,14 @@ class PluginManagerUI {
       container.appendChild(failedSection);
     }
 
-    // Active modules section
+    // Plugin instances section
     if (info.modules.length > 0) {
-      const modulesSection = document.createElement("div");
-      modulesSection.style.marginTop = "30px";
-      modulesSection.innerHTML = `
+      const instancesSection = document.createElement("div");
+      instancesSection.style.marginTop = "30px";
+      instancesSection.innerHTML = `
         <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 10px;">
           <i class="ri-code-box-line" style="color: var(--el-color-info);"></i>
-          Active Module Instances
+          Plugin Instances
           <span style="
             background: var(--el-color-info-light-9);
             color: var(--el-color-info);
@@ -353,20 +353,21 @@ class PluginManagerUI {
         </h3>
       `;
 
-      const modulesList = document.createElement("div");
-      modulesList.style.cssText = `
+      const instancesList = document.createElement("div");
+      instancesList.style.cssText = `
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
         gap: 10px;
       `;
 
-      info.modules.forEach((moduleName) => {
-        const moduleInstance = window.customjs?.[moduleName];
-        const hasScript =
-          window.customjs?.script?.[moduleName] ||
-          moduleInstance?.constructor?.SCRIPT;
-        const moduleTag = document.createElement("div");
-        moduleTag.style.cssText = `
+      info.modules.forEach((instanceName) => {
+        // Get plugin info from registry by instance name
+        const pluginInfo = plugins.getPluginInfoByName(instanceName);
+        const displayName = pluginInfo?.name || instanceName;
+        const pluginInstance = window.customjs?.[instanceName];
+
+        const instanceTag = document.createElement("div");
+        instanceTag.style.cssText = `
           background: var(--el-color-info-light-9);
           border: 1px solid var(--el-color-info-light-7);
           padding: 12px;
@@ -375,55 +376,62 @@ class PluginManagerUI {
           text-align: center;
           font-weight: 500;
           transition: all 0.2s;
-          cursor: ${hasScript ? "pointer" : "default"};
+          cursor: ${pluginInfo ? "pointer" : "default"};
         `;
 
-        const icon = hasScript ? "ri-code-s-slash-line" : "ri-file-code-line";
-        moduleTag.innerHTML = `
-          <i class="${icon}" style="margin-right: 5px;"></i>${moduleName}
+        const icon = pluginInfo ? "ri-code-s-slash-line" : "ri-file-code-line";
+        instanceTag.innerHTML = `
+          <i class="${icon}" style="margin-right: 5px;"></i>${displayName}
         `;
 
-        if (hasScript) {
-          moduleTag.title = "Click to view details";
-          moduleTag.onmouseenter = () => {
-            moduleTag.style.background = "var(--el-color-info-light-8)";
-            moduleTag.style.transform = "translateY(-2px)";
+        if (pluginInfo) {
+          instanceTag.title = "Click to view plugin details";
+          instanceTag.onmouseenter = () => {
+            instanceTag.style.background = "var(--el-color-info-light-8)";
+            instanceTag.style.transform = "translateY(-2px)";
           };
-          moduleTag.onmouseleave = () => {
-            moduleTag.style.background = "var(--el-color-info-light-9)";
-            moduleTag.style.transform = "translateY(0)";
+          instanceTag.onmouseleave = () => {
+            instanceTag.style.background = "var(--el-color-info-light-9)";
+            instanceTag.style.transform = "translateY(0)";
           };
-          moduleTag.onclick = () => {
-            const script =
-              window.customjs.script[moduleName] ||
-              moduleInstance.constructor.SCRIPT;
-            console.group(`📦 ${moduleName} Module Info`);
-            console.log("Name:", script.name);
-            console.log("Version:", script.version);
-            console.log("Build:", script.build);
-            console.log("Author:", script.author);
-            console.log("Description:", script.description);
-            console.log("Dependencies:", script.dependencies);
-            console.log("Instance:", moduleInstance);
+          instanceTag.onclick = () => {
+            console.group(`📦 ${displayName} Plugin Info`);
+            console.log("Instance Key:", instanceName);
+            console.log("Name:", pluginInfo.name);
+            console.log("Version:", pluginInfo.version);
+            console.log("Build:", pluginInfo.build);
+            console.log("Author:", pluginInfo.author);
+            console.log("Description:", pluginInfo.description);
+            console.log("Dependencies:", pluginInfo.dependencies);
+            console.log("Instance:", pluginInstance);
             console.groupEnd();
-            Utils.showInfo(`Check console for ${moduleName} details`);
+            Utils.showInfo(`Check console for ${displayName} details`);
           };
         }
 
-        modulesList.appendChild(moduleTag);
+        instancesList.appendChild(instanceTag);
       });
 
-      modulesSection.appendChild(modulesList);
-      container.appendChild(modulesSection);
+      instancesSection.appendChild(instancesList);
+      container.appendChild(instancesSection);
     }
   }
 
   createEnhancedPluginCard(url, status) {
-    const pluginName = url.split("/").pop().replace(".js", "");
-    const moduleInstance = window.customjs?.[pluginName];
-    const scriptInfo =
-      window.customjs?.script?.[pluginName] ||
-      moduleInstance?.constructor?.SCRIPT;
+    // Get plugin info from registry
+    const pluginInfo = plugins.getPluginInfo(url);
+
+    // Fallback to manual extraction if not in registry
+    const moduleKey = url.split("/").pop().replace(".js", "");
+    const displayName = pluginInfo?.name || moduleKey;
+    const scriptInfo = pluginInfo || {
+      name: moduleKey,
+      description: "",
+      author: "Unknown",
+      version: "N/A",
+      build: "N/A",
+      dependencies: [],
+    };
 
     const card = document.createElement("div");
     card.style.cssText = `
@@ -469,9 +477,7 @@ class PluginManagerUI {
     const nameEl = document.createElement("div");
     nameEl.style.cssText =
       "font-size: 18px; font-weight: 600; margin-bottom: 4px;";
-    nameEl.innerHTML = `<i class="ri-puzzle-line" style="margin-right: 5px;"></i>${
-      scriptInfo?.name || pluginName
-    }`;
+    nameEl.innerHTML = `<i class="ri-puzzle-line" style="margin-right: 5px;"></i>${displayName}`;
 
     const badge = document.createElement("span");
     badge.style.cssText = `
@@ -590,7 +596,7 @@ class PluginManagerUI {
           const result = await plugins.reload(url);
           Utils.showSuccess(
             result.success
-              ? `Reloaded: ${pluginName}`
+              ? `Reloaded: ${displayName}`
               : `Failed: ${result.message}`
           );
           this.refreshPluginList();
@@ -603,9 +609,9 @@ class PluginManagerUI {
         "ri-play-line",
         "success",
         (btn) => {
-          const result = plugins.startPlugin(pluginName);
+          const result = plugins.startPlugin(moduleKey);
           Utils.showSuccess(
-            result.success ? `Started: ${pluginName}` : result.message
+            result.success ? `Started: ${displayName}` : result.message
           );
         }
       );
@@ -616,9 +622,9 @@ class PluginManagerUI {
         "ri-stop-line",
         "warning",
         (btn) => {
-          const result = plugins.stopPlugin(pluginName);
+          const result = plugins.stopPlugin(moduleKey);
           Utils.showInfo(
-            result.success ? `Stopped: ${pluginName}` : result.message
+            result.success ? `Stopped: ${displayName}` : result.message
           );
         }
       );
@@ -652,7 +658,7 @@ class PluginManagerUI {
           const result = await plugins.loadPlugin(url);
           Utils.showSuccess(
             result.success
-              ? `Loaded: ${pluginName}`
+              ? `Loaded: ${displayName}`
               : `Failed: ${result.message}`
           );
           this.refreshPluginList();
