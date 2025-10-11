@@ -80,6 +80,20 @@ class NavMenuAPI {
     this.contentContainers.forEach((container, itemId) => {
       container.style.display = activeIndex === itemId ? "block" : "none";
     });
+
+    // Update active state on menu items
+    this.customItems.forEach((item, itemId) => {
+      const menuItem = this.navMenu?.querySelector(
+        `[data-custom-nav-item="${itemId}"]`
+      );
+      if (menuItem) {
+        if (activeIndex === itemId) {
+          menuItem.classList.add("is-active");
+        } else {
+          menuItem.classList.remove("is-active");
+        }
+      }
+    });
   }
 
   waitForNavMenu() {
@@ -302,6 +316,19 @@ class NavMenuAPI {
     menuItem.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
+
+      // Remove active class from all custom menu items
+      this.customItems.forEach((_, itemId) => {
+        const el = this.navMenu?.querySelector(
+          `[data-custom-nav-item="${itemId}"]`
+        );
+        if (el) {
+          el.classList.remove("is-active");
+        }
+      });
+
+      // Add active class to clicked item immediately
+      menuItem.classList.add("is-active");
 
       // If item has content, use VRCX's selectMenu to switch tabs
       if (item.content && window.$pinia?.ui?.selectMenu) {

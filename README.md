@@ -6,6 +6,25 @@ A modular JavaScript framework that extends VRCX with powerful features includin
 
 **🎯 Current Status:** Production Ready ✅ | **📦 Total Plugins:** 13 | **📊 Total Lines:** ~6000+
 
+## 📋 Quick Reference
+
+| Plugin                    | Description                                                    | Status      |
+| ------------------------- | -------------------------------------------------------------- | ----------- |
+| **custom.js**             | Main loader with lifecycle management & dynamic plugin loading | ✅ Core     |
+| **config.js**             | Configuration management and metadata                          | ✅ Core     |
+| **utils.js**              | Clipboard, notifications, time formatting, Steam API           | ✅ Core     |
+| **api-helpers.js**        | API wrappers, logging, IPC integration                         | ✅ Core     |
+| **context-menu-api.js**   | Add items to user/avatar/world/group dialog menus              | ✅ API      |
+| **nav-menu-api.js**       | Add custom navigation tabs with auto content management        | ✅ API      |
+| **plugin-manager-ui.js**  | Visual plugin management dashboard                             | ✅ UI       |
+| **protocol-links.js**     | Copy VRCX protocol links (vrcx://user/, etc.)                  | ✅ Feature  |
+| **tag-manager.js**        | Load 6000+ custom user tags from JSON                          | ✅ Feature  |
+| **bio-updater.js**        | Auto-update bio with dynamic placeholders                      | ✅ Feature  |
+| **auto-invite.js**        | Location-based automatic invitations                           | ✅ Feature  |
+| **registry-overrides.js** | VRChat registry settings management                            | ✅ Feature  |
+| **managers.js**           | Instance monitoring, notifications, debug tools                | ✅ Feature  |
+| **debug.js**              | Comprehensive debugging with DevTools auto-open                | 🔧 Optional |
+
 ## 🚀 Features
 
 ### Core System
@@ -611,6 +630,57 @@ window.customjs.contextMenu.removeGroupItem("my-group-action");
 - Identifies dialog type via z-index sorting and `aria-controls` button lookup
 - 100% reliable detection for all dialog types
 
+### Plugin Lifecycle Hooks
+
+Custom plugins can use lifecycle hooks for proper initialization:
+
+```javascript
+class MyPlugin {
+  static SCRIPT = {
+    name: "My Plugin",
+    description: "Example plugin with lifecycle hooks",
+    author: "Your Name",
+    version: "{VERSION}",
+    build: "{BUILD}",
+    dependencies: [],
+  };
+
+  constructor() {
+    this.on_startup();
+  }
+
+  // Called immediately when plugin loads (before login)
+  on_startup() {
+    console.log("Plugin starting up...");
+    // Setup UI modifications, event listeners, overrides
+
+    // Register for login hook
+    window.on_login((currentUser) => this.on_login(currentUser));
+  }
+
+  // Called after successful VRChat login
+  on_login(currentUser) {
+    console.log("User logged in:", currentUser.displayName);
+    // Load user data, make API calls, setup watchers
+  }
+
+  // Called when plugin is stopped/unloaded
+  cleanup() {
+    console.log("Plugin cleaning up...");
+    // Remove event listeners, disconnect observers, cleanup resources
+  }
+}
+
+// Auto-initialize
+(function() {
+  window.customjs = window.customjs || {};
+  window.customjs.myPlugin = new MyPlugin();
+  window.customjs.script = window.customjs.script || {};
+  window.customjs.script.myPlugin = MyPlugin.SCRIPT;
+  console.log(\`✓ Loaded \${MyPlugin.SCRIPT.name} v\${MyPlugin.SCRIPT.version}\`);
+})();
+```
+
 ### Tag Manager
 
 ```javascript
@@ -618,7 +688,9 @@ window.customjs.contextMenu.removeGroupItem("my-group-action");
 window.customjs.tagManager.addTag(userId, tag, color);
 window.customjs.tagManager.refreshTags();
 window.customjs.tagManager.getLoadedTagsCount();
-window.customjs.tagManager.getUserTags(userId);
+window.customjs.tagManager.getUserTag(userId); // Returns single tag (not array)
+window.customjs.tagManager.getFriendName(userId); // Get display name
+window.customjs.tagManager.getActiveTagsCount(); // Count tags on friends/moderated users
 ```
 
 ### Registry Overrides
