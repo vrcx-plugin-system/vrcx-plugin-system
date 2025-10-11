@@ -8,8 +8,8 @@ class CustomContextMenu {
     name: "Context Menu Module",
     description: "Custom context menu management for VRCX dialogs",
     author: "Bluscream",
-    version: "1.0.0",
-    build: "1760216414",
+    version: "1.0.1",
+    build: "1760216821",
     dependencies: [],
   };
   constructor() {
@@ -189,7 +189,6 @@ class CustomContextMenu {
       return visibleDialogs[0];
     }
 
-    // If multiple dialogs are open, we need to be smarter
     // Check the number of items in the dropdown menu to help identify it
     const itemCount = menuContainer.querySelectorAll(
       ".el-dropdown-menu__item"
@@ -197,11 +196,39 @@ class CustomContextMenu {
 
     // Avatar dialogs typically have 10-20 items
     // World dialogs typically have 8-15 items
-    // Group dialogs typically have 5-10 items
+    // Group dialogs typically have 1-8 items
     // User dialogs typically have 20+ items
 
-    if (visibleDialogs.length > 1) {
-      // Multiple dialogs open - use heuristics
+    // Debug logging
+    console.log("[Context Menu Detection]", {
+      visibleDialogs,
+      itemCount,
+      menuId: menuContainer.id,
+      avatarVisible: window.$pinia?.avatar?.avatarDialog?.visible,
+      worldVisible: window.$pinia?.world?.worldDialog?.visible,
+      groupVisible: window.$pinia?.group?.groupDialog?.visible,
+      userVisible: window.$pinia?.user?.userDialog?.visible,
+    });
+
+    // If multiple dialogs are open OR if dialog state detection failed, use heuristics
+    if (visibleDialogs.length > 1 || visibleDialogs.length === 0) {
+      // Use item count heuristics to determine dialog type
+      if (itemCount >= 20) {
+        return "user";
+      }
+      if (itemCount >= 10 && itemCount < 20) {
+        return "avatar";
+      }
+      if (itemCount >= 8 && itemCount < 10) {
+        return "world";
+      }
+      if (itemCount >= 1 && itemCount < 8) {
+        return "group";
+      }
+    }
+
+    // If we have visible dialogs, prefer those with heuristics
+    if (visibleDialogs.length > 0) {
       if (itemCount >= 20 && visibleDialogs.includes("user")) {
         return "user";
       }
@@ -214,16 +241,15 @@ class CustomContextMenu {
       }
       if (
         itemCount >= 8 &&
-        itemCount < 15 &&
+        itemCount < 10 &&
         visibleDialogs.includes("world")
       ) {
         return "world";
       }
-      if (itemCount < 10 && visibleDialogs.includes("group")) {
+      if (itemCount < 8 && visibleDialogs.includes("group")) {
         return "group";
       }
-
-      // Default to first visible dialog if heuristics don't match
+      // Default to first visible dialog
       return visibleDialogs[0];
     }
 
