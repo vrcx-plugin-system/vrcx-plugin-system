@@ -131,7 +131,7 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "1.6.1";
+    this.version = "2.0.0";
     this.build = "1760486400";
 
     // Store setting definitions and categories
@@ -149,19 +149,21 @@ class ConfigManager {
     this.isSaving = false;
     this.saveQueued = false;
 
+    // localStorage key
+    this.storageKey = "customjs";
+
     console.log(
-      `[CJS|ConfigManager] ConfigManager v${this.version} (${this.build}) initialized`
+      `[CJS|ConfigManager] ConfigManager v${this.version} (${this.build}) initialized (localStorage mode)`
     );
   }
 
   /**
-   * Initialize config manager - load from disk
+   * Initialize config manager - load from storage
    * @returns {Promise<void>}
    */
   async init() {
     try {
       await this.load();
-      this._setupProxies();
       console.log("[CJS|ConfigManager] ✓ Initialized and loaded config");
     } catch (error) {
       console.error("[CJS|ConfigManager] Error initializing:", error);
@@ -215,21 +217,6 @@ class ConfigManager {
     );
 
     this.generalSettings.get(categoryKey).set(key, setting);
-
-    // Initialize in global config and set up proxy
-    window.customjs.config = window.customjs.config || {};
-    if (!window.customjs.config[categoryKey]) {
-      window.customjs.config[categoryKey] = {};
-    }
-
-    Object.defineProperty(window.customjs.config[categoryKey], key, {
-      get: () => setting.value,
-      set: (newValue) => {
-        setting.value = newValue;
-      },
-      enumerable: true,
-      configurable: true,
-    });
 
     console.log(
       `[CJS|ConfigManager] Registered general setting: ${categoryKey}.${key} (${type})`
@@ -353,93 +340,6 @@ class ConfigManager {
   }
 
   /**
-   * Update the proxy at window.customjs.config when a setting value changes
-   * @param {PluginSetting} setting - The setting that changed
-   * @private
-   * @deprecated Currently unused - proxy getters read directly from setting.value
-   * Kept for potential future use, but calling this causes infinite recursion
-   */
-  _updateProxy(setting) {
-    const { pluginId, category, key, value } = setting;
-
-    window.customjs.config = window.customjs.config || {};
-
-    // General settings (no pluginId)
-    if (!pluginId) {
-      window.customjs.config[category] = window.customjs.config[category] || {};
-      window.customjs.config[category][key] = value;
-      return;
-    }
-
-    // Plugin settings
-    window.customjs.config.settings = window.customjs.config.settings || {};
-    window.customjs.config.settings[pluginId] =
-      window.customjs.config.settings[pluginId] || {};
-    window.customjs.config.settings[pluginId][category] =
-      window.customjs.config.settings[pluginId][category] || {};
-
-    // Update value
-    window.customjs.config.settings[pluginId][category][key] = value;
-  }
-
-  /**
-   * Setup proxy for all registered settings at window.customjs.config
-   * @private
-   */
-  _setupProxies() {
-    window.customjs.config = window.customjs.config || {};
-    window.customjs.config.settings = window.customjs.config.settings || {};
-
-    // Setup proxies for plugin settings
-    this.settings.forEach((categories, pluginId) => {
-      window.customjs.config.settings[pluginId] =
-        window.customjs.config.settings[pluginId] || {};
-
-      categories.forEach((settings, categoryKey) => {
-        window.customjs.config.settings[pluginId][categoryKey] =
-          window.customjs.config.settings[pluginId][categoryKey] || {};
-
-        settings.forEach((setting, settingKey) => {
-          // Create getter/setter proxy for direct value access
-          Object.defineProperty(
-            window.customjs.config.settings[pluginId][categoryKey],
-            settingKey,
-            {
-              get: () => setting.value,
-              set: (newValue) => {
-                // Directly update the setting value
-                // Proxy getter reads from setting.value, so they stay in sync
-                setting.value = newValue;
-              },
-              enumerable: true,
-              configurable: true,
-            }
-          );
-        });
-      });
-    });
-
-    // Setup proxies for general settings
-    this.generalSettings.forEach((settings, categoryKey) => {
-      window.customjs.config[categoryKey] =
-        window.customjs.config[categoryKey] || {};
-
-      settings.forEach((setting, settingKey) => {
-        Object.defineProperty(window.customjs.config[categoryKey], settingKey, {
-          get: () => setting.value,
-          set: (newValue) => {
-            setting.value = newValue;
-          },
-          enumerable: true,
-          configurable: true,
-        });
-      });
-    });
-
-    console.log("[CJS|ConfigManager] ✓ Setup proxies for all settings");
-  }
-
-  /**
    * Get a setting value
    * @param {string} pluginId
    * @param {string} categoryKey
@@ -493,38 +393,24 @@ class ConfigManager {
   }
 
   /**
-   * Load config from VRChat's config.json
+   * Load config from localStorage
    * @returns {Promise<void>}
    */
   async load() {
     try {
-      if (!window.AppApi?.ReadConfigFileSafe) {
-        console.warn(
-          "[CJS|ConfigManager] AppApi.ReadConfigFileSafe not available"
-        );
-        return;
-      }
-
-      const configJson = await window.AppApi.ReadConfigFileSafe();
+      const configJson = localStorage.getItem(this.storageKey);
       if (!configJson) {
         console.log(
-          "[CJS|ConfigManager] No config file found or empty, using defaults"
+          "[CJS|ConfigManager] No config found in localStorage, using defaults"
         );
         return;
       }
 
       const config = JSON.parse(configJson);
-      const customjsRoot = config?.vrcx?.customjs;
-
-      if (!customjsRoot) {
-        console.log("[CJS|ConfigManager] No customjs config found in file");
-        return;
-      }
-
       let loadedCount = 0;
 
-      // Load plugin settings from vrcx.customjs.settings (new structure)
-      const pluginSettings = customjsRoot.settings;
+      // Load plugin settings
+      const pluginSettings = config.settings;
       if (pluginSettings) {
         Object.keys(pluginSettings).forEach((pluginId) => {
           const pluginConfig = pluginSettings[pluginId];
@@ -546,9 +432,9 @@ class ConfigManager {
         });
       }
 
-      // Load general settings (logger, etc.) from vrcx.customjs.*
+      // Load general settings
       this.generalCategories.forEach((categoryInfo, categoryKey) => {
-        const categoryConfig = customjsRoot[categoryKey];
+        const categoryConfig = config[categoryKey];
         if (categoryConfig && typeof categoryConfig === "object") {
           const categorySettings = this.generalSettings.get(categoryKey);
           if (categorySettings) {
@@ -564,21 +450,18 @@ class ConfigManager {
         }
       });
 
-      // Load plugin config from vrcx.customjs.loader.plugins (object with url: enabled)
-      if (
-        customjsRoot.loader?.plugins &&
-        typeof customjsRoot.loader.plugins === "object"
-      ) {
-        this.pluginConfig = customjsRoot.loader.plugins;
+      // Load plugin config
+      if (config.loader?.plugins && typeof config.loader.plugins === "object") {
+        this.pluginConfig = config.loader.plugins;
         console.log(
           `[CJS|ConfigManager] ✓ Loaded plugin configuration with ${
-            Object.keys(customjsRoot.loader.plugins).length
+            Object.keys(config.loader.plugins).length
           } entries`
         );
       }
 
       console.log(
-        `[CJS|ConfigManager] ✓ Loaded ${loadedCount} settings from disk`
+        `[CJS|ConfigManager] ✓ Loaded ${loadedCount} settings from localStorage`
       );
     } catch (error) {
       console.error("[CJS|ConfigManager] Error loading config:", error);
@@ -586,7 +469,7 @@ class ConfigManager {
   }
 
   /**
-   * Save config to VRChat's config.json (only non-default settings)
+   * Save config to localStorage (only non-default settings)
    * @returns {Promise<void>}
    */
   async save() {
@@ -599,32 +482,16 @@ class ConfigManager {
     this.isSaving = true;
 
     try {
-      if (
-        !window.AppApi?.ReadConfigFileSafe ||
-        !window.AppApi?.WriteConfigFile
-      ) {
-        console.error(
-          "[CJS|ConfigManager] AppApi methods not available for saving"
-        );
-        return;
-      }
-
-      // Read current config
-      const configJson = await window.AppApi.ReadConfigFileSafe();
-      const config = configJson ? JSON.parse(configJson) : {};
-
-      // Ensure structure exists
-      config.vrcx = config.vrcx || {};
-      config.vrcx.customjs = config.vrcx.customjs || {};
-      config.vrcx.customjs.loader = config.vrcx.customjs.loader || {};
+      const config = {};
 
       // Save plugin configuration (url -> enabled mapping)
+      config.loader = config.loader || {};
       if (this.pluginConfig) {
-        config.vrcx.customjs.loader.plugins = this.pluginConfig;
+        config.loader.plugins = this.pluginConfig;
       }
 
       // Initialize settings section
-      config.vrcx.customjs.settings = config.vrcx.customjs.settings || {};
+      config.settings = {};
 
       // Build plugin settings (save only non-default settings)
       let savedCount = 0;
@@ -634,12 +501,11 @@ class ConfigManager {
             // Only save modified settings
             if (setting.isModified()) {
               // Ensure structure exists
-              config.vrcx.customjs.settings[pluginId] =
-                config.vrcx.customjs.settings[pluginId] || {};
-              config.vrcx.customjs.settings[pluginId][categoryKey] =
-                config.vrcx.customjs.settings[pluginId][categoryKey] || {};
+              config.settings[pluginId] = config.settings[pluginId] || {};
+              config.settings[pluginId][categoryKey] =
+                config.settings[pluginId][categoryKey] || {};
 
-              config.vrcx.customjs.settings[pluginId][categoryKey][settingKey] =
+              config.settings[pluginId][categoryKey][settingKey] =
                 setting.value;
               savedCount++;
             }
@@ -647,26 +513,26 @@ class ConfigManager {
         });
       });
 
-      // Save general settings (logger, loader, etc.) - save only non-default settings
+      // Save general settings (only non-default settings)
       this.generalSettings.forEach((settings, categoryKey) => {
         settings.forEach((setting, settingKey) => {
           // Only save modified settings
           if (setting.isModified()) {
             // Ensure structure exists
-            config.vrcx.customjs[categoryKey] =
-              config.vrcx.customjs[categoryKey] || {};
-
-            config.vrcx.customjs[categoryKey][settingKey] = setting.value;
+            config[categoryKey] = config[categoryKey] || {};
+            config[categoryKey][settingKey] = setting.value;
             savedCount++;
           }
         });
       });
 
-      // Write to disk
+      // Write to localStorage
       const configString = JSON.stringify(config, null, 2);
-      await window.AppApi.WriteConfigFile(configString);
+      localStorage.setItem(this.storageKey, configString);
 
-      console.log(`[CJS|ConfigManager] ✓ Saved ${savedCount} settings to disk`);
+      console.log(
+        `[CJS|ConfigManager] ✓ Saved ${savedCount} settings to localStorage`
+      );
     } catch (error) {
       console.error("[CJS|ConfigManager] Error saving config:", error);
     } finally {
@@ -750,6 +616,171 @@ class ConfigManager {
   }
 
   /**
+   * Export config to JSON string
+   * @returns {string} JSON config
+   */
+  exportToJSON() {
+    try {
+      const configString = localStorage.getItem(this.storageKey);
+      return configString || "{}";
+    } catch (error) {
+      console.error("[CJS|ConfigManager] Error exporting config:", error);
+      return "{}";
+    }
+  }
+
+  /**
+   * Export config to clipboard
+   * @returns {Promise<boolean>} Success status
+   */
+  async exportToClipboard() {
+    try {
+      const configString = this.exportToJSON();
+      await navigator.clipboard.writeText(configString);
+      console.log("[CJS|ConfigManager] ✓ Config exported to clipboard");
+      return true;
+    } catch (error) {
+      console.error("[CJS|ConfigManager] Error exporting to clipboard:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Import config from JSON string
+   * @param {string} configString - JSON config string
+   * @returns {Promise<boolean>} Success status
+   */
+  async importFromJSON(configString) {
+    try {
+      // Validate JSON
+      const config = JSON.parse(configString);
+
+      // Save to localStorage
+      localStorage.setItem(this.storageKey, JSON.stringify(config, null, 2));
+
+      // Reload config
+      await this.load();
+
+      console.log("[CJS|ConfigManager] ✓ Config imported successfully");
+      return true;
+    } catch (error) {
+      console.error("[CJS|ConfigManager] Error importing config:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Import config from clipboard
+   * @returns {Promise<boolean>} Success status
+   */
+  async importFromClipboard() {
+    try {
+      const configString = await navigator.clipboard.readText();
+      return await this.importFromJSON(configString);
+    } catch (error) {
+      console.error(
+        "[CJS|ConfigManager] Error importing from clipboard:",
+        error
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Export config to VRChat config.json (legacy support)
+   * @returns {Promise<boolean>} Success status
+   */
+  async exportToVRChatConfig() {
+    try {
+      if (
+        !window.AppApi?.ReadConfigFileSafe ||
+        !window.AppApi?.WriteConfigFile
+      ) {
+        console.error("[CJS|ConfigManager] AppApi methods not available");
+        return false;
+      }
+
+      // Read current VRChat config
+      const vrchatConfigJson = await window.AppApi.ReadConfigFileSafe();
+      const vrchatConfig = vrchatConfigJson ? JSON.parse(vrchatConfigJson) : {};
+
+      // Get our config using exportToJSON()
+      const ourConfigString = this.exportToJSON();
+      const ourConfig = JSON.parse(ourConfigString);
+
+      // Merge into VRChat config
+      vrchatConfig.vrcx = vrchatConfig.vrcx || {};
+      vrchatConfig.vrcx.customjs = ourConfig;
+
+      // Write back
+      const configString = JSON.stringify(vrchatConfig, null, 2);
+      await window.AppApi.WriteConfigFile(configString);
+
+      console.log(
+        "[CJS|ConfigManager] ✓ Config exported to VRChat config.json"
+      );
+      return true;
+    } catch (error) {
+      console.error(
+        "[CJS|ConfigManager] Error exporting to VRChat config:",
+        error
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Import config from VRChat config.json (legacy support)
+   * @returns {Promise<boolean>} Success status
+   */
+  async importFromVRChatConfig() {
+    try {
+      if (!window.AppApi?.ReadConfigFileSafe) {
+        console.error(
+          "[CJS|ConfigManager] AppApi.ReadConfigFileSafe not available"
+        );
+        return false;
+      }
+
+      const configJson = await window.AppApi.ReadConfigFileSafe();
+      if (!configJson) {
+        console.log("[CJS|ConfigManager] No VRChat config file found");
+        return false;
+      }
+
+      const vrchatConfig = JSON.parse(configJson);
+      const customjsConfig = vrchatConfig?.vrcx?.customjs;
+
+      if (!customjsConfig) {
+        console.log(
+          "[CJS|ConfigManager] No customjs config found in VRChat config"
+        );
+        return false;
+      }
+
+      // Save to localStorage
+      localStorage.setItem(
+        this.storageKey,
+        JSON.stringify(customjsConfig, null, 2)
+      );
+
+      // Reload
+      await this.load();
+
+      console.log(
+        "[CJS|ConfigManager] ✓ Config imported from VRChat config.json"
+      );
+      return true;
+    } catch (error) {
+      console.error(
+        "[CJS|ConfigManager] Error importing from VRChat config:",
+        error
+      );
+      return false;
+    }
+  }
+
+  /**
    * Get complete config structure for debugging
    * @returns {object}
    */
@@ -814,14 +845,52 @@ class ConfigManager {
   }
 }
 
-// Export classes globally under customjs namespace
-if (typeof window !== "undefined") {
-  window.customjs = window.customjs || {};
-  window.customjs.ConfigManager = ConfigManager;
-  window.customjs.PluginSetting = PluginSetting;
-  window.customjs.configManager = new ConfigManager();
+// ============================================================================
+// CONFIG CORE MODULE
+// ============================================================================
 
-  console.log(
-    "[CJS|ConfigManager] ConfigManager class loaded and instance created"
-  );
+/**
+ * ConfigModule - Core module that provides the ConfigManager
+ */
+class ConfigModule extends CoreModule {
+  constructor() {
+    super({
+      id: "config",
+      name: "ConfigManager",
+      description: "Configuration management system for VRCX Custom",
+      author: "Bluscream",
+      version: "2.0.0",
+      build: "1760486400",
+    });
+  }
+
+  async load() {
+    this.log("Loading ConfigManager module...");
+
+    // Export classes globally
+    window.customjs = window.customjs || {};
+    window.customjs.ConfigManager = ConfigManager;
+    window.customjs.PluginSetting = PluginSetting;
+    window.customjs.configManager = new ConfigManager();
+
+    this.loaded = true;
+    this.log("✓ ConfigManager class loaded and instance created");
+  }
+
+  async start() {
+    this.log("Starting ConfigManager module...");
+
+    // Initialize the configManager
+    if (window.customjs?.configManager) {
+      await window.customjs.configManager.init();
+    }
+
+    this.started = true;
+    this.log("✓ ConfigManager module started");
+  }
+}
+
+// Export classes and auto-instantiate core module
+if (typeof window !== "undefined") {
+  new ConfigModule();
 }

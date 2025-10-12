@@ -366,4 +366,4 @@ Oculus ID: {oculusId}`,
 }
 
 // Export plugin class for PluginLoader
-window.__LAST_PLUGIN_CLASS__ = BioUpdaterPlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = BioUpdaterPlugin;

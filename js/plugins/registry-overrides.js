@@ -260,4 +260,4 @@ class RegistryOverridesPlugin extends Plugin {
 }
 
 // Export plugin class for PluginLoader
-window.__LAST_PLUGIN_CLASS__ = RegistryOverridesPlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = RegistryOverridesPlugin;

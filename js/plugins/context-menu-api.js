@@ -578,4 +578,4 @@ class ContextMenuApiPlugin extends Plugin {
 }
 
 // Export plugin class for PluginLoader
-window.__LAST_PLUGIN_CLASS__ = ContextMenuApiPlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = ContextMenuApiPlugin;

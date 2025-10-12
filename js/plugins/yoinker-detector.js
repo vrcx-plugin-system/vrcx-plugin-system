@@ -563,4 +563,4 @@ class YoinkerDetectorPlugin extends Plugin {
 }
 
 // Make plugin class available for PluginLoader to instantiate
-window.__LAST_PLUGIN_CLASS__ = YoinkerDetectorPlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = YoinkerDetectorPlugin;

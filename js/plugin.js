@@ -1,7 +1,8 @@
-class Plugin {
+class Plugin extends Module {
   constructor(metadata = {}) {
     // Get URL from metadata or from global scope (set by PluginManager)
-    const pluginUrl = metadata.url || window.__CURRENT_PLUGIN_URL__ || null;
+    const pluginUrl =
+      metadata.url || window.customjs?.__currentPluginUrl || null;
 
     // Auto-derive ID from URL if not provided
     let pluginId = metadata.id;
@@ -18,20 +19,19 @@ class Plugin {
       );
     }
 
-    this.metadata = {
+    // Call Module constructor
+    super({
       id: pluginId,
       name: metadata.name || pluginId,
       description: metadata.description || "",
       author: metadata.author || "Unknown",
       version: metadata.version || "1.0.0",
       build: metadata.build || Date.now().toString(),
-      dependencies: metadata.dependencies || [],
       url: pluginUrl,
-    };
+    });
 
     this.enabled = false;
-    this.loaded = false;
-    this.started = false;
+    this.dependencies = metadata.dependencies || [];
 
     // Create personal logger instance for this plugin
     this.logger = new window.customjs.Logger(this.metadata.id);
@@ -39,14 +39,8 @@ class Plugin {
     // Initialize config object (will be populated by ConfigManager)
     this.config = {};
 
-    // Resource tracking for automatic cleanup
-    this.resources = {
-      timers: new Set(),
-      observers: new Set(),
-      listeners: new Map(), // element -> [{ event, handler, options }, ...]
-      hooks: new Set(), // Track hooks registered by this plugin
-      subscriptions: new Set(),
-    };
+    // Add hooks tracking to resources
+    this.resources.hooks = new Set();
 
     // Automatically register with plugin manager
     if (window.customjs?.pluginManager) {
@@ -110,10 +104,9 @@ class Plugin {
    */
   async stop() {
     this.log("stop() called - Override this method in your plugin");
-    this.started = false;
 
-    // Clean up local resources
-    this.cleanupResources();
+    // Call parent stop (which handles resource cleanup)
+    await super.stop();
 
     // Clean up global subscriptions via PluginManager
     if (window.customjs?.pluginManager) {
@@ -165,50 +158,14 @@ class Plugin {
   }
 
   /**
-   * Register a timer (setInterval/setTimeout) for automatic cleanup
-   * @param {number} timerId - Timer ID from setInterval/setTimeout
-   */
-  registerTimer(timerId) {
-    this.resources.timers.add(timerId);
-    return timerId;
-  }
-
-  /**
-   * Register an observer (MutationObserver, IntersectionObserver, etc.)
-   * @param {object} observer - Observer instance
-   */
-  registerObserver(observer) {
-    this.resources.observers.add(observer);
-    return observer;
-  }
-
-  /**
-   * Register an event listener for automatic cleanup
-   * @param {Element} element - DOM element
-   * @param {string} event - Event name
-   * @param {function} handler - Event handler
-   * @param {object} options - Event listener options
-   */
-  registerListener(element, event, handler, options = {}) {
-    element.addEventListener(event, handler, options);
-
-    if (!this.resources.listeners.has(element)) {
-      this.resources.listeners.set(element, []);
-    }
-    this.resources.listeners.get(element).push({ event, handler, options });
-
-    return { element, event, handler };
-  }
-
-  /**
    * Register a Pinia subscription or any unsubscribe function for automatic cleanup
    * Uses centralized tracking via PluginManager and local tracking for cleanup
    * @param {function} unsubscribe - Unsubscribe function returned by $subscribe or similar
    * @returns {function} The unsubscribe function (for chaining)
    */
   registerSubscription(unsubscribe) {
-    // Track locally for cleanup
-    this.resources.subscriptions.add(unsubscribe);
+    // Call parent method to track locally
+    super.registerSubscription(unsubscribe);
 
     // Track globally in PluginManager
     if (window.customjs?.pluginManager) {
@@ -228,51 +185,6 @@ class Plugin {
    */
   registerResource(unsubscribe) {
     return this.registerSubscription(unsubscribe);
-  }
-
-  /**
-   * Clean up all tracked resources (timers, observers, listeners)
-   * NOTE: Subscriptions are cleaned up centrally via PluginManager.unregisterSubscriptions()
-   * Called automatically by stop()
-   * @private
-   */
-  cleanupResources() {
-    let cleanupCount = 0;
-
-    // Clear timers
-    this.resources.timers.forEach((timerId) => {
-      clearInterval(timerId);
-      clearTimeout(timerId);
-      cleanupCount++;
-    });
-    this.resources.timers.clear();
-
-    // Disconnect observers
-    this.resources.observers.forEach((observer) => {
-      observer.disconnect();
-      cleanupCount++;
-    });
-    this.resources.observers.clear();
-
-    // Remove event listeners
-    this.resources.listeners.forEach((listeners, element) => {
-      listeners.forEach(({ event, handler, options }) => {
-        element.removeEventListener(event, handler, options);
-        cleanupCount++;
-      });
-    });
-    this.resources.listeners.clear();
-
-    // Clear local subscription tracking (actual unsubscribe is done by PluginManager)
-    this.resources.subscriptions.clear();
-
-    // Note: Hooks are not automatically removed as they may be used by other plugins
-    // Removing them would require coordination with PluginManager
-    this.resources.hooks.clear();
-
-    if (cleanupCount > 0) {
-      this.log(`✓ Cleaned up ${cleanupCount} local resources`);
-    }
   }
 
   /**
@@ -527,7 +439,1091 @@ class Plugin {
   }
 }
 
-// Export for use by other plugins
+// ============================================================================
+// PLUGIN LOADER
+// ============================================================================
+
+/**
+ * PluginLoader class - handles loading plugins (inherits from ModuleLoader)
+ */
+class PluginLoader extends ModuleLoader {
+  constructor(pluginManager) {
+    super();
+    this.pluginManager = pluginManager;
+
+    // Default plugin configuration
+    this.defaultPlugins = [
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config-proxy.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/invite-message-api.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/protocol-links.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/registry-overrides.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/tag-manager.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/yoinker-detector.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-invite.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-follow.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/bio-updater.js",
+        enabled: false,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/plugin-manager-ui.js",
+        enabled: false,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/monitor-invisibleplayers.js",
+        enabled: false,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/selfinvite-onblockedplayer.js",
+        enabled: false,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/avatar-log.js",
+        enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js",
+        enabled: false,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/template.js",
+        enabled: false,
+      },
+    ];
+  }
+
+  /**
+   * Load plugin code from URL (overrides base method for plugin-specific logic)
+   * @param {string} pluginUrl - URL to load
+   * @param {number} timeout - Load timeout in ms
+   * @returns {Promise<boolean>} Success status
+   */
+  async loadPluginCode(pluginUrl, timeout = 10000) {
+    const attempts = this.retryAttempts.get(pluginUrl) || 0;
+
+    try {
+      const url = pluginUrl + "?v=" + Date.now();
+      this.log(`Loading plugin: ${pluginUrl}`);
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const pluginCode = await response.text();
+
+      // Store the number of plugins before loading
+      const pluginCountBefore = window.customjs.plugins.length;
+
+      // Wrap in IIFE to isolate scope
+      const wrappedCode = `(function() { 
+        window.customjs = window.customjs || {};
+        window.customjs.__currentPluginUrl = "${pluginUrl}";
+        
+        ${pluginCode}
+        
+        // Auto-instantiate plugin if class was defined
+        if (typeof window.customjs.__LAST_PLUGIN_CLASS__  !== 'undefined') {
+          try {
+            const PluginClass = window.customjs.__LAST_PLUGIN_CLASS__ ;
+            const pluginInstance = new PluginClass();
+            console.log(\`[CJS|PluginLoader] ✓ Instantiated plugin: \${pluginInstance.metadata.name}\`);
+            delete window.customjs.__LAST_PLUGIN_CLASS__ ;
+            delete window.customjs.__currentPluginUrl;
+          } catch (e) {
+            console.error('[CJS|PluginLoader] Error instantiating plugin:', e);
+            delete window.customjs.__currentPluginUrl;
+          }
+        }
+      })();`;
+
+      // Inject code
+      const script = document.createElement("script");
+      script.type = "text/javascript";
+      script.textContent = wrappedCode;
+      script.dataset.pluginUrl = pluginUrl;
+
+      const loadPromise = new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error(`Plugin load timeout: ${pluginUrl}`));
+        }, timeout);
+
+        script.onerror = () => {
+          clearTimeout(timeoutId);
+          reject(new Error(`Script error loading plugin`));
+        };
+
+        setTimeout(() => {
+          clearTimeout(timeoutId);
+          const pluginCountAfter = window.customjs.plugins.length;
+          if (pluginCountAfter > pluginCountBefore) {
+            const newPlugin = window.customjs.plugins[pluginCountAfter - 1];
+            this.log(
+              `✓ Loaded ${newPlugin.metadata.name} v${newPlugin.metadata.version}`
+            );
+          }
+          resolve();
+        }, 100);
+      });
+
+      document.head.appendChild(script);
+      await loadPromise;
+
+      this.loadedUrls.add(pluginUrl);
+      this.retryAttempts.delete(pluginUrl);
+      return true;
+    } catch (error) {
+      this.retryAttempts.set(pluginUrl, attempts + 1);
+
+      if (attempts + 1 >= this.maxRetries) {
+        this.failedUrls.add(pluginUrl);
+        this.error(
+          `✗ Failed to load plugin after ${this.maxRetries} attempts: ${pluginUrl}`,
+          error
+        );
+        return false;
+      } else {
+        this.warn(
+          `⚠ Retry ${attempts + 1}/${this.maxRetries} for: ${pluginUrl}`
+        );
+        await new Promise((resolve) =>
+          setTimeout(resolve, 1000 * (attempts + 1))
+        );
+        return await this.loadPluginCode(pluginUrl, timeout);
+      }
+    }
+  }
+
+  log(message, ...args) {
+    console.log(`[CJS|PluginLoader] ${message}`, ...args);
+  }
+
+  warn(message, ...args) {
+    console.warn(`[CJS|PluginLoader] ${message}`, ...args);
+  }
+
+  error(message, ...args) {
+    console.error(`[CJS|PluginLoader] ${message}`, ...args);
+  }
+}
+
+// ============================================================================
+// PLUGIN MANAGER
+// ============================================================================
+
+class PluginManager {
+  constructor() {
+    // Login tracking
+    this.loginCallbacks = [];
+    this.isLoggedIn = false;
+    this.hasTriggeredLogin = false;
+
+    // Plugin loading tracking
+    this.loadedUrls = new Set();
+    this.failedUrls = new Set();
+
+    // Initialize global customjs structures if not exists
+    if (!window.customjs.plugins) {
+      window.customjs.plugins = [];
+    }
+    if (!window.customjs.subscriptions) {
+      window.customjs.subscriptions = new Map(); // pluginId -> Set of unsubscribe functions
+    }
+    if (!window.customjs.hooks) {
+      window.customjs.hooks = {
+        pre: {},
+        post: {},
+        void: {},
+        replace: {},
+      };
+    }
+    if (!window.customjs.functions) {
+      window.customjs.functions = {};
+    }
+    if (!window.customjs.events) {
+      window.customjs.events = {};
+    }
+
+    // Register in global namespace
+    window.customjs.pluginManager = this;
+  }
+
+  registerPlugin(plugin) {
+    if (!plugin || !plugin.metadata) {
+      console.error("[CJS|PluginManager] Invalid plugin registration");
+      return false;
+    }
+
+    // Check if already registered
+    const existing = window.customjs.plugins.find(
+      (p) => p.metadata.id === plugin.metadata.id
+    );
+    if (existing) {
+      console.warn(
+        `[CJS|PluginManager] Plugin already registered: ${plugin.metadata.id}`
+      );
+      return false;
+    }
+
+    window.customjs.plugins.push(plugin);
+
+    // Initialize subscription tracking for this plugin
+    if (!window.customjs.subscriptions.has(plugin.metadata.id)) {
+      window.customjs.subscriptions.set(plugin.metadata.id, new Set());
+    }
+
+    console.log(
+      `[CJS|PluginManager] Registered plugin: ${plugin.metadata.name} v${plugin.metadata.version}`
+    );
+    return true;
+  }
+
+  /**
+   * Register a subscription for a plugin (centralized tracking)
+   * @param {string} pluginId - Plugin ID
+   * @param {function} unsubscribe - Unsubscribe function
+   * @returns {function} The unsubscribe function (for chaining)
+   */
+  registerSubscription(pluginId, unsubscribe) {
+    if (!window.customjs.subscriptions.has(pluginId)) {
+      window.customjs.subscriptions.set(pluginId, new Set());
+    }
+
+    window.customjs.subscriptions.get(pluginId).add(unsubscribe);
+    return unsubscribe;
+  }
+
+  /**
+   * Unregister all subscriptions for a plugin
+   * @param {string} pluginId - Plugin ID
+   */
+  unregisterSubscriptions(pluginId) {
+    const subscriptions = window.customjs.subscriptions.get(pluginId);
+    if (!subscriptions) return;
+
+    let count = 0;
+    subscriptions.forEach((unsubscribe) => {
+      if (typeof unsubscribe === "function") {
+        try {
+          unsubscribe();
+          count++;
+        } catch (error) {
+          console.error(
+            `[CJS|PluginManager] Error unsubscribing for ${pluginId}:`,
+            error
+          );
+        }
+      }
+    });
+
+    subscriptions.clear();
+    console.log(
+      `[CJS|PluginManager] Unregistered ${count} subscriptions for ${pluginId}`
+    );
+  }
+
+  unregisterPlugin(pluginId) {
+    const index = window.customjs.plugins.findIndex(
+      (p) => p.metadata.id === pluginId
+    );
+    if (index === -1) return false;
+
+    // Clean up subscriptions first
+    this.unregisterSubscriptions(pluginId);
+
+    window.customjs.plugins.splice(index, 1);
+    return true;
+  }
+
+  getPlugin(pluginId) {
+    return window.customjs.plugins.find((p) => p.metadata.id === pluginId);
+  }
+
+  /**
+   * Wait for a plugin to be available
+   * @param {string} pluginId - Plugin ID to wait for
+   * @param {number} timeout - Timeout in milliseconds (default: 10000)
+   * @returns {Promise<Plugin>} - Resolves with plugin instance
+   */
+  async waitForPlugin(pluginId, timeout = 10000) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      const plugin = this.getPlugin(pluginId);
+      if (plugin && plugin.loaded) {
+        return plugin;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    throw new Error(`Timeout waiting for plugin: ${pluginId}`);
+  }
+
+  getAllPlugins() {
+    return window.customjs.plugins;
+  }
+
+  async startAllPlugins() {
+    console.log(
+      `%c[CJS|PluginManager] %cCalling start() on ${window.customjs.plugins.length} plugins...`,
+      "font-weight: bold; color: #ff9900",
+      "color: #888"
+    );
+
+    for (const plugin of window.customjs.plugins) {
+      try {
+        // Enable plugin if not already enabled
+        if (!plugin.enabled) {
+          plugin.enabled = true; // Don't call enable() as it would trigger start()
+        }
+
+        // Call start()
+        if (!plugin.started) {
+          await plugin.start();
+          console.log(
+            `[CJS|PluginManager] ✓ Started ${plugin.metadata.name} v${plugin.metadata.version}`
+          );
+        }
+      } catch (error) {
+        console.error(
+          `[CJS|PluginManager] ✗ Error starting ${plugin.metadata.name}:`,
+          error
+        );
+      }
+    }
+
+    console.log(
+      `%c[CJS|PluginManager] %c✓ All plugins started`,
+      "font-weight: bold; color: #ff9900",
+      "color: #888"
+    );
+  }
+
+  async stopAllPlugins() {
+    for (const plugin of window.customjs.plugins) {
+      try {
+        await plugin.stop();
+      } catch (error) {
+        console.error(
+          `[CJS|PluginManager] Error stopping ${plugin.metadata.name}:`,
+          error
+        );
+      }
+    }
+  }
+
+  onLogin(callback) {
+    if (this.isLoggedIn && this.hasTriggeredLogin) {
+      const currentUser = window.$pinia?.user?.currentUser;
+      try {
+        callback(currentUser);
+      } catch (error) {
+        console.error("[CJS|PluginManager] Error in login callback:", error);
+      }
+    } else {
+      this.loginCallbacks.push(callback);
+    }
+  }
+
+  async triggerLogin(currentUser) {
+    if (this.hasTriggeredLogin) return;
+
+    this.hasTriggeredLogin = true;
+    this.isLoggedIn = true;
+
+    const user = currentUser || window.$pinia?.user?.currentUser;
+    console.log(`[CJS|✓ User logged in: ${user?.displayName || "Unknown"}`);
+
+    // Trigger plugin onLogin methods
+    for (const plugin of window.customjs.plugins) {
+      try {
+        if (plugin.enabled && typeof plugin.onLogin === "function") {
+          await plugin.onLogin(user);
+        }
+      } catch (error) {
+        console.error(
+          `[CJS|PluginManager] Error in ${plugin.metadata.name}.onLogin:`,
+          error
+        );
+      }
+    }
+
+    // Trigger registered callbacks
+    for (const callback of this.loginCallbacks) {
+      try {
+        callback(user);
+      } catch (error) {
+        console.error("[CJS|PluginManager] Error in login callback:", error);
+      }
+    }
+  }
+
+  startLoginMonitoring() {
+    const setupWatch = () => {
+      if (window.$pinia?.user?.$subscribe) {
+        window.$pinia.user.$subscribe(() => {
+          const currentUser = window.$pinia.user.currentUser;
+          if (currentUser && currentUser.id && !this.hasTriggeredLogin) {
+            this.triggerLogin(currentUser);
+          }
+        });
+      } else {
+        setTimeout(setupWatch, 500);
+      }
+    };
+
+    setTimeout(setupWatch, 100);
+  }
+
+  registerPreHook(functionPath, callback, plugin) {
+    window.customjs.hooks.pre[functionPath] =
+      window.customjs.hooks.pre[functionPath] || [];
+    window.customjs.hooks.pre[functionPath].push({ plugin, callback });
+
+    // Try to wrap the function, or wait for it to exist
+    this.wrapFunctionWhenReady(functionPath);
+
+    console.log(
+      `[CJS|PluginManager] Registered pre-hook for ${functionPath} from ${plugin.metadata.name}`
+    );
+  }
+
+  registerPostHook(functionPath, callback, plugin) {
+    window.customjs.hooks.post[functionPath] =
+      window.customjs.hooks.post[functionPath] || [];
+    window.customjs.hooks.post[functionPath].push({ plugin, callback });
+
+    // Try to wrap the function, or wait for it to exist
+    this.wrapFunctionWhenReady(functionPath);
+
+    console.log(
+      `[CJS|PluginManager] Registered post-hook for ${functionPath} from ${plugin.metadata.name}`
+    );
+  }
+
+  registerVoidHook(functionPath, callback, plugin) {
+    window.customjs.hooks.void[functionPath] =
+      window.customjs.hooks.void[functionPath] || [];
+    window.customjs.hooks.void[functionPath].push({ plugin, callback });
+
+    // Try to wrap the function, or wait for it to exist
+    this.wrapFunctionWhenReady(functionPath);
+
+    console.log(
+      `[CJS|PluginManager] Registered void-hook for ${functionPath} from ${plugin.metadata.name}`
+    );
+  }
+
+  registerReplaceHook(functionPath, callback, plugin) {
+    window.customjs.hooks.replace[functionPath] =
+      window.customjs.hooks.replace[functionPath] || [];
+    window.customjs.hooks.replace[functionPath].push({ plugin, callback });
+
+    // Try to wrap the function, or wait for it to exist
+    this.wrapFunctionWhenReady(functionPath);
+
+    console.log(
+      `[CJS|PluginManager] Registered replace-hook for ${functionPath} from ${plugin.metadata.name}`
+    );
+  }
+
+  wrapFunctionWhenReady(functionPath, retries = 0, maxRetries = 10) {
+    // Try to wrap immediately
+    if (this.wrapFunction(functionPath)) {
+      return true;
+    }
+
+    // If function doesn't exist yet, retry with exponential backoff
+    if (retries < maxRetries) {
+      const delay = Math.min(500 * Math.pow(1.5, retries), 5000);
+      setTimeout(() => {
+        console.log(
+          `[CJS|PluginManager] Retrying to wrap ${functionPath} (attempt ${
+            retries + 1
+          }/${maxRetries})...`
+        );
+        this.wrapFunctionWhenReady(functionPath, retries + 1, maxRetries);
+      }, delay);
+    } else {
+      console.warn(
+        `[CJS|PluginManager] Failed to wrap ${functionPath} after ${maxRetries} attempts - function may not exist`
+      );
+    }
+
+    return false;
+  }
+
+  wrapFunction(functionPath) {
+    // Skip if already wrapped
+    if (window.customjs.functions[functionPath]) {
+      return true;
+    }
+
+    // Parse the function path (e.g., "AppApi.SendIpc" or "$pinia.notification.playNoty")
+    const parts = functionPath.split(".");
+    let obj = window;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      obj = obj[parts[i]];
+      if (!obj) {
+        // Path doesn't exist yet
+        return false;
+      }
+    }
+
+    const funcName = parts[parts.length - 1];
+    const originalFunc = obj[funcName];
+
+    if (typeof originalFunc !== "function") {
+      // Not a function yet
+      return false;
+    }
+
+    // Store original
+    window.customjs.functions[functionPath] = originalFunc;
+
+    // Create wrapped version
+    obj[funcName] = function (...args) {
+      // Check for void hooks first - they completely prevent function execution
+      const voidHooks = window.customjs.hooks.void[functionPath] || [];
+      if (voidHooks.length > 0) {
+        for (const { plugin, callback } of voidHooks) {
+          try {
+            callback.call(plugin, args);
+          } catch (error) {
+            console.error(
+              `[CJS|PluginManager] Error in void-hook for ${functionPath}:`,
+              error
+            );
+          }
+        }
+        return; // Void the function - don't call original or any other hooks
+      }
+
+      // Call pre-hooks
+      const preHooks = window.customjs.hooks.pre[functionPath] || [];
+      for (const { plugin, callback } of preHooks) {
+        try {
+          callback.call(plugin, args);
+        } catch (error) {
+          console.error(
+            `[CJS|PluginManager] Error in pre-hook for ${functionPath}:`,
+            error
+          );
+        }
+      }
+
+      // Check for replace hooks - they replace the original function
+      const replaceHooks = window.customjs.hooks.replace[functionPath] || [];
+      let result;
+
+      if (replaceHooks.length > 0) {
+        // Chain replace hooks - each one calls the next, ending with the original
+        let chainedFunction = originalFunc.bind(this);
+
+        // Build chain from last to first, so first registered hook runs first
+        for (let i = replaceHooks.length - 1; i >= 0; i--) {
+          const { plugin, callback } = replaceHooks[i];
+          const nextFunction = chainedFunction;
+
+          chainedFunction = function (...hookArgs) {
+            try {
+              return callback.call(plugin, nextFunction, ...hookArgs);
+            } catch (error) {
+              console.error(
+                `[CJS|PluginManager] Error in replace-hook for ${functionPath}:`,
+                error
+              );
+              // On error, call the next function in chain
+              return nextFunction.apply(this, hookArgs);
+            }
+          };
+        }
+
+        result = chainedFunction(...args);
+      } else {
+        // Call original function
+        result = originalFunc.apply(this, args);
+      }
+
+      // Call post-hooks
+      const postHooks = window.customjs.hooks.post[functionPath] || [];
+      for (const { plugin, callback } of postHooks) {
+        try {
+          callback.call(plugin, result, args);
+        } catch (error) {
+          console.error(
+            `[CJS|PluginManager] Error in post-hook for ${functionPath}:`,
+            error
+          );
+        }
+      }
+
+      return result;
+    };
+
+    console.log(`[CJS|PluginManager] ✓ Wrapped function: ${functionPath}`);
+    return true;
+  }
+
+  /**
+   * Setup a fallback logger if the main Logger class failed to load
+   */
+  setupFallbackLogger() {
+    // Minimal Logger implementation for fallback
+    window.customjs.Logger = class FallbackLogger {
+      constructor(context = "CJS") {
+        this.context = context;
+      }
+
+      log(msg, options = {}, level = "info") {
+        const formattedMsg = `[CJS|${this.context}] ${msg}`;
+        if (typeof console[level] === "function") {
+          console[level](formattedMsg);
+        } else {
+          console.log(formattedMsg);
+        }
+      }
+
+      logInfo(msg) {
+        this.log(msg, {}, "info");
+      }
+      info(msg) {
+        this.logInfo(msg);
+      }
+
+      logWarn(msg) {
+        this.log(msg, {}, "warn");
+      }
+      warn(msg) {
+        this.logWarn(msg);
+      }
+
+      logError(msg) {
+        this.log(msg, {}, "error");
+      }
+      error(msg) {
+        this.logError(msg);
+      }
+
+      logDebug(msg) {
+        this.log(msg, {}, "log");
+      }
+      debug(msg) {
+        this.logDebug(msg);
+      }
+
+      showInfo(msg) {
+        console.log(`[CJS|${this.context}] ${msg}`);
+      }
+      showSuccess(msg) {
+        console.log(`[CJS|${this.context}] ✓ ${msg}`);
+      }
+      showWarn(msg) {
+        console.warn(`[CJS|${this.context}] ${msg}`);
+      }
+      showError(msg) {
+        console.error(`[CJS|${this.context}] ${msg}`);
+      }
+
+      async notifyDesktop(msg) {
+        console.log(`[CJS|${this.context}] [Desktop] ${msg}`);
+      }
+      async notifyXSOverlay(msg) {
+        console.log(`[CJS|${this.context}] [XSOverlay] ${msg}`);
+      }
+      async notifyOVRToolkit(msg) {
+        console.log(`[CJS|${this.context}] [OVRToolkit] ${msg}`);
+      }
+      async notifyVR(msg) {
+        console.log(`[CJS|${this.context}] [VR] ${msg}`);
+      }
+
+      logAndShow(msg, level = "info") {
+        this.log(msg, {}, level);
+      }
+      logAndNotifyAll(msg, level = "info") {
+        this.log(msg, {}, level);
+      }
+    };
+
+    console.log("[CJS|PluginManager] ✓ Fallback Logger class registered");
+  }
+
+  /**
+   * Get plugin configuration (merge defaults with loaded config)
+   * @returns {object} - { url: enabled } mapping
+   */
+  getPluginConfig() {
+    // Get defaults from PluginLoader
+    const config = {};
+
+    // Use defaultPlugins from PluginLoader if available
+    if (window.customjs?.PluginLoader) {
+      const tempLoader = new window.customjs.PluginLoader(null);
+      tempLoader.defaultPlugins.forEach((plugin) => {
+        config[plugin.url] = plugin.enabled;
+      });
+    }
+
+    // Load from ConfigManager if available
+    if (window.customjs?.configManager) {
+      const loadedConfig = window.customjs.configManager.getPluginConfig();
+      if (loadedConfig && typeof loadedConfig === "object") {
+        // Merge loaded config (overrides defaults)
+        Object.assign(config, loadedConfig);
+      }
+    }
+
+    return config;
+  }
+
+  /**
+   * Save plugin configuration to config system
+   * @param {object} config - { url: enabled } mapping
+   */
+  savePluginConfig(config) {
+    if (window.customjs?.configManager) {
+      window.customjs.configManager.setPluginConfig(config);
+    }
+  }
+
+  async loadAllPlugins() {
+    // Phase 1: Load core modules first with retry logic and 3s delay
+    const moduleLoader = new window.customjs.ModuleLoader();
+
+    console.log(
+      `%c[CJS|PluginManager] %cLoading ${moduleLoader.coreModules.length} core modules (with 3s delay)...`,
+      "font-weight: bold; color: #00aaff",
+      "color: #888"
+    );
+
+    try {
+      await moduleLoader.loadModules(moduleLoader.coreModules, 3000); // 3 second delay
+    } catch (error) {
+      console.error(
+        "[CJS|PluginManager] ✗ Critical error loading core modules:",
+        error
+      );
+      return; // Stop entire loading process
+    }
+
+    // Ensure Logger exists (provide fallback if loading failed)
+    if (!window.customjs.Logger) {
+      console.warn(
+        "[CJS|PluginManager] Logger failed to load, using fallback console logger"
+      );
+      this.setupFallbackLogger();
+    }
+
+    console.log(
+      `%c[CJS|PluginManager] %cCore modules loaded`,
+      "font-weight: bold; color: #00aaff",
+      "color: #888"
+    );
+
+    // Phase 2: Initialize core modules
+    console.log(
+      `%c[CJS|PluginManager] %cInitializing core modules...`,
+      "font-weight: bold; color: #00aaff",
+      "color: #888"
+    );
+
+    // Initialize each core module in order
+    if (window.customjs?.coreModules) {
+      for (const [id, module] of window.customjs.coreModules) {
+        try {
+          if (typeof module.load === "function") {
+            await module.load();
+          }
+          if (typeof module.start === "function") {
+            await module.start();
+          }
+          console.log(`[CJS|PluginManager] ✓ Initialized core module: ${id}`);
+        } catch (error) {
+          console.error(
+            `[CJS|PluginManager] ✗ Error initializing ${id}:`,
+            error
+          );
+        }
+      }
+    }
+
+    // Phase 3: Initialize ConfigManager (if exists)
+    if (window.customjs?.configManager) {
+      console.log(
+        `%c[CJS|PluginManager] %cInitializing ConfigManager...`,
+        "font-weight: bold; color: #00aaff",
+        "color: #888"
+      );
+      try {
+        await window.customjs.configManager.init();
+        console.log("[CJS|PluginManager] ✓ ConfigManager initialized");
+      } catch (error) {
+        console.error(
+          "[CJS|PluginManager] ✗ Error initializing ConfigManager:",
+          error
+        );
+      }
+    }
+
+    // Phase 4: Get plugin list from config (merge with defaults)
+    const pluginConfig = this.getPluginConfig();
+    const enabledPlugins = Object.entries(pluginConfig)
+      .filter(([url, enabled]) => enabled)
+      .map(([url]) => url);
+
+    console.log(
+      `%c[CJS|PluginManager] %cLoading ${enabledPlugins.length} plugins from config...`,
+      "font-weight: bold; color: #00aaff",
+      "color: #888"
+    );
+
+    if (window.$app?.playNoty) {
+      window.$app.playNoty({
+        message: `Loading ${enabledPlugins.length} plugins...`,
+        type: "info",
+      });
+    }
+
+    // Phase 5: Load enabled plugins using PluginLoader
+    if (window.customjs?.PluginLoader) {
+      const pluginLoader = new window.customjs.PluginLoader(this);
+
+      for (const pluginUrl of enabledPlugins) {
+        const success = await pluginLoader.loadPluginCode(pluginUrl);
+        if (success) {
+          this.loadedUrls.add(pluginUrl);
+        } else {
+          this.failedUrls.add(pluginUrl);
+        }
+      }
+
+      console.log(
+        `%c[CJS|PluginManager] %cPlugin code loading complete. Loaded: ${this.loadedUrls.size}, Failed: ${this.failedUrls.size}`,
+        "font-weight: bold; color: #00aaff",
+        "color: #888"
+      );
+    } else {
+      console.error(
+        "[CJS|PluginManager] PluginLoader not available - cannot load plugins"
+      );
+    }
+
+    // Phase 6: Call load() on all plugins
+    console.log(
+      `%c[CJS|PluginManager] %cCalling load() on ${window.customjs.plugins.length} plugins...`,
+      "font-weight: bold; color: #00aaff",
+      "color: #888"
+    );
+    for (const plugin of window.customjs.plugins) {
+      try {
+        await plugin.load();
+      } catch (error) {
+        console.error(
+          `[CJS|PluginManager] ✗ Error loading ${plugin.metadata.name}:`,
+          error
+        );
+      }
+    }
+
+    // Phase 7: Call start() on all plugins
+    await this.startAllPlugins();
+
+    // Phase 8: Start login monitoring
+    this.startLoginMonitoring();
+
+    // Phase 9: Save plugin config to disk
+    this.savePluginConfig(pluginConfig);
+    if (window.customjs?.configManager) {
+      await window.customjs.configManager.save();
+    }
+
+    console.log(
+      `%c[CJS|PluginManager] %c✓ Plugin system ready!`,
+      "font-weight: bold; color: #00ff00",
+      "color: #0f0"
+    );
+
+    if (window.$app?.playNoty) {
+      window.$app.playNoty({
+        text: `Loaded <strong>${enabledPlugins.length}</strong> plugins...`,
+        type: "success",
+      });
+    }
+  }
+
+  async addPlugin(url) {
+    if (this.loadedUrls.has(url)) {
+      console.warn(`[CJS|PluginManager] Already loaded: ${url}`);
+      return { success: false, message: "Already loaded" };
+    }
+
+    try {
+      // Load plugin code using PluginLoader
+      if (!window.customjs?.PluginLoader) {
+        throw new Error("PluginLoader not available");
+      }
+
+      const pluginLoader = new window.customjs.PluginLoader(this);
+      const success = await pluginLoader.loadPluginCode(url);
+
+      if (!success) {
+        throw new Error("Failed to load plugin code");
+      }
+
+      this.loadedUrls.add(url);
+
+      // Find the newly registered plugin
+      const plugin = this.findPluginByUrl(url);
+      if (plugin) {
+        // Call load(), enable, and start()
+        await plugin.load();
+        await plugin.enable();
+        await plugin.start();
+
+        console.log(
+          `[CJS|PluginManager] ✓ Successfully loaded and started: ${plugin.metadata.name}`
+        );
+      } else {
+        console.warn(
+          `[CJS|PluginManager] ⚠ Plugin loaded but not found: ${url}`
+        );
+      }
+
+      // Add to plugin config and save
+      const config = this.getPluginConfig();
+      config[url] = true;
+      this.savePluginConfig(config);
+      if (window.customjs?.configManager) {
+        await window.customjs.configManager.save();
+      }
+
+      return { success: true, message: "Loaded successfully" };
+    } catch (error) {
+      console.error(`[CJS|PluginManager] ✗ Failed to load: ${url}`, error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  async removePlugin(url) {
+    const plugin = this.findPluginByUrl(url);
+    if (!plugin) {
+      console.warn(`[CJS|PluginManager] Plugin not found for URL: ${url}`);
+      return { success: false, message: "Not found" };
+    }
+
+    await plugin.stop();
+    this.unregisterPlugin(plugin.metadata.id);
+    this.loadedUrls.delete(url);
+
+    // Remove from plugin config and save
+    const config = this.getPluginConfig();
+    delete config[url];
+    this.savePluginConfig(config);
+    if (window.customjs?.configManager) {
+      await window.customjs.configManager.save();
+    }
+
+    console.log(`[CJS|PluginManager] ✓ Removed: ${plugin.metadata.name}`);
+    console.warn(
+      `[CJS|PluginManager] Note: Code remains in memory. Refresh VRCX for full removal.`
+    );
+    return {
+      success: true,
+      message: "Removed (refresh to fully unload code)",
+    };
+  }
+
+  async reloadPlugin(url) {
+    console.log(`[CJS|PluginManager] Reloading: ${url}`);
+    await this.removePlugin(url);
+    return await this.addPlugin(url);
+  }
+
+  async reloadAllPlugins() {
+    console.log(
+      `[CJS|PluginManager] Reloading all ${this.loadedUrls.size} plugins...`
+    );
+
+    const urls = Array.from(this.loadedUrls);
+    const results = { success: [], failed: [] };
+
+    for (const url of urls) {
+      // Skip plugin.js base class
+      if (url.endsWith("/plugin.js")) continue;
+
+      try {
+        await this.reloadPlugin(url);
+        results.success.push(url);
+      } catch (error) {
+        results.failed.push({ url, error: error.message });
+      }
+    }
+
+    console.log(
+      `[CJS|PluginManager] Reload complete. Success: ${results.success.length}, Failed: ${results.failed.length}`
+    );
+    return results;
+  }
+
+  findPluginByUrl(url) {
+    // Extract plugin ID from URL
+    const pluginId = url.split("/").pop().replace(".js", "");
+    return window.customjs.plugins.find((p) => p.metadata.id === pluginId);
+  }
+
+  getPluginList() {
+    return {
+      loaded: Array.from(this.loadedUrls),
+      failed: Array.from(this.failedUrls),
+      plugins: window.customjs.plugins.map((p) => ({
+        id: p.metadata.id,
+        name: p.metadata.name,
+        version: p.metadata.version,
+        build: p.metadata.build,
+        enabled: p.enabled,
+        loaded: p.loaded,
+      })),
+    };
+  }
+}
+
+// Export for use by other plugins under window.customjs
 if (typeof window !== "undefined") {
-  window.Plugin = Plugin;
+  window.customjs.Plugin = Plugin;
+  window.customjs.PluginLoader = PluginLoader;
+  window.customjs.PluginManager = PluginManager;
 }

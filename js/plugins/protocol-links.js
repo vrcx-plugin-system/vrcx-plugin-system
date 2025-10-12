@@ -233,4 +233,4 @@ class ProtocolLinksPlugin extends Plugin {
 }
 
 // Export plugin class for PluginLoader
-window.__LAST_PLUGIN_CLASS__ = ProtocolLinksPlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = ProtocolLinksPlugin;

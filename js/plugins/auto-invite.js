@@ -533,4 +533,4 @@ class AutoInvitePlugin extends Plugin {
 }
 
 // Export plugin class for PluginLoader
-window.__LAST_PLUGIN_CLASS__ = AutoInvitePlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = AutoInvitePlugin;

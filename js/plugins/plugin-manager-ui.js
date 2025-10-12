@@ -1398,4 +1398,4 @@ class PluginManagerUIPlugin extends Plugin {
 }
 
 // Export plugin class for PluginManager
-window.__LAST_PLUGIN_CLASS__ = PluginManagerUIPlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = PluginManagerUIPlugin;

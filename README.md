@@ -626,7 +626,7 @@ class MyPlugin extends Plugin {
 }
 
 // Export for PluginManager
-window.__LAST_PLUGIN_CLASS__ = MyPlugin;
+window.customjs.__lastPluginClass = MyPlugin;
 ```
 
 ### Registration & Settings
@@ -1021,7 +1021,7 @@ class TimerPlugin extends Plugin {
   }
 }
 
-window.__LAST_PLUGIN_CLASS__ = TimerPlugin;
+window.customjs.__lastPluginClass = TimerPlugin;
 ```
 
 ### Example 2: Location Watcher
@@ -1045,7 +1045,7 @@ class LocationWatcherPlugin extends Plugin {
   }
 }
 
-window.__LAST_PLUGIN_CLASS__ = LocationWatcherPlugin;
+window.customjs.__lastPluginClass = LocationWatcherPlugin;
 ```
 
 ### Example 3: Context Menu Item
@@ -1070,7 +1070,7 @@ class ContextMenuExamplePlugin extends Plugin {
   }
 }
 
-window.__LAST_PLUGIN_CLASS__ = ContextMenuExamplePlugin;
+window.customjs.__lastPluginClass = ContextMenuExamplePlugin;
 ```
 
 ---
@@ -1087,7 +1087,7 @@ window.__LAST_PLUGIN_CLASS__ = ContextMenuExamplePlugin;
 
 **"Plugin not registered"**
 
-- Missing `window.__LAST_PLUGIN_CLASS__ = YourPlugin;` at end of file
+- Missing `window.customjs.__lastPluginClass = YourPlugin;` at end of file
 - Check class name matches exported name
 - Verify constructor calls `super()`
 
@@ -1309,7 +1309,7 @@ customjs.functions["AppApi.SendIpc"] = originalFunction;
 - Call `await super.stop()` in your `stop()` method
 - Use `this.logger` for all logging
 - Register all settings in `load()`, start features in `start()`
-- Export with `window.__LAST_PLUGIN_CLASS__`
+- Export with `window.customjs.__lastPluginClass`
 
 ### DON'T ❌
 

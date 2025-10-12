@@ -208,8 +208,7 @@ class Logger {
     if (opts.webhook) {
       setTimeout(async () => {
         try {
-          const webhookUrl =
-            window.customjs?.config?.logger?.webhook?.value;
+          const webhookUrl = window.customjs?.config?.logger?.webhook?.value;
           if (webhookUrl) {
             const payload = {
               message: formattedMsg,
@@ -439,34 +438,74 @@ class Logger {
   }
 }
 
-// Export Logger class globally under customjs namespace
-if (typeof window !== "undefined") {
-  window.customjs = window.customjs || {};
-  window.customjs.Logger = Logger;
+// ============================================================================
+// LOGGER CORE MODULE
+// ============================================================================
 
-  // Register logger settings with ConfigManager (if available)
-  if (window.customjs?.configManager) {
-    const configManager = window.customjs.configManager;
-
-    // Register logger category
-    configManager.registerGeneralCategory(
-      "logger",
-      "Logger Settings",
-      "Configuration for the logging system"
-    );
-
-    // Register logger settings
-    configManager.registerGeneralSetting(
-      "logger",
-      "webhook",
-      "Webhook URL",
-      "string",
-      "http://homeassistant.local:8123/api/webhook/vrcx",
-      "Webhook URL for remote logging"
-    );
-
-    console.log("[CJS|Logger] Logger settings registered with ConfigManager");
+/**
+ * LoggerModule - Core module that provides the Logger class
+ */
+class LoggerModule extends CoreModule {
+  constructor() {
+    super({
+      id: "logger",
+      name: "Logger",
+      description: "Centralized logging system for VRCX Custom",
+      author: "Bluscream",
+      version: "2.0.0",
+      build: "1760486400",
+    });
   }
 
-  console.log("[CJS|Logger] Logger class loaded and ready (v1.1.1)");
+  async load() {
+    this.log("Loading Logger module...");
+
+    // Export Logger class globally
+    window.customjs = window.customjs || {};
+    window.customjs.Logger = Logger;
+
+    this.loaded = true;
+    this.log("✓ Logger class loaded and ready");
+  }
+
+  async start() {
+    this.log("Starting Logger module...");
+
+    // Register logger settings with ConfigManager (if available and not already registered)
+    if (window.customjs?.configManager) {
+      try {
+        const configManager = window.customjs.configManager;
+
+        // Only register if not already registered
+        if (!configManager.generalCategories.has("logger")) {
+          configManager.registerGeneralCategory(
+            "logger",
+            "Logger Settings",
+            "Configuration for the logging system"
+          );
+
+          configManager.registerGeneralSetting(
+            "logger",
+            "webhook",
+            "Webhook URL",
+            "string",
+            "http://homeassistant.local:8123/api/webhook/vrcx",
+            "Webhook URL for remote logging"
+          );
+
+          this.log("✓ Logger settings registered with ConfigManager");
+        }
+      } catch (error) {
+        this.warn("Failed to register logger settings:", error);
+      }
+    }
+
+    this.started = true;
+    this.log("✓ Logger module started");
+  }
+}
+
+// Auto-instantiate the core module
+if (typeof window !== "undefined") {
+  new LoggerModule();
 }

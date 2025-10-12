@@ -214,4 +214,4 @@ class InvisiblePlayersMonitorPlugin extends Plugin {
 }
 
 // Export plugin class for PluginLoader
-window.__LAST_PLUGIN_CLASS__ = InvisiblePlayersMonitorPlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = InvisiblePlayersMonitorPlugin;

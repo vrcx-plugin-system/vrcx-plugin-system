@@ -534,4 +534,4 @@ class AutoFollowPlugin extends Plugin {
 }
 
 // Export plugin class for PluginLoader
-window.__LAST_PLUGIN_CLASS__ = AutoFollowPlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = AutoFollowPlugin;

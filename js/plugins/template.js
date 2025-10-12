@@ -512,4 +512,4 @@ class TemplatePlugin extends Plugin {
 }
 
 // Make plugin class available for PluginLoader to instantiate
-window.__LAST_PLUGIN_CLASS__ = TemplatePlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = TemplatePlugin;

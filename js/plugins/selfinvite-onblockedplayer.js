@@ -385,4 +385,4 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
 }
 
 // Export plugin class for PluginLoader
-window.__LAST_PLUGIN_CLASS__ = SelfInviteOnBlockedPlayerPlugin;
+window.customjs.__LAST_PLUGIN_CLASS__ = SelfInviteOnBlockedPlayerPlugin;
