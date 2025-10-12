@@ -65,6 +65,10 @@ window.customjs.default_plugins = [
     enabled: false,
   },
   {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/avatar-log.js",
+    enabled: false,
+  },
+  {
     url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js",
     enabled: false,
   },
