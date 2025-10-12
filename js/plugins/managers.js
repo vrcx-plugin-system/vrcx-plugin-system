@@ -1,12 +1,13 @@
 // ============================================================================
 // MANAGERS PLUGIN
-// Version: 2.0.0
+// Version: 3.0.0
 // Build: 1728668400
 // ============================================================================
 
 /**
  * Managers Plugin
  * Collection of manager utilities: instance monitoring, notifications, debug tools
+ * NOW USING PROPER HOOK SYSTEM - No direct function overrides!
  */
 class ManagersPlugin extends Plugin {
   constructor() {
@@ -16,7 +17,7 @@ class ManagersPlugin extends Plugin {
       description:
         "Management classes for instance monitoring, notifications, and debug tools",
       author: "Bluscream",
-      version: "2.0.0",
+      version: "3.0.0",
       build: "1728668400",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/Plugin.js",
@@ -25,10 +26,7 @@ class ManagersPlugin extends Plugin {
       ],
     });
 
-    // Sub-manager instances
-    this.instanceMonitor = null;
-    this.notificationHandler = null;
-    this.debugTools = null;
+    this.lastInvisiblePlayers = 0;
   }
 
   async load() {
@@ -40,121 +38,76 @@ class ManagersPlugin extends Plugin {
   }
 
   async start() {
-    // Initialize sub-managers
-    this.instanceMonitor = new InstanceMonitor(this);
-    this.notificationHandler = new NotificationHandler(this);
-    this.debugTools = new DebugTools(this);
+    // Setup hooks for instance monitoring
+    this.setupInstanceMonitoring();
 
-    // Expose sub-managers globally
-    window.customjs.instanceMonitor = this.instanceMonitor;
-    window.customjs.notificationHandler = this.notificationHandler;
-    window.customjs.debugTools = this.debugTools;
+    // Setup hooks for notification handling
+    this.setupNotificationHandling();
 
-    // Legacy support
-    window.InstanceMonitor = InstanceMonitor;
-    window.NotificationHandler = NotificationHandler;
-    window.DebugTools = DebugTools;
+    // Setup debug tools
+    this.setupDebugTools();
 
     this.enabled = true;
     this.started = true;
-    this.log("Managers plugin started, all sub-managers initialized");
+    this.log("Managers plugin started, all hooks registered");
   }
 
   async stop() {
     this.log("Stopping Managers plugin");
-
-    // Cleanup sub-managers
-    this.instanceMonitor = null;
-    this.notificationHandler = null;
-    this.debugTools = null;
-
     await super.stop();
   }
-}
 
-// ============================================================================
-// INSTANCE MONITOR
-// ============================================================================
+  // ============================================================================
+  // INSTANCE MONITORING (Using Hooks)
+  // ============================================================================
 
-class InstanceMonitor {
-  constructor(parentPlugin) {
-    this.parentPlugin = parentPlugin;
-    this.lastInvisiblePlayers = 0;
-    this.setupInstanceOverride();
-  }
+  setupInstanceMonitoring() {
+    // Use POST-HOOK to process getInstance results
+    // Hook system will automatically wait for the function to exist
+    this.registerPostHook(
+      "request.instanceRequest.getInstance",
+      (result, args) => {
+        // result is a Promise, add .then() to process when it resolves
+        if (result && typeof result.then === "function") {
+          result.then((instanceArgs) => {
+            const users = instanceArgs.json.userCount;
+            const realUsers =
+              instanceArgs.json.n_users - instanceArgs.json.queueSize;
+            const invisiblePlayers = realUsers - users;
 
-  setupInstanceOverride() {
-    if (!window.request?.instanceRequest?.getInstance) {
-      console.warn("[InstanceMonitor] getInstance not available yet");
-      return;
-    }
+            if (invisiblePlayers > 0) {
+              instanceArgs.json.invisiblePlayers = invisiblePlayers;
+              instanceArgs.json.displayName = `${
+                instanceArgs.json.displayName ?? instanceArgs.json.name
+              } (${invisiblePlayers} invisible)`;
 
-    // Use hook system to intercept getInstance
-    const originalGetInstance = window.request.instanceRequest.getInstance;
-
-    window.request.instanceRequest.getInstance = (params) => {
-      return originalGetInstance(params).then((args) => {
-        const users = args.json.userCount;
-        const realUsers = args.json.n_users - args.json.queueSize;
-        args.json.invisiblePlayers = realUsers - users;
-
-        if (args.json.invisiblePlayers > 0) {
-          args.json.displayName = `${
-            args.json.displayName ?? args.json.name
-          } (${args.json.invisiblePlayers} invisible)`;
-
-          setTimeout(async () => {
-            window.customjs?.logger?.log(
-              `Found ${args.json.invisiblePlayers} potentially invisible players in instance "${args.json.instanceId}" in world "${args.json.worldName}"`,
-              { console: true, vrcx: { notify: true } },
-              "warning"
-            );
-          }, 1000);
+              window.customjs?.logger?.log(
+                `Found ${invisiblePlayers} potentially invisible players in instance "${instanceArgs.json.instanceId}" in world "${instanceArgs.json.worldName}"`,
+                { console: true, vrcx: { notify: true } },
+                "warning"
+              );
+            }
+          });
         }
+      }
+    );
 
-        return args;
-      });
-    };
-
-    console.log("[InstanceMonitor] Instance override setup complete");
-  }
-}
-
-// ============================================================================
-// NOTIFICATION HANDLER
-// ============================================================================
-
-class NotificationHandler {
-  constructor(parentPlugin) {
-    this.parentPlugin = parentPlugin;
-
-    // Try to setup, retry if not available
-    if (!this.setupNotificationOverride()) {
-      setTimeout(() => {
-        if (!this.setupNotificationOverride()) {
-          console.warn(
-            "[NotificationHandler] Notification store still not available"
-          );
-        }
-      }, 2000);
-    }
+    this.log(
+      "Instance monitoring hook registered (will activate when function available)"
+    );
   }
 
-  setupNotificationOverride() {
-    const notificationStore = window.$pinia?.notification;
-    if (!notificationStore || !notificationStore.playNoty) {
-      return false;
-    }
+  // ============================================================================
+  // NOTIFICATION HANDLING (Using Hooks)
+  // ============================================================================
 
-    const originalPlayNoty = notificationStore.playNoty.bind(notificationStore);
-
-    notificationStore.playNoty = (json) => {
-      // Call original first
-      setTimeout(() => {
-        originalPlayNoty(json);
-      }, 0);
-
+  setupNotificationHandling() {
+    // Use POST-HOOK to process notifications
+    // Hook system will automatically wait for the function to exist
+    this.registerPostHook("$pinia.notification.playNoty", (result, args) => {
+      const json = args[0];
       let noty = json;
+
       if (typeof json === "string") {
         try {
           noty = JSON.parse(json);
@@ -172,36 +125,40 @@ class NotificationHandler {
       // Only process recent notifications (within 10 seconds)
       if (diff > 10000) return;
 
-      switch (noty.type) {
-        case "OnPlayerJoined":
-          this.handleTaggedPlayerJoined(noty);
-          break;
+      this.handleNotification(noty);
+    });
 
-        case "BlockedOnPlayerJoined":
-          if (window.customjs?.autoInviteManager?.lastJoined && window.$app) {
-            const p = window.$app.parseLocation(
-              window.customjs.autoInviteManager.lastJoined
-            );
-            window.$app.newInstanceSelfInvite(p.worldId);
-          }
-          break;
+    this.log(
+      "Notification hook registered (will activate when function available)"
+    );
+  }
 
-        case "GameStarted":
-          // Trigger registry overrides when game starts
-          if (window.customjs?.registryOverrides) {
-            window.customjs.registryOverrides.triggerEvent("GAME_START");
-          }
-          break;
+  handleNotification(noty) {
+    switch (noty.type) {
+      case "OnPlayerJoined":
+        this.handleTaggedPlayerJoined(noty);
+        break;
 
-        case "invite":
-          // Log invite notifications
-          console.log("[NotificationHandler] Invite received:", noty);
-          break;
-      }
-    };
+      case "BlockedOnPlayerJoined":
+        if (window.customjs?.autoInviteManager?.lastJoined && window.$app) {
+          const p = window.$app.parseLocation(
+            window.customjs.autoInviteManager.lastJoined
+          );
+          window.$app.newInstanceSelfInvite(p.worldId);
+        }
+        break;
 
-    console.log("[NotificationHandler] Notification override setup complete");
-    return true;
+      case "GameStarted":
+        // Trigger registry overrides when game starts
+        if (window.customjs?.registryOverrides) {
+          window.customjs.registryOverrides.triggerEvent("GAME_START");
+        }
+        break;
+
+      case "invite":
+        this.log("Invite notification received:", noty);
+        break;
+    }
   }
 
   handleTaggedPlayerJoined(noty) {
@@ -226,48 +183,34 @@ class NotificationHandler {
         );
       }
     } catch (error) {
-      console.error(
-        "[NotificationHandler] Error handling tagged player:",
-        error
-      );
+      this.error("Error handling tagged player join:", error);
     }
   }
-}
 
-// ============================================================================
-// DEBUG TOOLS
-// ============================================================================
+  // ============================================================================
+  // DEBUG TOOLS (Using Hooks)
+  // ============================================================================
 
-class DebugTools {
-  constructor(parentPlugin) {
-    this.parentPlugin = parentPlugin;
+  setupDebugTools() {
+    // Setup IPC logging hook
     this.setupIPCLogging();
+
+    // Setup console debug functions
     this.setupConsoleFunctions();
+
+    this.log("Debug tools initialized");
   }
 
   setupIPCLogging() {
-    // Initialize backups if not already done
-    if (window.customjs?.apiHelpers?.initBackups) {
-      window.customjs.apiHelpers.initBackups();
-    }
+    // Use PRE-HOOK to log IPC calls
+    // Hook system will automatically wait for the function to exist
+    this.registerPreHook("AppApi.SendIpc", (args) => {
+      console.log(`[IPC OUT]`, args);
+    });
 
-    // Hook into SendIpc for debugging
-    if (
-      window.AppApi?.SendIpc &&
-      window.customjs?.functions &&
-      !window.customjs.functions["AppApi.SendIpc"]
-    ) {
-      // Use the hook system
-      const originalSendIpc = window.AppApi.SendIpc;
-      window.customjs.functions["AppApi.SendIpc"] = originalSendIpc;
-
-      window.AppApi.SendIpc = (...args) => {
-        console.log(`[IPC OUT]`, args);
-        return originalSendIpc.apply(window.AppApi, args);
-      };
-
-      console.log("[DebugTools] IPC logging enabled");
-    }
+    this.log(
+      "IPC logging hook registered (will activate when function available)"
+    );
   }
 
   setupConsoleFunctions() {
@@ -290,15 +233,54 @@ class DebugTools {
       listPlugins: () => window.customjs?.plugins,
       getPlugin: (id) =>
         window.customjs?.plugins?.find((p) => p.metadata.id === id),
+      getPluginManager: () => window.customjs?.pluginManager,
+      getPluginList: () => window.customjs?.pluginManager?.getPluginList(),
+      // New helper functions for the refactored system
+      inspectPlugin: (id) => {
+        const plugin = window.customjs?.plugins?.find(
+          (p) => p.metadata.id === id
+        );
+        if (plugin) {
+          console.log("Plugin:", plugin);
+          console.log("Metadata:", plugin.metadata);
+          console.log("State:", {
+            enabled: plugin.enabled,
+            loaded: plugin.loaded,
+            started: plugin.started,
+          });
+          console.log("Resources:", plugin.resources);
+        }
+        return plugin;
+      },
+      listEvents: () => {
+        const events = window.customjs?.events || {};
+        Object.keys(events).forEach((eventName) => {
+          console.log(
+            `Event: ${eventName} (${events[eventName].length} listeners)`
+          );
+        });
+        return events;
+      },
+      listHooks: () => {
+        console.log(
+          "Pre-hooks:",
+          Object.keys(window.customjs?.hooks?.pre || {})
+        );
+        console.log(
+          "Post-hooks:",
+          Object.keys(window.customjs?.hooks?.post || {})
+        );
+        return window.customjs?.hooks;
+      },
     };
 
     // Expose debug functions
     window.customjs.debugFunctions = debugFunctions;
     window.debugVRCX = debugFunctions; // Legacy
 
-    console.log("[DebugTools] Console debug functions registered");
+    this.log("Console debug functions registered");
   }
 }
 
-// Export plugin class for PluginLoader
+// Export plugin class for PluginManager
 window.__LAST_PLUGIN_CLASS__ = ManagersPlugin;

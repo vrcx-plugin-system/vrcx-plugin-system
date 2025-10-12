@@ -379,6 +379,60 @@ class PluginManagerUIPlugin extends Plugin {
         '<span style="background: #6f42c1; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-right: 4px;">Enabled</span>'
       );
 
+    // Resource counts
+    const resources = plugin.resources || {
+      timers: new Set(),
+      observers: new Set(),
+      listeners: new Map(),
+      hooks: new Set(),
+      subscriptions: new Set(),
+    };
+
+    const timerCount = resources.timers?.size || 0;
+    const observerCount = resources.observers?.size || 0;
+    const listenerCount = resources.listeners?.size || 0;
+    const hookCount = resources.hooks?.size || 0;
+    const subscriptionCount = resources.subscriptions?.size || 0;
+    const totalResources =
+      timerCount +
+      observerCount +
+      listenerCount +
+      hookCount +
+      subscriptionCount;
+
+    // Build resource display
+    const resourceItems = [];
+    if (timerCount > 0)
+      resourceItems.push(`⏱️ ${timerCount} timer${timerCount > 1 ? "s" : ""}`);
+    if (observerCount > 0)
+      resourceItems.push(
+        `👁️ ${observerCount} observer${observerCount > 1 ? "s" : ""}`
+      );
+    if (listenerCount > 0)
+      resourceItems.push(
+        `🎧 ${listenerCount} listener${listenerCount > 1 ? "s" : ""}`
+      );
+    if (hookCount > 0)
+      resourceItems.push(`🪝 ${hookCount} hook${hookCount > 1 ? "s" : ""}`);
+    if (subscriptionCount > 0)
+      resourceItems.push(
+        `📊 ${subscriptionCount} subscription${
+          subscriptionCount > 1 ? "s" : ""
+        }`
+      );
+
+    const resourcesHtml =
+      totalResources > 0
+        ? `<div style="font-size: 11px; color: #555; margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #007bff;">
+           <div style="font-weight: 600; margin-bottom: 4px; color: #007bff;">
+             <i class="ri-cpu-line"></i> Resources (${totalResources})
+           </div>
+           <div style="line-height: 1.6;">
+             ${resourceItems.join(" • ")}
+           </div>
+         </div>`
+        : '<div style="font-size: 11px; color: #999; margin-top: 8px; font-style: italic;">No active resources</div>';
+
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
         <div style="flex: 1;">
@@ -397,6 +451,7 @@ class PluginManagerUIPlugin extends Plugin {
               : ""
           }
           ${depsHtml}
+          ${resourcesHtml}
         </div>
       </div>
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e9ecef;">

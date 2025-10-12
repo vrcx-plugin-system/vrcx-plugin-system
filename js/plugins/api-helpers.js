@@ -1,6 +1,6 @@
 // ============================================================================
 // API HELPERS PLUGIN
-// Version: 2.0.0
+// Version: 3.0.0
 // Build: 1728668400
 // ============================================================================
 
@@ -12,24 +12,16 @@ class ApiHelpersPlugin extends Plugin {
       description:
         "API wrapper functions, logging, and location management for VRCX",
       author: "Bluscream",
-      version: "2.0.0",
+      version: "3.0.0",
       build: "1728668400",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/Plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
       ],
     });
-
-    // Backup original functions
-    this.bak = {
-      initialized: false,
-    };
   }
 
   async load() {
-    // Initialize backups
-    this.initBackups();
-
     // Expose API methods globally
     window.customjs.api = this.API;
     window.customjs.logger = this.Logger;
@@ -37,54 +29,21 @@ class ApiHelpersPlugin extends Plugin {
     window.customjs.apiHelpers = this;
 
     // Legacy support
-    window.bak = this.bak;
     window.API = this.API;
     window.Logger = this.Logger;
     window.LocationManager = this.LocationManager;
+
+    // Note: window.bak removed - use customjs.functions for backed up functions
+    // The hook system automatically backs up functions in customjs.functions
 
     this.log("API helpers ready");
     this.loaded = true;
   }
 
   async start() {
-    // Retry backup initialization if it failed earlier
-    if (!this.bak.initialized) {
-      this.initBackups();
-    }
-
     this.enabled = true;
     this.started = true;
     this.log("API helpers started");
-  }
-
-  // ============================================================================
-  // BACKUP INITIALIZATION
-  // ============================================================================
-
-  /**
-   * Initialize backup references to original functions
-   */
-  initBackups() {
-    if (this.bak.initialized) return true;
-
-    // Store references to original functions before any overrides
-    if (window.$pinia && window.request && window.AppApi) {
-      this.bak = {
-        initialized: true,
-        updateCurrentUserLocation: window.$app?.updateCurrentUserLocation,
-        setCurrentUserLocation: window.$app?.setCurrentUserLocation,
-        applyWorldDialogInstances: window.$app?.applyWorldDialogInstances,
-        applyGroupDialogInstances: window.$app?.applyGroupDialogInstances,
-        playNoty: window.$app?.playNoty,
-        getInstance: window.request?.instanceRequest?.getInstance,
-        SendIpc: window.AppApi.SendIpc.bind(window.AppApi),
-      };
-      this.log("✓ Function backups initialized");
-      return true;
-    }
-
-    this.warn("⚠ Some APIs not available yet for backup");
-    return false;
   }
 
   // ============================================================================

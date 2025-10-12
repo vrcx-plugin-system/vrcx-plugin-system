@@ -309,8 +309,8 @@ class PluginManager {
       window.customjs.hooks.pre[functionPath] || [];
     window.customjs.hooks.pre[functionPath].push({ plugin, callback });
 
-    // Wrap the original function if not already wrapped
-    this.wrapFunction(functionPath);
+    // Try to wrap the function, or wait for it to exist
+    this.wrapFunctionWhenReady(functionPath);
 
     console.log(
       `[PluginManager] Registered pre-hook for ${functionPath} from ${plugin.metadata.name}`
@@ -322,30 +322,55 @@ class PluginManager {
       window.customjs.hooks.post[functionPath] || [];
     window.customjs.hooks.post[functionPath].push({ plugin, callback });
 
-    // Wrap the original function if not already wrapped
-    this.wrapFunction(functionPath);
+    // Try to wrap the function, or wait for it to exist
+    this.wrapFunctionWhenReady(functionPath);
 
     console.log(
       `[PluginManager] Registered post-hook for ${functionPath} from ${plugin.metadata.name}`
     );
   }
 
+  wrapFunctionWhenReady(functionPath, retries = 0, maxRetries = 10) {
+    // Try to wrap immediately
+    if (this.wrapFunction(functionPath)) {
+      return true;
+    }
+
+    // If function doesn't exist yet, retry with exponential backoff
+    if (retries < maxRetries) {
+      const delay = Math.min(500 * Math.pow(1.5, retries), 5000);
+      setTimeout(() => {
+        console.log(
+          `[PluginManager] Retrying to wrap ${functionPath} (attempt ${
+            retries + 1
+          }/${maxRetries})...`
+        );
+        this.wrapFunctionWhenReady(functionPath, retries + 1, maxRetries);
+      }, delay);
+    } else {
+      console.warn(
+        `[PluginManager] Failed to wrap ${functionPath} after ${maxRetries} attempts - function may not exist`
+      );
+    }
+
+    return false;
+  }
+
   wrapFunction(functionPath) {
     // Skip if already wrapped
     if (window.customjs.functions[functionPath]) {
-      return;
+      return true;
     }
 
-    // Parse the function path (e.g., "AppApi.SendIpc" or "window.someFunc")
+    // Parse the function path (e.g., "AppApi.SendIpc" or "$pinia.notification.playNoty")
     const parts = functionPath.split(".");
     let obj = window;
+
     for (let i = 0; i < parts.length - 1; i++) {
       obj = obj[parts[i]];
       if (!obj) {
-        console.error(
-          `[PluginManager] Cannot wrap ${functionPath}: path not found`
-        );
-        return;
+        // Path doesn't exist yet
+        return false;
       }
     }
 
@@ -353,10 +378,8 @@ class PluginManager {
     const originalFunc = obj[funcName];
 
     if (typeof originalFunc !== "function") {
-      console.error(
-        `[PluginManager] Cannot wrap ${functionPath}: not a function`
-      );
-      return;
+      // Not a function yet
+      return false;
     }
 
     // Store original
@@ -396,7 +419,8 @@ class PluginManager {
       return result;
     };
 
-    console.log(`[PluginManager] Wrapped function: ${functionPath}`);
+    console.log(`[PluginManager] ✓ Wrapped function: ${functionPath}`);
+    return true;
   }
 
   // ============================================================================
