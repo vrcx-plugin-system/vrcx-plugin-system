@@ -3,10 +3,10 @@ class DebugPlugin extends Plugin {
     super({
       name: "Debug Plugin",
       description:
-        "Debug utilities, IPC logging, and console commands for development",
+        "Debug utilities, IPC logging, global scope search, and console commands for development",
       author: "Bluscream",
-      version: "2.0.0",
-      build: "1760386222",
+      version: "2.1.0",
+      build: "1760386522",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
       ],

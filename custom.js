@@ -72,7 +72,7 @@ window.customjs.pluginConfig = {
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/managers.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/plugin-manager-ui.js",
     // Optional/Debug plugins (uncomment to enable)
-    // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js",
+    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js",
     // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/template.js",
   ],
   loadTimeout: 10000,
