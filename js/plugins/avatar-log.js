@@ -714,7 +714,7 @@ class AvatarLogPlugin extends Plugin {
       },
     };
     localStorage.removeItem("avatarlog_processed");
-    this.logger.log("🗑️ Cleared all processed avatars");
+    this.logger.log("🗑️ Cleared all processed avatars!");
   }
 
   // Manual trigger for scanning stores
