@@ -533,8 +533,10 @@ class PluginManager {
       // Store the number of plugins before loading
       const pluginCountBefore = window.customjs.plugins.length;
 
-      // Check if this is the base Plugin class
+      // Check if this is the logger or base Plugin class (utility files, not plugins)
+      const isLogger = pluginUrl.includes("/logger.js");
       const isBaseClass = pluginUrl.includes("/plugin.js");
+      const isUtilityFile = isLogger || isBaseClass;
 
       // Wrap in IIFE to isolate scope, but don't auto-execute plugin initialization
       const wrappedCode = `(function() { 
@@ -544,8 +546,8 @@ class PluginManager {
         ${pluginCode}
         
         // After plugin class is defined, try to detect it and instantiate
-        // (Skip for base Plugin class)
-        if (!${isBaseClass} && typeof window.__LAST_PLUGIN_CLASS__ !== 'undefined') {
+        // (Skip for logger and base Plugin class)
+        if (!${isUtilityFile} && typeof window.__LAST_PLUGIN_CLASS__ !== 'undefined') {
           try {
             const PluginClass = window.__LAST_PLUGIN_CLASS__;
             const pluginInstance = new PluginClass();
@@ -579,8 +581,8 @@ class PluginManager {
         setTimeout(() => {
           clearTimeout(timeout);
 
-          // Check if a new plugin was registered (skip check for base class)
-          if (!isBaseClass) {
+          // Check if a new plugin was registered (skip check for utility files)
+          if (!isUtilityFile) {
             const pluginCountAfter = window.customjs.plugins.length;
             if (pluginCountAfter > pluginCountBefore) {
               const newPlugin = window.customjs.plugins[pluginCountAfter - 1];
@@ -593,7 +595,11 @@ class PluginManager {
               );
             }
           } else {
-            console.log(`[CJS|[PluginManager] ✓ Loaded base Plugin class`);
+            // Utility file loaded (logger or base class)
+            const utilityName = isLogger
+              ? "Logger utility"
+              : "base Plugin class";
+            console.log(`[CJS|[PluginManager] ✓ Loaded ${utilityName}`);
           }
 
           this.loadedUrls.add(pluginUrl);
