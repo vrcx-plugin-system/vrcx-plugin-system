@@ -1,9 +1,9 @@
 // ============================================================================
-// VRCX CUSTOM PLUGINS SYSTEM v2.2.0
-// Build: 1744630000
+// VRCX CUSTOM PLUGINS SYSTEM v2.2.1
+// Build: 1760196000
 // ============================================================================
 
-// Initialize global customjs namespace - ALL custom JS code goes under this object
+// DO NOT REPLACE THESE VALUES - THEY ARE REPLACED BY THE UPDATE SCRIPT
 window.customjs = {
   version: "{VERSION}",
   build: "{BUILD}",
@@ -116,6 +116,23 @@ class PluginManager {
     // Plugin loading tracking
     this.loadedUrls = new Set();
     this.failedUrls = new Set();
+
+    // Initialize global customjs structures if not exists
+    if (!window.customjs.plugins) {
+      window.customjs.plugins = [];
+    }
+    if (!window.customjs.hooks) {
+      window.customjs.hooks = {
+        pre: {},
+        post: {},
+      };
+    }
+    if (!window.customjs.functions) {
+      window.customjs.functions = {};
+    }
+    if (!window.customjs.events) {
+      window.customjs.events = {};
+    }
 
     // Register in global namespace
     window.customjs.pluginManager = this;
