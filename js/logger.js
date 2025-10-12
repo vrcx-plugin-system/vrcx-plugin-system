@@ -44,7 +44,7 @@ class Logger {
    * @private
    */
   _formatMessage(msg, includeTimestamp = false) {
-    const parts = ["[CJS]", `[${this.context}]`];
+    const parts = [`[CJS|${this.context}]`];
 
     if (includeTimestamp) {
       const timestamp = new Date().toLocaleTimeString("en-US", {
