@@ -1,7 +1,7 @@
 // ============================================================================
 // CONTEXT MENU API PLUGIN
-// Version: 2.0.2
-// Build: 1760196100
+// Version: 2.1.0
+// Build: 1760196200
 // ============================================================================
 
 /**
@@ -15,8 +15,8 @@ class ContextMenuApiPlugin extends Plugin {
       name: "Context Menu API",
       description: "Custom context menu management for VRCX dialogs",
       author: "Bluscream",
-      version: "2.0.2",
-      build: "1760196100",
+      version: "2.1.0",
+      build: "1760196200",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
       ],
@@ -386,84 +386,35 @@ class ContextMenuApiPlugin extends Plugin {
     );
 
     if (!visibleDialog) {
-      this.warn(`No visible dialog found for ${menuType}`);
       return null;
     }
 
-    // Try to get data from Vue component
+    // Try to get data from Pinia store directly
     try {
-      // Try multiple Vue 3 access methods
-      let vueComponent =
-        visibleDialog.__vueParentComponent ||
-        visibleDialog.__vue__ ||
-        visibleDialog._vnode?.component;
-
-      // Debug: Log component structure
-      this.log(
-        `Searching for ${menuType} data in Vue component:`,
-        vueComponent
-      );
-
-      if (vueComponent) {
-        // Try props first
-        if (vueComponent.props) {
-          this.log(`Found props:`, Object.keys(vueComponent.props));
-          const data =
-            vueComponent.props[menuType + "Ref"] || vueComponent.props.ref;
-          if (data) {
-            this.log(`✓ Found data in props`);
-            return data;
-          }
+      // Access Pinia stores based on menuType
+      if (menuType === "user" && window.$pinia?.user) {
+        const userDialog = window.$pinia.user.userDialog;
+        if (userDialog && userDialog.visible && userDialog.ref) {
+          return userDialog.ref;
         }
-
-        // Try exposed
-        if (vueComponent.exposed) {
-          this.log(`Found exposed:`, Object.keys(vueComponent.exposed));
-          const data = vueComponent.exposed[menuType + "Ref"];
-          if (data) {
-            this.log(`✓ Found data in exposed`);
-            return data;
-          }
+      } else if (menuType === "avatar" && window.$pinia?.avatar) {
+        const avatarDialog = window.$pinia.avatar.avatarDialog;
+        if (avatarDialog && avatarDialog.visible && avatarDialog.ref) {
+          return avatarDialog.ref;
         }
-
-        // Try setupState
-        if (vueComponent.setupState) {
-          this.log(`Found setupState:`, Object.keys(vueComponent.setupState));
-          const data = vueComponent.setupState[menuType + "Ref"];
-          if (data) {
-            this.log(`✓ Found data in setupState`);
-            return data;
-          }
+      } else if (menuType === "world" && window.$pinia?.world) {
+        const worldDialog = window.$pinia.world.worldDialog;
+        if (worldDialog && worldDialog.visible && worldDialog.ref) {
+          return worldDialog.ref;
         }
-
-        // Try ctx (context)
-        if (vueComponent.ctx) {
-          this.log(`Found ctx:`, Object.keys(vueComponent.ctx));
-          const data = vueComponent.ctx[menuType + "Ref"];
-          if (data) {
-            this.log(`✓ Found data in ctx`);
-            return data;
-          }
+      } else if (menuType === "group" && window.$pinia?.group) {
+        const groupDialog = window.$pinia.group.groupDialog;
+        if (groupDialog && groupDialog.visible && groupDialog.ref) {
+          return groupDialog.ref;
         }
-
-        // Try data property directly
-        if (vueComponent.data) {
-          this.log(`Found data:`, Object.keys(vueComponent.data));
-          const data = vueComponent.data[menuType + "Ref"];
-          if (data) {
-            this.log(`✓ Found data in data`);
-            return data;
-          }
-        }
-
-        this.warn(
-          `Could not find ${menuType}Ref in any Vue component property`
-        );
-      } else {
-        this.warn(`No Vue component found on dialog element`);
       }
     } catch (error) {
-      this.error("Error extracting dialog data:", error);
+      this.error("Error extracting dialog data from Pinia:", error);
     }
 
     return null;

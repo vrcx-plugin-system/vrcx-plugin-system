@@ -501,9 +501,6 @@ class PluginManager {
     // Phase 4: Start login monitoring
     this.startLoginMonitoring();
 
-    // Phase 5: Print available commands
-    this.printAvailableCommands();
-
     console.log(
       `%c[CJS|PluginManager] %c✓ Plugin system ready!`,
       "font-weight: bold; color: #00ff00",
@@ -728,40 +725,6 @@ class PluginManager {
         loaded: p.loaded,
       })),
     };
-  }
-
-  printAvailableCommands() {
-    console.log(`[CJS|
-═══════════════════════════════════════════════════════════
-  VRCX Custom Plugins System v${window.customjs.version}
-  
-  Plugin Access:
-  
-  customjs.plugins                          - Array of all Plugin instances
-  customjs.pluginManager.getPluginList()    - Get detailed plugin info
-  customjs.pluginManager.getPlugin(id)      - Get plugin by ID
-  customjs.pluginManager.findPluginByUrl(url) - Find plugin by URL
-  
-  Plugin Loading:
-  
-  customjs.pluginManager.addPlugin(url)     - Load new plugin
-  customjs.pluginManager.removePlugin(url)  - Unload plugin
-  customjs.pluginManager.reloadPlugin(url)  - Reload specific plugin
-  customjs.pluginManager.reloadAllPlugins() - Reload all plugins
-  
-  Plugin Control:
-  
-  customjs.pluginManager.onLogin(callback)  - Register login callback
-  customjs.plugins[0].enable()              - Enable a plugin
-  customjs.plugins[0].disable()             - Disable a plugin
-  customjs.plugins[0].toggle()              - Toggle plugin state
-  
-  Examples:
-    customjs.pluginManager.addPlugin("https://example.com/plugin.js")
-    customjs.plugins.find(p => p.metadata.id === "utils").toggle()
-    customjs.pluginManager.onLogin((user) => console.log(user.displayName))
-═══════════════════════════════════════════════════════════
-    `);
   }
 }
 
