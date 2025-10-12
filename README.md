@@ -4,7 +4,15 @@
 
 A modern JavaScript framework extending VRCX with features including custom navigation tabs, plugin management UI, context menus, user tagging, bio automation, and comprehensive debugging. Built on a robust Plugin base class with proper lifecycle management and resource tracking.
 
-**🎯 Status:** Production Ready ✅ | **📦 Version:** 2.1.0 | **🔌 Plugins:** 14 (All Refactored ✅) | **📊 Lines:** ~8000+
+**🎯 Status:** Production Ready ✅ | **📦 Version:** 2.1.1 | **🔌 Plugins:** 14 (All Refactored ✅) | **📊 Lines:** ~8000+
+
+## 🌟 What's New in v2.1.1
+
+- 🔧 **Standardized Plugin Access** - All plugins now use `pluginManager.getPlugin()` to access each other
+- 🐛 **Fixed Plugin Communication** - Context Menu API and Nav Menu API now properly accessible
+- ❌ **Removed Non-Existent Properties** - No more confusion about `window.customjs.utils`, `.contextMenu`, etc.
+- 📚 **Improved Documentation** - Clear examples of proper plugin access patterns
+- ✅ **Updated All Plugins** - protocol-links, bio-updater, template, and debug plugins updated
 
 ## 🌟 What's New in v2.1.0
 
@@ -21,22 +29,23 @@ A modern JavaScript framework extending VRCX with features including custom navi
 
 ## 📋 Plugin Overview
 
-| Plugin                    | Description                                    | Status          |
-| ------------------------- | ---------------------------------------------- | --------------- |
-| **Plugin.js**             | Base class for all plugins                     | ✅ Base Class   |
-| **config.js**             | Configuration management                       | ✅ Refactored   |
-| **utils.js**              | Utilities, clipboard, notifications, Steam API | ✅ Refactored   |
-| **api-helpers.js**        | API wrappers, logging, location management     | ✅ Refactored   |
-| **bio-updater.js**        | Auto-update bio with dynamic templates         | ✅ Refactored   |
-| **debug.js**              | Debug utilities and system inspection          | ✅ Refactored   |
-| **template.js**           | Comprehensive plugin example                   | ✅ Refactored   |
-| **context-menu-api.js**   | Add items to dialog context menus              | ⏳ Needs Update |
-| **nav-menu-api.js**       | Custom navigation tabs API                     | ⏳ Needs Update |
-| **auto-invite.js**        | Location-based automatic invitations           | ⏳ Needs Update |
-| **protocol-links.js**     | Copy VRCX protocol links                       | ⏳ Needs Update |
-| **registry-overrides.js** | VRChat registry settings management            | ⏳ Needs Update |
-| **tag-manager.js**        | Load 6000+ custom user tags                    | ⏳ Needs Update |
-| **plugin-manager-ui.js**  | Visual plugin management dashboard             | ⏳ Needs Update |
+| Plugin                    | Description                                    | Status        |
+| ------------------------- | ---------------------------------------------- | ------------- |
+| **Plugin.js**             | Base class for all plugins                     | ✅ Base Class |
+| **config.js**             | Configuration management                       | ✅ Updated    |
+| **utils.js**              | Utilities, clipboard, notifications, Steam API | ✅ Updated    |
+| **api-helpers.js**        | API wrappers, logging, location management     | ✅ Updated    |
+| **bio-updater.js**        | Auto-update bio with dynamic templates         | ✅ Updated    |
+| **debug.js**              | Debug utilities and system inspection          | ✅ Updated    |
+| **template.js**           | Comprehensive plugin example                   | ✅ Updated    |
+| **context-menu-api.js**   | Add items to dialog context menus              | ✅ Updated    |
+| **nav-menu-api.js**       | Custom navigation tabs API                     | ✅ Updated    |
+| **auto-invite.js**        | Location-based automatic invitations           | ✅ Updated    |
+| **protocol-links.js**     | Copy VRCX protocol links                       | ✅ Updated    |
+| **registry-overrides.js** | VRChat registry settings management            | ✅ Updated    |
+| **tag-manager.js**        | Load 6000+ custom user tags                    | ✅ Updated    |
+| **plugin-manager-ui.js**  | Visual plugin management dashboard             | ✅ Updated    |
+| **managers.js**           | Debug functions and utilities                  | ✅ Updated    |
 
 ## 📁 Project Structure
 
@@ -226,7 +235,12 @@ class MyPlugin extends Plugin {
   }
 
   async load() {
-    window.customjs.myPlugin = this;
+    // ⚠️ NOT RECOMMENDED: Don't expose plugin directly
+    // window.customjs.myPlugin = this;
+
+    // ✅ RECOMMENDED: Access via PluginManager
+    // Other plugins use: window.customjs.pluginManager.getPlugin("my-plugin")
+
     this.loaded = true;
   }
 
@@ -249,6 +263,47 @@ window.__LAST_PLUGIN_CLASS__ = MyPlugin;
 ```
 
 ## 🌐 Global API
+
+### How to Access Plugins
+
+**✅ ALWAYS use PluginManager to access other plugins:**
+
+```javascript
+// Get a plugin immediately (returns undefined if not loaded)
+const utils = window.customjs.pluginManager.getPlugin("utils");
+if (utils) {
+  utils.showSuccess("Hello!");
+}
+
+// Wait for a plugin to load (useful in start() method)
+async start() {
+  const contextMenu = await window.customjs.pluginManager.waitForPlugin("context-menu-api");
+  contextMenu.addUserItem("my-item", { ... });
+}
+
+// Common plugin access patterns
+const config = customjs.pluginManager.getPlugin("config");
+const utils = customjs.pluginManager.getPlugin("utils");
+const apiHelpers = customjs.pluginManager.getPlugin("api-helpers");
+const contextMenu = customjs.pluginManager.getPlugin("context-menu-api");
+const navMenu = customjs.pluginManager.getPlugin("nav-menu-api");
+```
+
+**❌ NEVER access plugins directly via window.customjs.pluginName:**
+
+```javascript
+// ❌ WRONG - These properties don't exist!
+window.customjs.utils; // undefined
+window.customjs.contextMenu; // undefined
+window.customjs.navMenu; // undefined
+window.customjs.api; // undefined
+
+// ✅ CORRECT - Use PluginManager
+window.customjs.pluginManager.getPlugin("utils");
+window.customjs.pluginManager.getPlugin("context-menu-api");
+window.customjs.pluginManager.getPlugin("nav-menu-api");
+window.customjs.pluginManager.getPlugin("api-helpers");
+```
 
 ### Plugin Management (`customjs.pluginManager`)
 
@@ -284,22 +339,34 @@ await plugin.toggle();
 customjs.plugins.find((p) => p.metadata.id === "utils").toggle();
 ```
 
-### Plugin Instances (`window.customjs`)
+### Accessing Plugins (`window.customjs`)
 
 ```javascript
-// System
+// ✅ RECOMMENDED: Access plugins via PluginManager
+const utils = customjs.pluginManager.getPlugin("utils");
+const contextMenu = customjs.pluginManager.getPlugin("context-menu-api");
+const navMenu = customjs.pluginManager.getPlugin("nav-menu-api");
+
+// Wait for plugin to load (useful in start() method)
+const apiHelpers = await customjs.pluginManager.waitForPlugin("api-helpers");
+
+// ⚠️ NOT RECOMMENDED: Direct access to window.customjs.pluginName
+// These properties don't exist - use pluginManager.getPlugin() instead!
+// customjs.utils ❌
+// customjs.contextMenu ❌
+// customjs.navMenu ❌
+// customjs.api ❌
+
+// ✅ System Properties (valid direct access)
 customjs.version; // Plugin system version
 customjs.build; // Build timestamp
 customjs.config; // User configuration
-customjs.plugins; // Array of all Plugin instances
-customjs.pluginManager; // PluginManager instance (handles loading & management)
+customjs.plugins; // Array of all Plugin instances (for iteration)
+customjs.pluginManager; // PluginManager instance
 customjs.events; // Event registry
 customjs.functions; // Backed up functions
 customjs.hooks; // Hook registry (pre & post)
-
-// Access plugins via manager
-customjs.pluginManager.getPlugin("plugin-id"); // Get plugin by ID
-customjs.pluginManager.waitForPlugin("plugin-id"); // Wait for plugin to load
+customjs.debugFunctions; // Debug utilities (if managers plugin loaded)
 ```
 
 ### Configuration
@@ -351,12 +418,16 @@ customjs.pluginManager.onLogin((currentUser) => {
 ### API & Logging
 
 ```javascript
+// Get API Helpers plugin
+const apiHelpers = customjs.pluginManager.getPlugin("api-helpers");
+
 // API wrappers
-await customjs.api.saveBio(bio);
-await customjs.api.sendInvite(params, userId);
+await apiHelpers.API.saveBio(bio);
+await apiHelpers.API.sendInvite(params, userId);
+await apiHelpers.API.saveCurrentUser(updates);
 
 // Logging
-customjs.logger.log(
+apiHelpers.logger.log(
   "Message",
   {
     console: true,
@@ -516,9 +587,12 @@ The script will:
 - ✅ Use `registerObserver()` for MutationObserver
 - ✅ Use `registerListener()` for addEventListener
 - ✅ Use `registerSubscription()` for Pinia subscriptions
-- ✅ Expose plugin to `window.customjs.pluginName`
+- ✅ Access other plugins via `window.customjs.pluginManager.getPlugin()`
+- ✅ Use `await pluginManager.waitForPlugin()` in start() when depending on other plugins
 - ✅ Call `await super.stop()` in stop()
 - ✅ Use `this.log()`, `this.warn()`, `this.error()`
+- ❌ Don't expose plugin to `window.customjs.pluginName` (use pluginManager instead)
+- ❌ Don't access other plugins via `window.customjs.pluginName` (doesn't exist)
 - ❌ Don't auto-initialize (loader handles it)
 - ❌ Don't use IIFE wrapper at bottom
 
@@ -572,11 +646,28 @@ The script will:
 
 ---
 
-**Version**: 2.1.0  
+**Version**: 2.1.1  
 **Author**: Bluscream  
-**Last Updated**: October 11, 2025
+**Last Updated**: October 12, 2025
 
 ## 🎉 Changelog
+
+### v2.1.1 (October 12, 2025) - Plugin Access Standardization
+
+- 🔧 **Standardized Plugin Access Pattern**
+  - ✅ All plugins now use `window.customjs.pluginManager.getPlugin()` to access other plugins
+  - ❌ Removed direct access to non-existent properties (e.g., `window.customjs.utils`, `window.customjs.contextMenu`)
+  - 📝 Updated documentation to reflect proper plugin access patterns
+- 🐛 **Bug Fixes**
+  - Fixed protocol-links.js plugin not finding context-menu-api
+  - Fixed bio-updater.js plugin not finding api-helpers
+  - Fixed template.js plugin showing outdated access patterns
+  - Fixed all plugins to use `pluginManager.waitForPlugin()` when needed
+- 📚 **Documentation Updates**
+  - Added "How to Access Plugins" section with clear examples
+  - Updated best practices to discourage direct plugin exposure
+  - Clarified which `window.customjs.*` properties are valid
+  - Updated template.js with proper plugin access examples
 
 ### v2.1.0 (October 11, 2025) - Major Refactoring
 

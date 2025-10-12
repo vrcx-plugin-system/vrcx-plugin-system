@@ -88,8 +88,10 @@ class BioUpdaterPlugin extends Plugin {
       // Split bio to preserve custom text before separator
       const oldBio = currentUser.bio.split("\n-\n")[0];
 
-      // Get utils plugin for helper functions
-      const utils = window.customjs?.pluginManager?.getPlugin("utils");
+      // Get plugin references
+      const utils = window.customjs.pluginManager.getPlugin("utils");
+      const autoInvite = window.customjs.pluginManager.getPlugin("auto-invite");
+      const tagManager = window.customjs.pluginManager.getPlugin("tag-manager");
 
       // Get Steam playtime if configured
       const steamId = this.getConfig("steam.id");
@@ -130,11 +132,6 @@ class BioUpdaterPlugin extends Plugin {
 
       // Apply template with replacements
       const bioTemplate = this.getConfig("bio.template");
-
-      // Get plugin references
-      const utils = window.customjs.pluginManager.getPlugin("utils");
-      const autoInvite = window.customjs.pluginManager.getPlugin("auto-invite");
-      const tagManager = window.customjs.pluginManager.getPlugin("tag-manager");
 
       const newBio = bioTemplate
         .replace(

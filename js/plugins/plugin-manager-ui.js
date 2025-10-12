@@ -33,9 +33,13 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   async start() {
-    if (!window.customjs?.navMenu) {
-      this.warn("NavMenu API not available, waiting...");
-      await this.waitForNavMenu();
+    // Wait for Nav Menu API to be available
+    const navMenu = await window.customjs.pluginManager.waitForPlugin(
+      "nav-menu-api"
+    );
+    if (!navMenu) {
+      this.error("Nav Menu API plugin not found after waiting");
+      return;
     }
 
     this.setupNavMenuItem();
@@ -64,16 +68,6 @@ class PluginManagerUIPlugin extends Plugin {
   // ============================================================================
   // SETUP
   // ============================================================================
-
-  async waitForNavMenu() {
-    return new Promise((resolve) => {
-      const check = () => {
-        if (window.customjs?.navMenu) resolve();
-        else setTimeout(check, 500);
-      };
-      check();
-    });
-  }
 
   setupNavMenuItem() {
     const navMenu = window.customjs?.pluginManager?.getPlugin("nav-menu-api");
