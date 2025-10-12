@@ -837,8 +837,8 @@ class PluginManager {
 
       const loadPromise = new Promise((resolve, reject) => {
         // Get loadTimeout from config or use default
-        const loadTimeoutSetting = window.customjs?.config?.loader?.loadTimeout;
-        const loadTimeout = loadTimeoutSetting?.value ?? loadTimeoutSetting ?? 10000;
+        const loadTimeout =
+          window.customjs?.config?.loader?.loadTimeout?.value ?? 10000;
 
         const timeout = setTimeout(() => {
           reject(new Error(`Plugin load timeout: ${pluginUrl}`));

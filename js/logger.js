@@ -208,7 +208,8 @@ class Logger {
     if (opts.webhook) {
       setTimeout(async () => {
         try {
-          const webhookUrl = window.customjs?.config?.logger?.webhook;
+          const webhookUrl =
+            window.customjs?.config?.logger?.webhook?.value;
           if (webhookUrl) {
             const payload = {
               message: formattedMsg,
@@ -446,7 +447,7 @@ if (typeof window !== "undefined") {
   // Register logger settings with ConfigManager (if available)
   if (window.customjs?.configManager) {
     const configManager = window.customjs.configManager;
-    
+
     // Register logger category
     configManager.registerGeneralCategory(
       "logger",
