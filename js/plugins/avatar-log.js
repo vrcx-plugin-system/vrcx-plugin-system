@@ -5,8 +5,8 @@ class AvatarLogPlugin extends Plugin {
       description:
         "Logs and submits avatar IDs to various avatar database providers (avtrDB, NSVR, PAW, VRCDB, VRCWB)",
       author: "Bluscream",
-      version: "1.0.3",
-      build: "1728758700",
+      version: "1.0.4",
+      build: "1728758800",
       dependencies: [],
     });
 
@@ -170,7 +170,7 @@ class AvatarLogPlugin extends Plugin {
   }
 
   async start() {
-    if (!this.getSetting("general.enabled")) {
+    if (!this.config.general.enabled.value) {
       this.logger.log("⏸️ Avatar Logger is disabled in settings");
       return;
     }
@@ -184,8 +184,8 @@ class AvatarLogPlugin extends Plugin {
   }
 
   async onLogin() {
-    if (!this.getSetting("general.enabled")) return;
-    if (!this.getSetting("advanced.scanOnStartup")) return;
+    if (!this.config.general.enabled.value) return;
+    if (!this.config.advanced.scanOnStartup.value) return;
 
     this.logger.log("👤 User logged in, scanning avatar stores...");
 
@@ -259,7 +259,7 @@ class AvatarLogPlugin extends Plugin {
 
   // Process a single avatar ID
   processAvatarId(avatarId, source = "unknown") {
-    if (!this.getSetting("general.enabled")) return;
+    if (!this.config.general.enabled.value) return;
     if (!avatarId || typeof avatarId !== "string") return;
 
     // Validate avatar ID format (avtr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
@@ -276,7 +276,7 @@ class AvatarLogPlugin extends Plugin {
       return;
     }
 
-    if (this.getSetting("general.logToConsole")) {
+    if (this.config.general.logToConsole.value) {
       this.logger.log(`📋 Queuing avatar: ${avatarId} (from: ${source})`);
     }
 
@@ -298,7 +298,7 @@ class AvatarLogPlugin extends Plugin {
     this.isProcessing = true;
 
     try {
-      const batchSize = this.getSetting("advanced.batchSize");
+      const batchSize = this.config.advanced.batchSize.value;
       const batch = Array.from(this.pendingQueue).slice(0, batchSize);
 
       // Process batch
@@ -310,7 +310,7 @@ class AvatarLogPlugin extends Plugin {
 
       // Continue processing if more in queue
       if (this.pendingQueue.size > 0) {
-        const delay = this.getSetting("advanced.queueDelay");
+        const delay = this.config.advanced.queueDelay.value;
         setTimeout(() => {
           this.isProcessing = false;
           this.processQueue();
@@ -327,7 +327,7 @@ class AvatarLogPlugin extends Plugin {
 
   // Send avatar ID to all enabled providers
   async sendToProviders(avatarId) {
-    const attribution = this.getSetting("general.attribution") || "";
+    const attribution = this.config.general.attribution.value || "";
     const userId = attribution || "1007655277732651069"; // VRC-LOG Dev ID as default
 
     const results = {
@@ -336,23 +336,23 @@ class AvatarLogPlugin extends Plugin {
     };
 
     // Send to each enabled provider
-    if (this.getSetting("providers.enableAvtrDB")) {
+    if (this.config.providers.enableAvtrDB.value) {
       results.providers.avtrdb = await this.sendToAvtrDB(avatarId, userId);
     }
-    if (this.getSetting("providers.enableNSVR")) {
+    if (this.config.providers.enableNSVR.value) {
       results.providers.nsvr = await this.sendToNSVR(avatarId, userId);
     }
-    if (this.getSetting("providers.enablePAW")) {
+    if (this.config.providers.enablePAW.value) {
       results.providers.paw = await this.sendToPAW(avatarId);
     }
-    if (this.getSetting("providers.enableVRCDB")) {
+    if (this.config.providers.enableVRCDB.value) {
       results.providers.vrcdb = await this.sendToVRCDB(avatarId, userId);
     }
-    if (this.getSetting("providers.enableVRCWB")) {
+    if (this.config.providers.enableVRCWB.value) {
       results.providers.vrcwb = await this.sendToVRCWB(avatarId, userId);
     }
 
-    if (this.getSetting("general.logToConsole")) {
+    if (this.config.general.logToConsole.value) {
       this.logger.log(`✅ Processed ${avatarId}:`, results.providers);
     }
 
