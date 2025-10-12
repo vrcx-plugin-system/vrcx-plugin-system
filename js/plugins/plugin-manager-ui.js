@@ -4,7 +4,7 @@ class PluginManagerUIPlugin extends Plugin {
       name: "Plugin Manager UI",
       description: "Visual UI for managing VRCX custom plugins",
       author: "Bluscream",
-      version: "4.0.0",
+      version: "5.0.0",
       build: "1760411000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
@@ -13,6 +13,7 @@ class PluginManagerUIPlugin extends Plugin {
     });
 
     this.contentContainer = null;
+    this.settingsModal = null;
   }
 
   async load() {
@@ -51,6 +52,12 @@ class PluginManagerUIPlugin extends Plugin {
 
     if (this.navMenuApi) {
       this.navMenuApi.removeItem("plugins");
+    }
+
+    // Clean up settings modal if open
+    if (this.settingsModal) {
+      this.settingsModal.remove();
+      this.settingsModal = null;
     }
 
     await super.stop();
@@ -155,7 +162,7 @@ class PluginManagerUIPlugin extends Plugin {
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
         <div>
           <h2 style="margin: 0; font-size: 28px; font-weight: 600;">
-            🔌 Plugin Manager v${window.customjs.version}
+            🔌 Plugins
           </h2>
           <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;">
             Core Modules: ${coreModules.length} • Plugins: ${pluginCount} • Subscriptions: ${subscriptionCount}
@@ -558,6 +565,9 @@ class PluginManagerUIPlugin extends Plugin {
         <button class="reload-btn el-button el-button--small el-button--info" style="flex: 1;">
           <i class="ri-restart-line"></i> Reload
         </button>
+        <button class="settings-btn el-button el-button--small el-button--primary" style="flex: 1;">
+          <i class="ri-settings-3-line"></i> Settings
+        </button>
         <button class="details-btn el-button el-button--small" style="flex: 1;">
           <i class="ri-information-line"></i> Details
         </button>
@@ -582,6 +592,7 @@ class PluginManagerUIPlugin extends Plugin {
     setTimeout(() => {
       const toggleBtn = card.querySelector(".toggle-btn");
       const reloadBtn = card.querySelector(".reload-btn");
+      const settingsBtn = card.querySelector(".settings-btn");
       const detailsBtn = card.querySelector(".details-btn");
       const removeBtn = card.querySelector(".remove-btn");
 
@@ -596,6 +607,13 @@ class PluginManagerUIPlugin extends Plugin {
         this.registerListener(reloadBtn, "click", async (e) => {
           e.stopPropagation();
           await this.handleReloadPlugin(plugin.metadata.url);
+        });
+      }
+
+      if (settingsBtn) {
+        this.registerListener(settingsBtn, "click", (e) => {
+          e.stopPropagation();
+          this.handleShowSettings(plugin);
         });
       }
 
@@ -946,6 +964,397 @@ class PluginManagerUIPlugin extends Plugin {
       this.logger.error("Error retrying plugin:", error);
       this.logger.showError(`Error: ${error.message}`);
     }
+  }
+
+  handleShowSettings(plugin) {
+    // Check if plugin has settings
+    const hasSettings =
+      window.customjs?.configManager?.settings?.get(plugin.metadata.id)?.size >
+      0;
+
+    if (!hasSettings) {
+      this.logger.showWarn("This plugin has no configurable settings");
+      return;
+    }
+
+    this.showSettingsModal(plugin);
+  }
+
+  showSettingsModal(plugin) {
+    // Remove existing modal if any
+    if (this.settingsModal) {
+      this.settingsModal.remove();
+      this.settingsModal = null;
+    }
+
+    // Create modal overlay
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      backdrop-filter: blur(2px);
+    `;
+
+    // Create modal container
+    const modal = document.createElement("div");
+    modal.style.cssText = `
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      width: 90%;
+      max-width: 700px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    `;
+
+    // Create header
+    const header = document.createElement("div");
+    header.style.cssText = `
+      padding: 20px 25px;
+      border-bottom: 1px solid #e9ecef;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    `;
+    header.innerHTML = `
+      <h3 style="margin: 0; font-size: 20px; font-weight: 600;">
+        <i class="ri-settings-3-line"></i> ${plugin.metadata.name} Settings
+      </h3>
+      <p style="margin: 5px 0 0 0; font-size: 13px; opacity: 0.9;">
+        Configure plugin settings • Changes are saved automatically
+      </p>
+    `;
+
+    // Create content area
+    const content = document.createElement("div");
+    content.style.cssText = `
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 25px;
+    `;
+
+    // Build settings UI
+    content.appendChild(this.buildSettingsUI(plugin));
+
+    // Create footer
+    const footer = document.createElement("div");
+    footer.style.cssText = `
+      padding: 15px 25px;
+      border-top: 1px solid #e9ecef;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8f9fa;
+    `;
+
+    const infoText = document.createElement("span");
+    infoText.style.cssText = "font-size: 12px; color: #6c757d;";
+    infoText.textContent = "Settings are automatically saved";
+
+    const buttonGroup = document.createElement("div");
+    buttonGroup.style.cssText = "display: flex; gap: 10px;";
+
+    const resetBtn = document.createElement("button");
+    resetBtn.className = "el-button el-button--small el-button--warning";
+    resetBtn.innerHTML = '<i class="ri-restart-line"></i> Reset to Defaults';
+
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "el-button el-button--small el-button--primary";
+    closeBtn.innerHTML = '<i class="ri-close-line"></i> Close';
+
+    buttonGroup.appendChild(resetBtn);
+    buttonGroup.appendChild(closeBtn);
+
+    footer.appendChild(infoText);
+    footer.appendChild(buttonGroup);
+
+    // Assemble modal
+    modal.appendChild(header);
+    modal.appendChild(content);
+    modal.appendChild(footer);
+    overlay.appendChild(modal);
+
+    // Event handlers
+    this.registerListener(closeBtn, "click", () => {
+      overlay.remove();
+      this.settingsModal = null;
+    });
+
+    this.registerListener(resetBtn, "click", async () => {
+      if (
+        confirm(
+          `Reset all settings for "${plugin.metadata.name}" to their default values?`
+        )
+      ) {
+        window.customjs.configManager.reset(plugin.metadata.id);
+        await window.customjs.configManager.save();
+        this.logger.showSuccess("Settings reset to defaults");
+        // Refresh the modal
+        content.innerHTML = "";
+        content.appendChild(this.buildSettingsUI(plugin));
+      }
+    });
+
+    this.registerListener(overlay, "click", (e) => {
+      if (e.target === overlay) {
+        overlay.remove();
+        this.settingsModal = null;
+      }
+    });
+
+    // Add to DOM
+    document.body.appendChild(overlay);
+    this.settingsModal = overlay;
+  }
+
+  buildSettingsUI(plugin) {
+    const container = document.createElement("div");
+
+    const categories =
+      window.customjs.configManager.categories.get(plugin.metadata.id) ||
+      new Map();
+    const settings =
+      window.customjs.configManager.settings.get(plugin.metadata.id) ||
+      new Map();
+
+    if (settings.size === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 40px; color: #6c757d;">
+          <i class="ri-inbox-line" style="font-size: 48px; opacity: 0.5;"></i>
+          <p style="margin-top: 15px; font-size: 14px;">This plugin has no configurable settings</p>
+        </div>
+      `;
+      return container;
+    }
+
+    // Render each category
+    settings.forEach((categorySettings, categoryKey) => {
+      const categoryInfo = categories.get(categoryKey) || {
+        name: categoryKey,
+        description: "",
+      };
+
+      // Category header
+      const categoryHeader = document.createElement("div");
+      categoryHeader.style.cssText = `
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e9ecef;
+      `;
+      categoryHeader.innerHTML = `
+        <h4 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: #212529;">
+          ${categoryInfo.name}
+        </h4>
+        ${
+          categoryInfo.description
+            ? `<p style="margin: 0; font-size: 13px; color: #6c757d;">${categoryInfo.description}</p>`
+            : ""
+        }
+      `;
+      container.appendChild(categoryHeader);
+
+      // Settings in category
+      const settingsContainer = document.createElement("div");
+      settingsContainer.style.cssText =
+        "display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;";
+
+      categorySettings.forEach((setting, settingKey) => {
+        const settingRow = this.createSettingInput(
+          plugin,
+          categoryKey,
+          setting
+        );
+        settingsContainer.appendChild(settingRow);
+      });
+
+      container.appendChild(settingsContainer);
+    });
+
+    return container;
+  }
+
+  createSettingInput(plugin, categoryKey, setting) {
+    const row = document.createElement("div");
+    row.style.cssText = `
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+    `;
+
+    // Label section
+    const labelSection = document.createElement("div");
+    labelSection.style.cssText = "flex: 1; min-width: 0;";
+
+    const label = document.createElement("div");
+    label.style.cssText =
+      "font-size: 14px; font-weight: 500; color: #212529; margin-bottom: 3px;";
+    label.textContent = setting.name;
+
+    const description = document.createElement("div");
+    description.style.cssText = "font-size: 12px; color: #6c757d;";
+    description.textContent = setting.description || "";
+
+    labelSection.appendChild(label);
+    if (setting.description) {
+      labelSection.appendChild(description);
+    }
+
+    // Input section
+    const inputSection = document.createElement("div");
+    inputSection.style.cssText = "margin-left: 15px; min-width: 200px;";
+
+    let input;
+
+    switch (setting.type) {
+      case "boolean":
+        input = document.createElement("label");
+        input.className = "el-switch";
+        input.style.cssText = "cursor: pointer;";
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.className = "el-switch__input";
+        checkbox.checked = setting.value;
+        checkbox.style.cssText = "display: none;";
+
+        const core = document.createElement("span");
+        core.className = "el-switch__core";
+        core.style.cssText = `
+          display: inline-block;
+          position: relative;
+          width: 40px;
+          height: 20px;
+          border-radius: 10px;
+          background: ${setting.value ? "#409eff" : "#dcdfe6"};
+          transition: background-color 0.3s;
+          cursor: pointer;
+        `;
+
+        const action = document.createElement("span");
+        action.className = "el-switch__action";
+        action.style.cssText = `
+          position: absolute;
+          top: 1px;
+          left: ${setting.value ? "21px" : "1px"};
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+          background: white;
+          transition: all 0.3s;
+        `;
+
+        core.appendChild(action);
+        input.appendChild(checkbox);
+        input.appendChild(core);
+
+        this.registerListener(input, "click", async () => {
+          const newValue = !setting.value;
+          setting.value = newValue;
+          checkbox.checked = newValue;
+          core.style.background = newValue ? "#409eff" : "#dcdfe6";
+          action.style.left = newValue ? "21px" : "1px";
+          await window.customjs.configManager.save();
+          this.logger.log(`Updated ${setting.name} to ${newValue}`);
+        });
+        break;
+
+      case "number":
+        input = document.createElement("input");
+        input.type = "number";
+        input.className = "el-input__inner";
+        input.value = setting.value;
+        input.style.cssText = `
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #dcdfe6;
+          border-radius: 4px;
+          font-size: 14px;
+        `;
+
+        this.registerListener(input, "change", async () => {
+          const newValue = parseFloat(input.value);
+          if (!isNaN(newValue)) {
+            setting.value = newValue;
+            await window.customjs.configManager.save();
+            this.logger.log(`Updated ${setting.name} to ${newValue}`);
+          }
+        });
+        break;
+
+      case "string":
+        input = document.createElement("input");
+        input.type = "text";
+        input.className = "el-input__inner";
+        input.value = setting.value;
+        input.style.cssText = `
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #dcdfe6;
+          border-radius: 4px;
+          font-size: 14px;
+        `;
+
+        this.registerListener(input, "change", async () => {
+          setting.value = input.value;
+          await window.customjs.configManager.save();
+          this.logger.log(`Updated ${setting.name} to ${input.value}`);
+        });
+        break;
+
+      case "array":
+      case "object":
+        input = document.createElement("textarea");
+        input.className = "el-textarea__inner";
+        input.value = JSON.stringify(setting.value, null, 2);
+        input.rows = 4;
+        input.style.cssText = `
+          width: 100%;
+          padding: 8px 12px;
+          border: 1px solid #dcdfe6;
+          border-radius: 4px;
+          font-size: 13px;
+          font-family: 'Consolas', monospace;
+          resize: vertical;
+        `;
+
+        this.registerListener(input, "change", async () => {
+          try {
+            const newValue = JSON.parse(input.value);
+            setting.value = newValue;
+            await window.customjs.configManager.save();
+            input.style.borderColor = "#dcdfe6";
+            this.logger.log(`Updated ${setting.name}`);
+          } catch (error) {
+            input.style.borderColor = "#f56c6c";
+            this.logger.showError("Invalid JSON format");
+          }
+        });
+        break;
+
+      default:
+        input = document.createElement("span");
+        input.textContent = `Unsupported type: ${setting.type}`;
+        input.style.cssText = "color: #f56c6c; font-size: 13px;";
+    }
+
+    inputSection.appendChild(input);
+
+    row.appendChild(labelSection);
+    row.appendChild(inputSection);
+
+    return row;
   }
 }
 

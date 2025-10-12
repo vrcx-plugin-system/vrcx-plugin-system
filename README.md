@@ -1,451 +1,338 @@
-# VRCX Custom JS - Modern Plugin System
+# VRCX Custom.js - Advanced Plugin System
 
-> **A powerful, modular plugin system for VRCX with lifecycle management, hot-reload, and automatic resource cleanup.**
+> **A powerful, modular plugin framework for VRCX with centralized configuration management, automatic resource cleanup, and persistent settings.**
 
-A modern JavaScript framework extending VRCX with features including custom navigation tabs, plugin management UI, context menus, user tagging, bio automation, and comprehensive debugging. Built on a robust Plugin base class with proper lifecycle management and resource tracking.
+A modern JavaScript plugin system that extends VRCX with features like custom navigation tabs, context menus, user tagging, bio automation, protocol link handlers, and comprehensive plugin management UI. Built on a robust architecture with proper lifecycle management, centralized configuration, and automatic resource tracking.
 
-**🎯 Status:** Production Ready ✅ | **📦 Version:** 2.1.1 | **🔌 Plugins:** 14 (All Refactored ✅) | **📊 Lines:** ~8000+
+**🎯 Status:** Production Ready ✅ | **📦 Version:** 1.7.1 | **🔌 Plugins:** 14 Available | **⚙️ Core Modules:** 4
 
-## 🌟 What's New in v2.1.1
+---
 
-- 🔧 **Standardized Plugin Access** - All plugins now use `pluginManager.getPlugin()` to access each other
-- 🐛 **Fixed Plugin Communication** - Context Menu API and Nav Menu API now properly accessible
-- ❌ **Removed Non-Existent Properties** - No more confusion about `window.customjs.utils`, `.contextMenu`, etc.
-- 📚 **Improved Documentation** - Clear examples of proper plugin access patterns
-- ✅ **Updated All Plugins** - protocol-links, bio-updater, template, and debug plugins updated
+## 📋 Table of Contents
 
-## 🌟 What's New in v2.1.0
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Architecture Overview](#-architecture-overview)
+- [Configuration System](#-configuration-system)
+- [Core Modules](#-core-modules)
+- [Available Plugins](#-available-plugins)
+- [Plugin Development](#-plugin-development)
+- [API Reference](#-api-reference)
+- [Troubleshooting](#-troubleshooting)
 
-- ✨ **Complete Plugin System Refactoring** - All 14 plugins extend unified `Plugin` base class
-- 🔄 **Proper Lifecycle Management** - `load()` → `start()` → `onLogin()` → `stop()`
-- 🧹 **Automatic Resource Cleanup** - Timers, observers, listeners automatically cleaned up
-- 🎯 **Event System** - Plugins can emit and listen to events from each other
-- 🪝 **Hook System** - Intercept and modify function calls with pre/post hooks
-- ♻️ **Hot Reload** - Enable/disable/reload plugins at runtime
-- 📁 **Clean Structure** - Base classes in `js/`, plugins in `js/plugins/`
-- 🌐 **Unified Namespace** - Everything under `window.customjs` (no global pollution)
-- 🔧 **Merged PluginManager** - PluginLoader merged into PluginManager for simplicity
-- ❌ **Removed Redundant APIs** - No more `window.plugins` or `window.on_login` wrappers
+---
 
-## 📋 Plugin Overview
+## ✨ Features
 
-| Plugin                    | Description                                    | Status        |
-| ------------------------- | ---------------------------------------------- | ------------- |
-| **Plugin.js**             | Base class for all plugins                     | ✅ Base Class |
-| **config.js**             | Configuration management                       | ✅ Updated    |
-| **utils.js**              | Utilities, clipboard, notifications, Steam API | ✅ Updated    |
-| **api-helpers.js**        | API wrappers, logging, location management     | ✅ Updated    |
-| **bio-updater.js**        | Auto-update bio with dynamic templates         | ✅ Updated    |
-| **debug.js**              | Debug utilities and system inspection          | ✅ Updated    |
-| **template.js**           | Comprehensive plugin example                   | ✅ Updated    |
-| **context-menu-api.js**   | Add items to dialog context menus              | ✅ Updated    |
-| **nav-menu-api.js**       | Custom navigation tabs API                     | ✅ Updated    |
-| **auto-invite.js**        | Location-based automatic invitations           | ✅ Updated    |
-| **protocol-links.js**     | Copy VRCX protocol links                       | ✅ Updated    |
-| **registry-overrides.js** | VRChat registry settings management            | ✅ Updated    |
-| **tag-manager.js**        | Load 6000+ custom user tags                    | ✅ Updated    |
-| **plugin-manager-ui.js**  | Visual plugin management dashboard             | ✅ Updated    |
-| **managers.js**           | Debug functions and utilities                  | ✅ Updated    |
+### 🏗️ **Core System**
 
-## 📁 Project Structure
+- **Modular Architecture** - Core modules + Plugin system
+- **Centralized Configuration** - All settings in `vrcx.customjs` section of VRChat config
+- **Lifecycle Management** - `load()` → `start()` → `onLogin()` → `stop()`
+- **Hot Reload** - Enable/disable/reload plugins without restarting VRCX
+- **Automatic Cleanup** - Timers, observers, listeners, subscriptions tracked and cleaned up
+- **Fallback Logger** - System continues working even if modules fail to load
 
-```
-vrcx-custom/
-├── custom.js                          # Main loader with PluginManager & PluginLoader
-├── custom.css                         # Custom styling
-├── update.ps1                         # Deployment script
-│
-├── js/                                # BASE CLASSES
-│   └── Plugin.js                      # Plugin base class (loaded first)
-│
-└── js/plugins/                        # ALL PLUGINS
-    ├── config.js                      # Configuration management ✅
-    ├── utils.js                       # Utility functions ✅
-    ├── api-helpers.js                 # API wrappers & logger ✅
-    ├── bio-updater.js                 # Bio auto-updater ✅
-    ├── debug.js                       # Debug utilities ✅
-    ├── template.js                    # Plugin template/example ✅
-    ├── context-menu-api.js            # Context menu management ✅
-    ├── nav-menu-api.js                # Navigation menu API ✅
-    ├── auto-invite.js                 # Auto-invite system ✅
-    ├── protocol-links.js              # Protocol link handlers ✅
-    ├── registry-overrides.js          # Registry settings ✅
-    ├── tag-manager.js                 # Custom user tags ✅
-    ├── managers.js                    # Manager utilities ✅
-    └── plugin-manager-ui.js           # Plugin UI manager ✅
-```
+### 🎨 **Plugin Features**
+
+- **Navigation Tabs** - Add custom tabs to VRCX navigation
+- **Context Menus** - Add items to user/world/avatar/group dialog menus
+- **Protocol Links** - Copy VRCX protocol links for quick sharing
+- **User Tagging** - Load and display 6000+ custom user tags
+- **Registry Management** - Control VRChat registry settings
+- **Auto Invite/Follow** - Automatic invitation and following systems
+- **Bio Updates** - Dynamic bio templates with placeholders
+- **Plugin Manager UI** - Visual management dashboard
+
+### 🔧 **Developer Features**
+
+- **Event System** - Inter-plugin communication via events
+- **Hook System** - Intercept and modify function calls (pre/post/void/replace)
+- **Resource Tracking** - Automatic cleanup of timers, observers, listeners, subscriptions
+- **Pinia Subscriptions** - Centralized tracking via `window.customjs.subscriptions`
+- **Type Safety** - Configuration type validation
+- **Debug Tools** - Comprehensive debugging utilities
+
+---
 
 ## 🚀 Quick Start
 
 ### Installation
 
-1. **Clone or download** this repository
-2. **Edit `custom.js`** and configure `window.customjs.config`:
+1. **Clone or download** this repository to your workspace
+
+2. **Copy `custom.js` to VRCX AppData folder:**
+
+   ```
+   %APPDATA%\VRCX\custom.js
+   ```
+
+3. **Restart VRCX** - The plugin system will initialize automatically
+
+4. **(Optional) Use the update script** for automated deployment:
+   ```powershell
+   cd vrcx-custom
+   .\update.ps1
+   ```
+
+### First Run
+
+On first run, the system will:
+
+1. Load 4 core modules (logger, config, utils, plugin)
+2. Initialize ConfigManager and load settings from VRChat's config.json
+3. Load enabled plugins from `vrcx.customjs.loader.plugins`
+4. Start all loaded plugins
+5. Save current configuration to disk
+
+### Enabling/Disabling Plugins
+
+**Method 1: Via Config File**
+
+Edit `%LOCALAPPDATA%\VRChat\VRChat\config.json`:
+
+```json
+{
+  "vrcx": {
+    "customjs": {
+      "loader": {
+        "plugins": {
+          "https://github.com/.../plugin-name.js": true, // enabled
+          "https://github.com/.../other-plugin.js": false // disabled
+        },
+        "loadTimeout": 10000
+      }
+    }
+  }
+}
+```
+
+**Method 2: Via Console**
 
 ```javascript
-window.customjs.config = {
-  steam: {
-    id: "{env:STEAM_ID64}", // Your Steam ID
-    key: "{env:STEAM_API_KEY}", // Your Steam API key
+// Get plugin config
+const config = customjs.pluginManager.getPluginConfig();
+
+// Enable/disable a plugin
+config["https://...plugin.js"] = true; // or false
+
+// Save config
+customjs.pluginManager.savePluginConfig(config);
+await customjs.configManager.save();
+```
+
+**Method 3: Via Plugin Manager UI**
+
+1. Load the `plugin-manager-ui` plugin
+2. Navigate to the "Plugins" tab
+3. Use the toggle buttons to enable/disable plugins
+
+---
+
+## 🏗️ Architecture Overview
+
+### System Structure
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    custom.js (Entry Point)               │
+│  - PluginManager class                                   │
+│  - Core module definitions (window.customjs.core_modules)│
+│  - Default plugin list (window.customjs.default_plugins) │
+└─────────────────────────────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ Core Modules │  │    Plugins   │  │    Config    │
+│  (Always)    │  │ (Conditional)│  │ (Persistent) │
+└──────────────┘  └──────────────┘  └──────────────┘
+        │                 │                   │
+        ▼                 ▼                   ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ logger.js    │  │ context-menu │  │ vrcx.customjs│
+│ config.js    │  │ nav-menu     │  │  .loader     │
+│ utils.js     │  │ protocol     │  │  .settings   │
+│ plugin.js    │  │ tag-manager  │  │  .logger     │
+└──────────────┘  │ auto-invite  │  └──────────────┘
+                  │ auto-follow  │
+                  │ registry     │
+                  │ bio-updater  │
+                  │ ... (14 total)│
+                  └──────────────┘
+```
+
+### Global Namespace: `window.customjs`
+
+```javascript
+window.customjs = {
+  // System info
+  version: "1.7.1", // Plugin system version
+  build: "1760410000", // Build timestamp
+
+  // Core components
+  core_modules: [], // Array of core module URLs
+  default_plugins: [], // Array of {url, enabled} objects
+  plugins: [], // Array of loaded Plugin instances
+
+  // Managers
+  pluginManager: PluginManager, // Plugin lifecycle manager
+  configManager: ConfigManager, // Configuration manager
+  Logger: Logger, // Logger class (for creating instances)
+
+  // Configuration (proxied from ConfigManager)
+  config: {
+    settings: {}, // Plugin settings (pluginId -> category -> setting)
+    loader: {}, // Loader settings (plugins, loadTimeout)
+    logger: {}, // Logger settings (webhook, etc.)
   },
-  bio: {
-    updateInterval: 7200000, // 2 hours
-    template: `...`, // Your bio template
+
+  // Tracking systems
+  subscriptions: Map, // pluginId -> Set of unsubscribe functions
+  hooks: {
+    // Function hooks
+    pre: {}, // Before function calls
+    post: {}, // After function calls
+    void: {}, // Cancel function calls
+    replace: {}, // Replace function implementation
   },
-  tags: {
-    urls: ["https://your-tags-url.json"],
-  },
-  // ... other settings
+  functions: {}, // Original function backups
+  events: {}, // Event registry for inter-plugin communication
+
+  // Utilities
+  utils: {}, // Utility functions (from utils.js)
 };
 ```
 
-3. **Set environment variables** (optional):
+---
 
-```powershell
-[System.Environment]::SetEnvironmentVariable("STEAM_ID64", "your_id", "User")
-[System.Environment]::SetEnvironmentVariable("STEAM_API_KEY", "your_key", "User")
+## ⚙️ Configuration System
+
+### Config File Location
+
+All configuration is stored in VRChat's config file:
+
+```
+%LOCALAPPDATA%\VRChat\VRChat\config.json
 ```
 
-4. **Run update script**:
+### Config Structure
 
-```powershell
-cd vrcx-custom
-.\update.ps1
-```
-
-5. **Restart VRCX** - plugins load automatically from GitHub
-
-### Manual Installation
-
-Copy `custom.js` to `%APPDATA%\VRCX\custom.js` and replace placeholders:
-
-- `{env:STEAM_ID64}` → your Steam ID
-- `{env:STEAM_API_KEY}` → your Steam API key
-- `{VERSION}` → version string
-- `{BUILD}` → build timestamp
-
-## 🏗️ Plugin System Architecture
-
-### The Plugin Base Class
-
-All plugins extend the `Plugin` base class which provides:
-
-#### **Lifecycle Management**
-
-```javascript
-class MyPlugin extends Plugin {
-  async load() {
-    // Called when plugin code loads
-    // Setup, register hooks, expose methods
-  }
-
-  async start() {
-    // Called after all plugins loaded
-    // Start timers, modify DOM, setup UI
-  }
-
-  async onLogin(currentUser) {
-    // Called after VRChat login
-    // Access user data, make API calls
-  }
-
-  async stop() {
-    // Called when disabled/unloaded
-    // Custom cleanup, then auto-cleanup
+```json
+{
+  "vrcx": {
+    "customjs": {
+      "loader": {
+        "plugins": {
+          "https://...plugin1.js": true, // Plugin enabled
+          "https://...plugin2.js": false // Plugin disabled
+        },
+        "loadTimeout": 10000 // Plugin load timeout (ms)
+      },
+      "settings": {
+        "plugin-id": {
+          "category-name": {
+            "setting-key": "value"
+          }
+        }
+      },
+      "logger": {
+        "webhook": "http://homeassistant.local:8123/api/webhook/vrcx"
+      }
+    }
   }
 }
 ```
 
-#### **Resource Tracking**
+### Configuration Hierarchy
 
-Automatically cleaned up on `stop()`:
+1. **`vrcx.customjs.loader`** - Loader configuration
+
+   - `plugins` - Object mapping plugin URLs to enabled state
+   - `loadTimeout` - Timeout for loading plugins (milliseconds)
+
+2. **`vrcx.customjs.settings`** - Plugin-specific settings
+
+   - Organized by plugin ID → category → setting key
+   - All settings saved (including defaults)
+   - Type validated automatically
+
+3. **`vrcx.customjs.logger`** - Logger configuration
+
+   - `webhook` - Webhook URL for remote logging
+
+4. **`vrcx.customjs.[category]`** - Other general settings
+   - Can be extended with custom categories via `registerGeneralCategory()`
+
+### Accessing Configuration
+
+**In Plugins:**
 
 ```javascript
-// Register timer (auto-cleanup)
-this.registerTimer(setInterval(() => {}, 1000));
+// Access your plugin's settings (PluginSetting objects)
+this.config.general.enabled.value; // Current value
+this.config.general.enabled.defaultValue; // Default value
+this.config.general.enabled.isModified(); // Is changed from default?
 
-// Register observer (auto-cleanup)
-const observer = new MutationObserver(...);
-this.registerObserver(observer);
-
-// Register event listener (auto-cleanup)
-this.registerListener(element, 'click', handler);
-
-// Register Pinia subscription (auto-cleanup)
-this.registerSubscription(unsubscribe);
+// Modify and save
+this.config.general.enabled.value = false;
+await this.saveSettings();
 ```
 
-#### **Event System**
+**From Global Namespace:**
 
 ```javascript
-// Emit events
-this.emit("my-event", { data: "value" });
+// Direct value access (proxied)
+window.customjs.config.settings.pluginId.category.setting;
 
-// Listen to events
-this.on("other-plugin:event", (data) => {
-  console.log("Received:", data);
-});
+// General settings
+window.customjs.config.logger.webhook.value;
+window.customjs.config.loader.loadTimeout.value;
+
+// ConfigManager API
+await customjs.configManager.save(); // Save all
+await customjs.configManager.load(); // Reload from disk
+customjs.configManager.reset(); // Reset all to defaults
+customjs.configManager.reset("plugin-id"); // Reset specific plugin
+customjs.configManager.debug(); // Get full config structure
 ```
 
-#### **Hook System**
+---
+
+## 🧩 Core Modules
+
+Core modules are always loaded before plugins. They provide the foundation for the plugin system.
+
+### 1. **logger.js** - Logging System
+
+**Purpose:** Provides comprehensive logging with multiple output channels
+
+**Features:**
+
+- Console logging with formatted context
+- VRCX UI notifications (noty, notify, message)
+- Desktop notifications
+- VR overlay notifications (XSOverlay, OVRToolkit)
+- Webhook integration for remote logging
+- Per-plugin logger instances
+
+**Usage:**
 
 ```javascript
-// Run before function
-this.registerPreHook("AppApi.SendIpc", (args) => {
-  console.log("SendIpc called with:", args);
-});
+// Each plugin automatically gets this.logger
+this.logger.log("Info message");
+this.logger.warn("Warning message");
+this.logger.error("Error message");
+this.logger.showSuccess("Toast notification");
+this.logger.notifyDesktop("Desktop notification");
+this.logger.notifyVR("VR overlay notification");
 
-// Run after function
-this.registerPostHook("AppApi.SendIpc", (result, args) => {
-  console.log("SendIpc returned:", result);
-});
-
-// Completely void/cancel a function (prevents execution)
-this.registerVoidHook("AppApi.SendIpc", (args) => {
-  console.log("SendIpc was called but voided:", args);
-  // Original function will NOT be called
-});
-
-// Replace function with custom implementation (chainable)
-this.registerReplaceHook("AppApi.SendIpc", function(originalFunc, ...args) {
-  console.log("Replacing SendIpc");
-  // You can call the original function or skip it entirely
-  const result = originalFunc(...args); // Optional
-  return result; // Or return your own result
-});
-```
-
-#### **State Management**
-
-```javascript
-await plugin.enable(); // Enable plugin
-await plugin.disable(); // Disable & cleanup
-await plugin.toggle(); // Toggle state
-
-console.log(plugin.enabled); // Is enabled?
-console.log(plugin.loaded); // Has load() completed?
-console.log(plugin.started); // Has start() completed?
-```
-
-### Creating a Plugin
-
-See `js/plugins/template.js` for a comprehensive example:
-
-```javascript
-class MyPlugin extends Plugin {
-  constructor() {
-    super({
-      id: "my-plugin",
-      name: "My Plugin",
-      description: "What it does",
-      author: "Your Name",
-      version: "1.0.0",
-      build: "1728668400",
-      dependencies: [
-        "https://github.com/USER/REPO/raw/refs/heads/main/js/Plugin.js",
-        "https://github.com/USER/REPO/raw/refs/heads/main/js/plugins/utils.js",
-      ],
-    });
-  }
-
-  async load() {
-    // ⚠️ NOT RECOMMENDED: Don't expose plugin directly
-    // window.customjs.myPlugin = this;
-
-    // ✅ RECOMMENDED: Access via PluginManager
-    // Other plugins use: window.customjs.pluginManager.getPlugin("my-plugin")
-
-    this.loaded = true;
-  }
-
-  async start() {
-    this.enabled = true;
-    this.started = true;
-  }
-
-  async onLogin(currentUser) {
-    console.log("User:", currentUser.displayName);
-  }
-
-  async stop() {
-    await super.stop(); // Auto-cleanup
-  }
-}
-
-// Export for loader
-window.__LAST_PLUGIN_CLASS__ = MyPlugin;
-```
-
-## 🌐 Global API
-
-### How to Access Plugins
-
-**✅ ALWAYS use PluginManager to access other plugins:**
-
-```javascript
-// Get a plugin immediately (returns undefined if not loaded)
-const utils = window.customjs.pluginManager.getPlugin("utils");
-if (utils) {
-  utils.showSuccess("Hello!");
-}
-
-// Wait for a plugin to load (useful in start() method)
-async start() {
-  const contextMenu = await window.customjs.pluginManager.waitForPlugin("context-menu-api");
-  contextMenu.addUserItem("my-item", { ... });
-}
-
-// Common plugin access patterns
-const config = customjs.pluginManager.getPlugin("config");
-const utils = customjs.pluginManager.getPlugin("utils");
-const apiHelpers = customjs.pluginManager.getPlugin("api-helpers");
-const contextMenu = customjs.pluginManager.getPlugin("context-menu-api");
-const navMenu = customjs.pluginManager.getPlugin("nav-menu-api");
-```
-
-**❌ NEVER access plugins directly via window.customjs.pluginName:**
-
-```javascript
-// ❌ WRONG - These properties don't exist!
-window.customjs.utils; // undefined
-window.customjs.contextMenu; // undefined
-window.customjs.navMenu; // undefined
-window.customjs.api; // undefined
-
-// ✅ CORRECT - Use PluginManager
-window.customjs.pluginManager.getPlugin("utils");
-window.customjs.pluginManager.getPlugin("context-menu-api");
-window.customjs.pluginManager.getPlugin("nav-menu-api");
-window.customjs.pluginManager.getPlugin("api-helpers");
-```
-
-### Plugin Management (`customjs.pluginManager`)
-
-```javascript
-// List all plugins
-customjs.pluginManager.getPluginList();
-
-// Get plugin by ID
-customjs.pluginManager.getPlugin("plugin-id");
-
-// Access all plugins directly
-customjs.plugins; // Array of all Plugin instances
-
-// Load new plugin
-await customjs.pluginManager.addPlugin("https://example.com/plugin.js");
-
-// Unload plugin
-await customjs.pluginManager.removePlugin("https://example.com/plugin.js");
-
-// Reload plugin
-await customjs.pluginManager.reloadPlugin("https://example.com/plugin.js");
-
-// Reload all
-await customjs.pluginManager.reloadAllPlugins();
-
-// Enable/disable/toggle (access plugin directly)
-const plugin = customjs.pluginManager.getPlugin("plugin-id");
-await plugin.enable();
-await plugin.disable();
-await plugin.toggle();
-
-// Or find and control in one line
-customjs.plugins.find((p) => p.metadata.id === "utils").toggle();
-```
-
-### Accessing Plugins (`window.customjs`)
-
-```javascript
-// ✅ RECOMMENDED: Access plugins via PluginManager
-const utils = customjs.pluginManager.getPlugin("utils");
-const contextMenu = customjs.pluginManager.getPlugin("context-menu-api");
-const navMenu = customjs.pluginManager.getPlugin("nav-menu-api");
-
-// Wait for plugin to load (useful in start() method)
-const apiHelpers = await customjs.pluginManager.waitForPlugin("api-helpers");
-
-// ⚠️ NOT RECOMMENDED: Direct access to window.customjs.pluginName
-// These properties don't exist - use pluginManager.getPlugin() instead!
-// customjs.utils ❌
-// customjs.contextMenu ❌
-// customjs.navMenu ❌
-// customjs.api ❌
-
-// ✅ System Properties (valid direct access)
-customjs.version; // Plugin system version
-customjs.build; // Build timestamp
-customjs.config; // User configuration
-customjs.plugins; // Array of all Plugin instances (for iteration)
-customjs.pluginManager; // PluginManager instance
-customjs.events; // Event registry
-customjs.functions; // Backed up functions
-customjs.hooks; // Hook registry (pre & post)
-customjs.debugFunctions; // Debug utilities (if managers plugin loaded)
-```
-
-### Configuration
-
-```javascript
-// Access config directly
-customjs.config.steam.id;
-
-// Or use the config plugin helper methods
-const config = customjs.pluginManager.getPlugin("config");
-config.get("steam.id");
-config.set("steam.id", "value");
-config.has("steam.id");
-config.getAll();
-```
-
-### Utilities
-
-```javascript
-// Get plugin instance
-const utils = customjs.pluginManager.getPlugin("utils");
-
-// Clipboard
-await utils.copyToClipboard("text", "Description");
-
-// Notifications
-utils.showSuccess("Success!");
-utils.showError("Error!");
-utils.showInfo("Info!");
-
-// Time formatting
-utils.timeToText(milliseconds);
-utils.getTimestamp();
-utils.formatDateTime();
-
-// Steam API
-await utils.getSteamPlaytime(steamId, apiKey);
-
-// Helpers
-utils.isEmpty(value);
-utils.tryDecodeBase64(string);
-
-// Register login callback
-customjs.pluginManager.onLogin((currentUser) => {
-  console.log(`User logged in: ${currentUser.displayName}`);
-});
-```
-
-### API & Logging
-
-```javascript
-// Get API Helpers plugin
-const apiHelpers = customjs.pluginManager.getPlugin("api-helpers");
-
-// API wrappers
-await apiHelpers.API.saveBio(bio);
-await apiHelpers.API.sendInvite(params, userId);
-await apiHelpers.API.saveCurrentUser(updates);
-
-// Logging
-apiHelpers.logger.log(
+// Advanced logging with multiple outputs
+this.logger.log(
   "Message",
   {
     console: true,
-    vrcx: { notify: true, message: true },
+    vrcx: { noty: true },
     desktop: true,
     xsoverlay: true,
     webhook: true,
@@ -454,263 +341,1110 @@ apiHelpers.logger.log(
 );
 ```
 
-## ⚙️ Configuration
+**Configuration:**
 
-All configuration is in `window.customjs.config` in `custom.js`:
-
-```javascript
-window.customjs.config = {
-  steam: {
-    id: "{env:STEAM_ID64}", // Steam ID (base64 supported)
-    key: "{env:STEAM_API_KEY}", // API key (base64 supported)
-  },
-  bio: {
-    updateInterval: 7200000, // 2 hours
-    initialDelay: 20000, // 20 seconds
-    template: `
--
-Relationship: {partners} <3
-Auto Invite: {autoinvite}
-Real Rank: {rank}
-Friends: {friends} | Blocked: {blocked}
-Time played: {playtime}
-Last updated: {now}
-    `,
-  },
-  registry: {
-    VRC_ALLOW_UNTRUSTED_URL: {
-      value: 0,
-      events: ["VRCX_START", "GAME_START"],
-    },
-  },
-  tags: {
-    urls: ["https://github.com/USER/tags.json"],
-    updateInterval: 3600000, // 1 hour
-    initialDelay: 5000, // 5 seconds
-  },
-  webhook: "http://homeassistant.local:8123/api/webhook/vrcx",
-};
+```json
+{
+  "vrcx": {
+    "customjs": {
+      "logger": {
+        "webhook": "http://your-webhook-url"
+      }
+    }
+  }
+}
 ```
 
-### Bio Template Placeholders
+### 2. **config.js** - Configuration Manager
 
-- `{partners}` - Partners from favorites
-- `{autojoin}` - Auto-join users
-- `{autoinvite}` - Auto-invite users
-- `{rank}` - Trust level
-- `{friends}` - Friend count
-- `{blocked}` - Blocked user count
-- `{muted}` - Muted user count
-- `{playtime}` - Time played (Steam API)
-- `{date_joined}` - Join date
-- `{now}` - Current timestamp
-- `{tags_loaded}` - Loaded tag count
-- `{userId}` - User ID
-- `{steamId}` - Steam ID
-- `{oculusId}` - Oculus ID
+**Purpose:** Centralized configuration management with type validation and persistence
 
-## 🐛 Debugging
+**Features:**
 
-### Enable Debug Plugin
+- Plugin settings organized by categories
+- General (non-plugin) settings support
+- Type validation (string, number, boolean, object, array)
+- Only saves to VRChat's config.json
+- Proxy system for easy access
+- Tracks modified vs default values
 
-Uncomment in `custom.js`:
+**Classes:**
+
+- `PluginSetting` - Individual setting with metadata
+- `ConfigManager` - Main configuration manager
+
+**API:**
 
 ```javascript
-"https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js",
+// Register plugin settings
+this.registerSettingCategory("general", "General Settings", "Description");
+this.registerSetting(
+  "general",
+  "enabled",
+  "Enable Feature",
+  "boolean",
+  true,
+  "Description"
+);
+
+// Register general settings
+customjs.configManager.registerGeneralCategory("mycat", "My Category", "Desc");
+customjs.configManager.registerGeneralSetting(
+  "mycat",
+  "key",
+  "Name",
+  "string",
+  "default",
+  "Desc"
+);
+
+// Access settings
+this.config.general.enabled.value; // From plugin
+customjs.config.settings.pluginId.general.enabled; // From global
+
+// Save/load
+await customjs.configManager.save();
+await customjs.configManager.load();
+customjs.configManager.debug(); // Inspect structure
 ```
+
+### 3. **utils.js** - Utility Functions
+
+**Purpose:** Common utility functions used across plugins
+
+**Functions:**
+
+- `isEmpty(value)` - Check if value is null/undefined/empty
+- `timeToText(ms)` - Convert milliseconds to human-readable format ("2d 3h")
+- `getTimestamp(date)` - Get localized timestamp
+- `formatDateTime(date)` - Format as "YYYY-MM-DD HH:MM:SS GMT+1"
+- `copyToClipboard(text, desc)` - Copy to clipboard with fallback
+- `saveBio(bio, bioLinks)` - Save bio with smart defaults
+- `getLocationObject(loc)` - Parse location string/object
+
+**Usage:**
+
+```javascript
+// Direct access (not a plugin, just utilities)
+window.customjs.utils.copyToClipboard("text", "Description");
+window.customjs.utils.timeToText(3600000); // "1h 0m"
+window.customjs.utils.isEmpty(value);
+```
+
+### 4. **plugin.js** - Plugin Base Class
+
+**Purpose:** Base class that all plugins extend
+
+**Features:**
+
+- Lifecycle methods (load, start, onLogin, stop)
+- Resource tracking and auto-cleanup
+- Personal logger instance per plugin
+- Configuration registration
+- Event system (emit/on)
+- Hook registration (pre/post/void/replace)
+- Enable/disable/toggle functionality
+
+**Lifecycle:**
+
+```javascript
+class MyPlugin extends Plugin {
+  async load() {
+    // Called when plugin code loads
+    // - Register settings
+    // - Setup hooks
+    // - Prepare but don't start
+  }
+
+  async start() {
+    // Called after all plugins loaded
+    // - Start timers
+    // - Setup UI
+    // - Activate features
+  }
+
+  async onLogin(currentUser) {
+    // Called after VRChat login
+    // - Load user data
+    // - Make authenticated API calls
+  }
+
+  async stop() {
+    // Called when disabled/unloaded
+    // - Custom cleanup
+    // - Auto-cleanup (timers, observers, etc.)
+  }
+}
+```
+
+---
+
+## 🔌 Available Plugins
+
+### UI & Navigation
+
+| Plugin                | Description                              | Default     |
+| --------------------- | ---------------------------------------- | ----------- |
+| **context-menu-api**  | Add custom items to dialog context menus | ✅ Enabled  |
+| **nav-menu-api**      | Create custom navigation tabs            | ✅ Enabled  |
+| **plugin-manager-ui** | Visual plugin management dashboard       | ⚠️ Disabled |
+
+### Features
+
+| Plugin                 | Description                                 | Default    |
+| ---------------------- | ------------------------------------------- | ---------- |
+| **protocol-links**     | Copy VRCX protocol links (vrcx://user/...)  | ✅ Enabled |
+| **tag-manager**        | Load and display custom user tags from JSON | ✅ Enabled |
+| **registry-overrides** | Manage VRChat registry settings             | ✅ Enabled |
+| **auto-invite**        | Automatically invite users when traveling   | ✅ Enabled |
+| **auto-follow**        | Follow users and send invite requests       | ✅ Enabled |
+
+### Advanced Features
+
+| Plugin                         | Description                                   | Default     |
+| ------------------------------ | --------------------------------------------- | ----------- |
+| **bio-updater**                | Auto-update bio with dynamic templates        | ⚠️ Disabled |
+| **monitor-invisibleplayers**   | Monitor invisible players in instances        | ⚠️ Disabled |
+| **selfinvite-onblockedplayer** | Create self-invites when blocked players join | ⚠️ Disabled |
+
+### Development
+
+| Plugin       | Description                           | Default     |
+| ------------ | ------------------------------------- | ----------- |
+| **debug**    | Debug utilities and system inspection | ⚠️ Disabled |
+| **template** | Comprehensive plugin example/template | ⚠️ Disabled |
+
+---
+
+## 📁 Project Structure
+
+```
+vrcx-custom/
+├── custom.js                    # Main entry point & PluginManager
+├── custom.css                   # Custom styling (optional)
+├── update.ps1                   # Deployment script
+├── README.md                    # This file
+│
+├── js/                          # CORE MODULES (Always Loaded)
+│   ├── logger.js                # Logging system with multiple outputs
+│   ├── config.js                # Configuration manager with persistence
+│   ├── utils.js                 # Utility functions
+│   └── plugin.js                # Plugin base class
+│
+└── js/plugins/                  # PLUGINS (Conditionally Loaded)
+    ├── context-menu-api.js      # Context menu management
+    ├── nav-menu-api.js          # Navigation tab API
+    ├── protocol-links.js        # VRCX protocol links
+    ├── tag-manager.js           # Custom user tags
+    ├── registry-overrides.js    # VRChat registry settings
+    ├── auto-invite.js           # Auto invitation system
+    ├── auto-follow.js           # Auto follow system
+    ├── bio-updater.js           # Bio automation
+    ├── monitor-invisibleplayers.js  # Invisible player monitor
+    ├── selfinvite-onblockedplayer.js # Self-invite on block
+    ├── plugin-manager-ui.js     # Plugin management UI
+    ├── debug.js                 # Debug utilities
+    ├── template.js              # Plugin template/example
+    └── invite-message-api.js    # (Legacy)
+```
+
+---
+
+## 🔧 Plugin Development
+
+### Creating a New Plugin
+
+Use `template.js` as your starting point:
+
+```javascript
+class MyPlugin extends Plugin {
+  constructor() {
+    super({
+      name: "My Plugin",
+      description: "What this plugin does",
+      author: "Your Name",
+      version: "1.0.0",
+      build: "1760411000",
+      dependencies: [
+        "https://github.com/.../plugin.js", // Required
+      ],
+    });
+  }
+
+  async load() {
+    // Register settings
+    this.registerSettingCategory("general", "General Settings", "Description");
+    this.registerSetting(
+      "general",
+      "enabled",
+      "Enable Feature",
+      "boolean",
+      true
+    );
+
+    this.loaded = true;
+    this.logger.log("Plugin loaded");
+  }
+
+  async start() {
+    // Start timers with auto-cleanup
+    this.registerTimer(
+      setInterval(() => {
+        if (this.config.general.enabled.value) {
+          this.doSomething();
+        }
+      }, 5000)
+    );
+
+    // Register Pinia subscription with auto-cleanup
+    this.registerSubscription(
+      window.$pinia.location.$subscribe((mutation, state) => {
+        this.onLocationChange(state.location);
+      })
+    );
+
+    this.started = true;
+    this.logger.log("Plugin started");
+  }
+
+  async onLogin(currentUser) {
+    this.logger.log(`User logged in: ${currentUser.displayName}`);
+  }
+
+  async stop() {
+    this.logger.log("Plugin stopping");
+    await super.stop(); // Auto-cleanup
+  }
+
+  doSomething() {
+    this.logger.log("Doing something!");
+  }
+
+  onLocationChange(location) {
+    this.logger.log(`Location changed: ${location?.instanceId}`);
+  }
+}
+
+// Export for PluginManager
+window.__LAST_PLUGIN_CLASS__ = MyPlugin;
+```
+
+### Registration & Settings
+
+**Register Setting Categories:**
+
+```javascript
+this.registerSettingCategory(
+  "general",
+  "General Settings",
+  "Basic configuration"
+);
+this.registerSettingCategory("timing", "Timing", "Timing configuration");
+```
+
+**Register Settings:**
+
+```javascript
+// Types: "string", "number", "boolean", "object", "array"
+this.registerSetting(
+  "general",
+  "enabled",
+  "Enable Feature",
+  "boolean",
+  true,
+  "Enable/disable main feature"
+);
+this.registerSetting(
+  "general",
+  "message",
+  "Custom Message",
+  "string",
+  "Hello!",
+  "Message to display"
+);
+this.registerSetting(
+  "timing",
+  "interval",
+  "Update Interval",
+  "number",
+  60000,
+  "Milliseconds"
+);
+this.registerSetting(
+  "general",
+  "urls",
+  "URL List",
+  "array",
+  [],
+  "List of URLs"
+);
+this.registerSetting(
+  "general",
+  "config",
+  "Advanced Config",
+  "object",
+  {},
+  "JSON object"
+);
+```
+
+**Access Settings:**
+
+```javascript
+// From within plugin
+this.config.general.enabled.value; // Get value
+this.config.general.enabled.value = false; // Set value
+this.config.general.enabled.defaultValue; // Get default
+this.config.general.enabled.isModified(); // Check if changed
+await this.saveSettings(); // Save to disk
+
+// From global namespace
+window.customjs.config.settings.myplugin.general.enabled; // Direct value
+```
+
+### Resource Management
+
+All registered resources are automatically cleaned up when plugin stops:
+
+```javascript
+// Timers
+const timerId = setInterval(() => { ... }, 1000);
+this.registerTimer(timerId);
+
+// Observers
+const observer = new MutationObserver(() => { ... });
+this.registerObserver(observer);
+observer.observe(target, options);
+
+// Event Listeners
+this.registerListener(element, 'click', handler);
+
+// Pinia Subscriptions (centralized tracking)
+this.registerSubscription(
+  window.$pinia.store.$subscribe((mutation, state) => { ... })
+);
+
+// Alias for subscriptions
+this.registerResource(unsubscribeFunction);
+```
+
+### Inter-Plugin Communication
+
+**Events:**
+
+```javascript
+// Emit event
+this.emit("my-event", { data: "value" });
+
+// Listen to your own events
+this.on("my-event", (data) => {
+  console.log("Received:", data);
+});
+
+// Listen to other plugin's events
+this.on("other-plugin:event-name", (data) => {
+  console.log("From other plugin:", data);
+});
+```
+
+**Accessing Other Plugins:**
+
+```javascript
+// Get plugin immediately
+const utils = window.customjs.pluginManager.getPlugin("utils");
+
+// Wait for plugin to load (use in start())
+const contextMenu = await window.customjs.pluginManager.waitForPlugin(
+  "context-menu-api"
+);
+
+// Access via plugins array
+const allPlugins = window.customjs.plugins;
+```
+
+### Function Hooks
+
+**Pre-Hook (run before):**
+
+```javascript
+this.registerPreHook("AppApi.SendIpc", (args) => {
+  console.log("About to call SendIpc with:", args);
+});
+```
+
+**Post-Hook (run after):**
+
+```javascript
+this.registerPostHook("AppApi.SendIpc", (result, args) => {
+  console.log("SendIpc returned:", result);
+});
+```
+
+**Void Hook (cancel execution):**
+
+```javascript
+this.registerVoidHook("AppApi.SendIpc", (args) => {
+  console.log("SendIpc called but cancelled:", args);
+  // Original function will NOT execute
+});
+```
+
+**Replace Hook (replace implementation):**
+
+```javascript
+this.registerReplaceHook("AppApi.SendIpc", function (originalFunc, ...args) {
+  console.log("Replacing SendIpc");
+  // Optionally call original
+  const result = originalFunc(...args);
+  // Or return your own result
+  return result;
+});
+```
+
+---
+
+## 🌐 API Reference
+
+### PluginManager API
+
+```javascript
+// Plugin management
+customjs.pluginManager.getPlugin(pluginId)           // Get plugin instance
+customjs.pluginManager.getAllPlugins()               // Get all plugins
+await customjs.pluginManager.waitForPlugin(id, ms)   // Wait for plugin to load
+
+// Plugin loading
+await customjs.pluginManager.addPlugin(url)          // Load new plugin
+await customjs.pluginManager.removePlugin(url)       // Remove plugin
+await customjs.pluginManager.reloadPlugin(url)       // Reload plugin
+await customjs.pluginManager.reloadAllPlugins()      // Reload all
+
+// Lifecycle
+await customjs.pluginManager.startAllPlugins()       // Start all plugins
+await customjs.pluginManager.stopAllPlugins()        // Stop all plugins
+
+// Login callbacks
+customjs.pluginManager.onLogin((user) => { ... })    // Register login callback
+
+// Config
+customjs.pluginManager.getPluginConfig()             // Get { url: enabled } mapping
+customjs.pluginManager.savePluginConfig(config)      // Save plugin config
+
+// Info
+customjs.pluginManager.getPluginList()               // Get load status
+customjs.pluginManager.findPluginByUrl(url)          // Find plugin by URL
+
+// Hooks
+customjs.pluginManager.registerPreHook(path, fn, plugin)
+customjs.pluginManager.registerPostHook(path, fn, plugin)
+customjs.pluginManager.registerVoidHook(path, fn, plugin)
+customjs.pluginManager.registerReplaceHook(path, fn, plugin)
+
+// Subscriptions
+customjs.pluginManager.registerSubscription(pluginId, unsubscribe)
+customjs.pluginManager.unregisterSubscriptions(pluginId)
+```
+
+### ConfigManager API
+
+```javascript
+// General settings
+configManager.registerGeneralCategory(key, name, description);
+configManager.registerGeneralSetting(
+  category,
+  key,
+  name,
+  type,
+  defaultValue,
+  description
+);
+
+// Plugin settings
+configManager.registerPluginSettingCategory(plugin, key, name, description);
+configManager.registerPluginSetting(
+  plugin,
+  category,
+  key,
+  name,
+  type,
+  defaultValue,
+  description
+);
+
+// Access settings
+configManager.get(pluginId, category, key, defaultValue);
+configManager.set(pluginId, category, key, value);
+configManager.getPluginSettings(pluginId);
+configManager.getPluginCategories(pluginId);
+
+// Plugin config
+configManager.getPluginConfig(); // Get { url: enabled } mapping
+configManager.setPluginConfig(config); // Set plugin config
+
+// Persistence
+await configManager.save(); // Save to disk
+await configManager.load(); // Load from disk
+configManager.reset(pluginId); // Reset to defaults
+
+// Debug
+configManager.debug(); // Get full structure
+```
+
+### Plugin Base Class API
+
+```javascript
+// Lifecycle (override these)
+async load()
+async start()
+async onLogin(currentUser)
+async stop()
+
+// State management
+await plugin.enable()
+await plugin.disable()
+await plugin.toggle()
+
+// Settings
+registerSettingCategory(key, name, description)
+registerSetting(category, key, name, type, defaultValue, description)
+await saveSettings()
+
+// Resource tracking
+registerTimer(timerId)
+registerObserver(observer)
+registerListener(element, event, handler, options)
+registerSubscription(unsubscribe)
+registerResource(unsubscribe)  // Alias for registerSubscription
+
+// Hooks
+registerPreHook(functionPath, callback)
+registerPostHook(functionPath, callback)
+registerVoidHook(functionPath, callback)
+registerReplaceHook(functionPath, callback)
+
+// Events
+emit(eventName, data)
+on(eventName, callback)
+
+// Logging
+log(message, ...args)
+warn(message, ...args)
+error(message, ...args)
+
+// Properties
+metadata: { id, name, description, author, version, build, dependencies, url }
+enabled: boolean
+loaded: boolean
+started: boolean
+config: {}  // Plugin settings (populated by ConfigManager)
+logger: Logger  // Personal logger instance
+```
+
+### Logger API
+
+```javascript
+// Console logging
+logger.log(msg, options, level);
+logger.logInfo(msg) / logger.info(msg);
+logger.logWarn(msg) / logger.warn(msg);
+logger.logError(msg) / logger.error(msg);
+logger.logDebug(msg) / logger.debug(msg);
+
+// UI notifications
+logger.showInfo(msg);
+logger.showSuccess(msg);
+logger.showWarn(msg);
+logger.showError(msg);
+
+// System notifications
+await logger.notifyDesktop(msg);
+await logger.notifyXSOverlay(msg, duration);
+await logger.notifyOVRToolkit(msg, duration);
+await logger.notifyVR(msg); // Both XSOverlay + OVRToolkit
+
+// Combined
+logger.logAndShow(msg, level);
+logger.logAndNotifyAll(msg, level); // Console + VRCX + Desktop + VR
+```
+
+### Utils API
+
+```javascript
+// Type checking
+utils.isEmpty(value); // null, undefined, or ""
+
+// Time formatting
+utils.timeToText(ms); // "2d 3h" or "45m 30s"
+utils.getTimestamp(date); // Localized timestamp
+utils.formatDateTime(date); // "2025-10-12 14:30:45 GMT+1"
+
+// Clipboard
+await utils.copyToClipboard(text, description);
+
+// VRC API helpers
+await utils.saveBio(bio, bioLinks);
+await utils.getLocationObject(locationString);
+```
+
+---
+
+## 🎮 Usage Examples
+
+### Example 1: Simple Timer Plugin
+
+```javascript
+class TimerPlugin extends Plugin {
+  constructor() {
+    super({
+      name: "Simple Timer",
+      version: "1.0.0",
+      build: "1760411000",
+    });
+  }
+
+  async load() {
+    this.registerSettingCategory("general", "General");
+    this.registerSetting("general", "interval", "Interval", "number", 5000);
+    this.loaded = true;
+  }
+
+  async start() {
+    this.registerTimer(
+      setInterval(() => {
+        this.logger.log(
+          `Timer tick! Interval: ${this.config.general.interval.value}ms`
+        );
+      }, this.config.general.interval.value)
+    );
+
+    this.started = true;
+  }
+}
+
+window.__LAST_PLUGIN_CLASS__ = TimerPlugin;
+```
+
+### Example 2: Location Watcher
+
+```javascript
+class LocationWatcherPlugin extends Plugin {
+  async start() {
+    // Watch location changes
+    this.registerSubscription(
+      window.$pinia.location.$subscribe(async (mutation, state) => {
+        if (state.location?.instanceId) {
+          const loc = await window.customjs.utils.getLocationObject(
+            state.location
+          );
+          this.logger.showInfo(`Joined: ${loc.worldName}`);
+        }
+      })
+    );
+
+    this.started = true;
+  }
+}
+
+window.__LAST_PLUGIN_CLASS__ = LocationWatcherPlugin;
+```
+
+### Example 3: Context Menu Item
+
+```javascript
+class ContextMenuExamplePlugin extends Plugin {
+  async start() {
+    const contextMenu = await customjs.pluginManager.waitForPlugin(
+      "context-menu-api"
+    );
+
+    contextMenu.addUserItem("my-action", {
+      label: "My Custom Action",
+      icon: "ri-star-line",
+      handler: (context, item) => {
+        this.logger.showSuccess(`Clicked on ${context.data.displayName}`);
+        console.log("User data:", context.data);
+      },
+    });
+
+    this.started = true;
+  }
+}
+
+window.__LAST_PLUGIN_CLASS__ = ContextMenuExamplePlugin;
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+**"Logger is not a constructor"**
+
+- Logger failed to load from network
+- Fallback logger will activate automatically
+- Check console for network errors
+
+**"Plugin not registered"**
+
+- Missing `window.__LAST_PLUGIN_CLASS__ = YourPlugin;` at end of file
+- Check class name matches exported name
+- Verify constructor calls `super()`
+
+**"Plugin timeout"**
+
+- Plugin took > 10 seconds to load
+- Increase `vrcx.customjs.loader.loadTimeout` in config
+- Check for slow network or large plugin files
+
+**Settings showing `[object Object]`**
+
+- Accessing PluginSetting object instead of value
+- Use `.value` property: `setting.value` or `setting?.value ?? setting`
+
+**Subscriptions not cleaning up**
+
+- Use `this.registerSubscription()` or `this.registerResource()`
+- Don't call unsubscribe manually (PluginManager handles it)
 
 ### Debug Commands
 
 ```javascript
-// Access debug functions (provided by managers plugin)
-const debugFns = customjs.debugFunctions; // or window.debugVRCX
-
-// List plugins
-debugFns.listPlugins();
-
-// List events
-debugFns.listEvents();
-
-// List hooks
-debugFns.listHooks();
-
-// Inspect specific plugin
-debugFns.inspectPlugin("plugin-id");
-
-// Get plugin by ID
-debugFns.getPlugin("plugin-id");
-```
-
-### Console Commands
-
-```javascript
-// Inspect all plugins
+// Inspect system
+console.log(customjs);
 console.log(customjs.plugins);
-console.log(customjs.pluginManager.getPluginList());
+console.log(customjs.subscriptions);
+
+// Get config structure
+customjs.configManager.debug();
+
+// List all plugins
+customjs.pluginManager.getPluginList();
 
 // Check plugin state
 const plugin = customjs.pluginManager.getPlugin("plugin-id");
 console.log(plugin.enabled, plugin.loaded, plugin.started);
 
-// Find plugin and toggle
-customjs.plugins.find((p) => p.metadata.id === "utils").toggle();
+// Check subscriptions for a plugin
+console.log(customjs.subscriptions.get("plugin-id"));
 
-// Reload plugin
-await customjs.pluginManager.reloadPlugin("https://url-to-plugin.js");
+// Reload a plugin
+await customjs.pluginManager.reloadPlugin("https://...plugin.js");
 
-// Register for login events
-customjs.pluginManager.onLogin((user) => console.log(user.displayName));
+// Force save config
+await customjs.configManager.save();
 ```
 
-## 🔄 Updates
+### Enable Debug Plugin
 
-Run the update script to deploy changes:
+Edit your config to enable the debug plugin:
 
-```powershell
-.\update.ps1
+```json
+{
+  "vrcx": {
+    "customjs": {
+      "loader": {
+        "plugins": {
+          "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js": true
+        }
+      }
+    }
+  }
+}
 ```
-
-The script will:
-
-- ✅ Commit and push to GitHub
-- ✅ Process version placeholders (`{VERSION}`, `{BUILD}`)
-- ✅ Replace environment variables
-- ✅ Clear logs directory
-- ✅ Copy to `%APPDATA%\VRCX\`
-
-## 📚 Plugin Development
-
-### Step-by-Step Guide
-
-1. **Copy `js/plugins/template.js`** as your starting point
-2. **Update metadata** in constructor
-3. **Implement lifecycle methods**:
-   - `load()` - Setup, expose globally
-   - `start()` - Initialize, start timers
-   - `onLogin()` - Handle user login
-   - `stop()` - Cleanup
-4. **Use resource tracking** for automatic cleanup
-5. **Export** with `window.__LAST_PLUGIN_CLASS__`
-6. **Add to `PLUGIN_CONFIG.plugins`** in `custom.js`
-7. **Test** with hot reload
-
-### Best Practices
-
-- ✅ Always call `super()` with metadata
-- ✅ Use `registerTimer()` for setInterval/setTimeout
-- ✅ Use `registerObserver()` for MutationObserver
-- ✅ Use `registerListener()` for addEventListener
-- ✅ Use `registerSubscription()` for Pinia subscriptions
-- ✅ Access other plugins via `window.customjs.pluginManager.getPlugin()`
-- ✅ Use `await pluginManager.waitForPlugin()` in start() when depending on other plugins
-- ✅ Call `await super.stop()` in stop()
-- ✅ Use `this.log()`, `this.warn()`, `this.error()`
-- ❌ Don't expose plugin to `window.customjs.pluginName` (use pluginManager instead)
-- ❌ Don't access other plugins via `window.customjs.pluginName` (doesn't exist)
-- ❌ Don't auto-initialize (loader handles it)
-- ❌ Don't use IIFE wrapper at bottom
-
-## 🔒 Security
-
-- **Base64 Encoding**: Credentials can be base64 encoded
-- **Environment Variables**: Sensitive data in env vars
-- **Error Isolation**: Failed plugins don't break system
-- **Resource Cleanup**: No memory leaks
-
-## 🚀 Performance
-
-- **Lazy Loading**: Plugins loaded on demand
-- **Cache Busting**: Fresh updates with timestamps
-- **Error Recovery**: Graceful error handling
-- **Memory Management**: Automatic cleanup
-- **Hot Reload**: No restart required
-
-## 📄 Documentation
-
-- **REFACTORING_SUMMARY.md** - Complete refactoring guide
-- **STRUCTURE.md** - Project structure details
-- **URL_REFERENCE.md** - URL patterns
-- **REORGANIZATION_COMPLETE.md** - Migration notes
-
-## 🤝 Contributing
-
-1. Create plugin in `js/plugins/`
-2. Extend `Plugin` base class
-3. Follow lifecycle pattern
-4. Add to `PLUGIN_CONFIG.plugins`
-5. Update README.md
-6. Test thoroughly
-7. Commit and push
-
-## 🆘 Support
-
-**Common Issues:**
-
-- "Plugin not registered" - Check `window.__LAST_PLUGIN_CLASS__`
-- Load errors - Check dependencies in metadata
-- Resource leaks - Use `register*()` methods
-
-**Debug Steps:**
-
-1. Check console logs
-2. Verify config settings
-3. Test with `plugins.list()`
-4. Enable debug plugin
-5. Check GitHub repo for updates
 
 ---
 
-**Version**: 2.1.1  
-**Author**: Bluscream  
-**Last Updated**: October 12, 2025
+## 🔄 Updates & Deployment
+
+### Using the Update Script
+
+The `update.ps1` script automates deployment:
+
+```powershell
+cd vrcx-custom
+.\update.ps1
+```
+
+**What it does:**
+
+1. ✅ Validates JavaScript syntax (requires Node.js)
+2. ✅ Switches to main branch
+3. ✅ Stages and commits changes
+4. ✅ Pushes to GitHub
+5. ✅ Processes `{VERSION}` and `{BUILD}` placeholders
+6. ✅ Replaces environment variables (`{env:VARIABLE}`)
+7. ✅ Copies to `%APPDATA%\VRCX\`
+8. ✅ Clears log files
+
+### Version & Build System
+
+Plugins can use placeholder values that get replaced during deployment:
+
+```javascript
+version: "{VERSION}",  // Replaced with git commit count for that file
+build: "{BUILD}",      // Replaced with file's last modification timestamp (Unix)
+```
+
+### Environment Variables
+
+Sensitive data can be stored in environment variables:
+
+```powershell
+[System.Environment]::SetEnvironmentVariable("STEAM_ID64", "your_id", "User")
+[System.Environment]::SetEnvironmentVariable("STEAM_API_KEY", "your_key", "User")
+```
+
+In code:
+
+```javascript
+steamId: "{env:STEAM_ID64}",  // Replaced during deployment
+apiKey: "{env:STEAM_API_KEY}",
+```
+
+---
+
+## 📊 System Internals
+
+### Plugin Loading Sequence
+
+```
+1. Load core modules (logger, config, utils, plugin)
+   ├─ Fallback logger if main fails
+   └─ Create ConfigManager instance
+
+2. Initialize ConfigManager
+   ├─ Load config from VRChat config.json
+   ├─ Register loader settings
+   └─ Merge with defaults
+
+3. Load enabled plugins from config
+   ├─ Fetch plugin code from URLs
+   ├─ Execute in isolated scope
+   ├─ Instantiate plugin class
+   └─ Register with PluginManager
+
+4. Call load() on all plugins
+   └─ Plugins register settings, hooks, etc.
+
+5. Setup config proxies
+   └─ Create getters/setters for easy access
+
+6. Call start() on all plugins
+   └─ Plugins activate features
+
+7. Setup login monitoring
+   └─ Trigger onLogin() when user logs in
+
+8. Save configuration
+   └─ Persist enabled states and settings
+```
+
+### Subscription Tracking
+
+Subscriptions are tracked centrally in `window.customjs.subscriptions`:
+
+```javascript
+// Map structure
+window.customjs.subscriptions = Map {
+  "plugin-id-1" => Set {
+    unsubscribeFunction1,
+    unsubscribeFunction2,
+  },
+  "plugin-id-2" => Set {
+    unsubscribeFunction3,
+  },
+}
+
+// When plugin stops
+pluginManager.unregisterSubscriptions("plugin-id");
+// All subscription functions are called automatically
+```
+
+### Hook System
+
+Functions are wrapped to support hooks:
+
+```javascript
+// Original function backed up
+customjs.functions["AppApi.SendIpc"] = originalFunction;
+
+// Wrapped function calls hooks in order:
+1. Check void hooks → if any exist, skip everything else
+2. Call pre-hooks → inspect/log arguments
+3. Call replace hooks (or original) → chain multiple replacements
+4. Call post-hooks → inspect/log result
+5. Return result
+```
+
+---
+
+## 🔐 Security & Performance
+
+### Security
+
+- **Base64 Support** - Credentials can be base64 encoded
+- **Environment Variables** - Sensitive data in env vars, not in code
+- **Error Isolation** - Failed plugins don't break the system
+- **Resource Cleanup** - Prevents memory leaks and dangling references
+
+### Performance
+
+- **Lazy Loading** - Plugins loaded on demand
+- **Cache Busting** - URLs timestamped to bypass cache
+- **Error Recovery** - Graceful degradation on failures
+- **Memory Management** - Automatic resource cleanup
+- **Hot Reload** - No VRCX restart required for plugin changes
+
+---
+
+## 📝 Best Practices
+
+### DO ✅
+
+- Always call `super(metadata)` in constructor
+- Use `this.registerTimer()`, `registerObserver()`, `registerListener()`, `registerSubscription()`
+- Access other plugins via `customjs.pluginManager.getPlugin()`
+- Use `await waitForPlugin()` for dependencies in `start()`
+- Call `await super.stop()` in your `stop()` method
+- Use `this.logger` for all logging
+- Register all settings in `load()`, start features in `start()`
+- Export with `window.__LAST_PLUGIN_CLASS__`
+
+### DON'T ❌
+
+- Don't expose plugin to `window.customjs.yourPluginName`
+- Don't access other plugins via `window.customjs.pluginName` (use PluginManager)
+- Don't manually call `unsubscribe()` on registered subscriptions (auto-handled)
+- Don't start timers or modify DOM in `load()` (use `start()`)
+- Don't make authenticated API calls in `load()` or `start()` (use `onLogin()`)
+- Don't use IIFE wrapper (PluginManager handles scope)
+- Don't forget to set `loaded`, `started` flags
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your plugin in `js/plugins/your-plugin.js`
+3. Extend the `Plugin` base class
+4. Add to `window.customjs.default_plugins` in `custom.js`
+5. Test thoroughly
+6. Update this README
+7. Submit a pull request
+
+---
+
+## 📄 License
+
+See [LICENSE](LICENSE) file for details.
+
+---
+
+## 👤 Author
+
+**Bluscream**
+
+- GitHub: [@Bluscream](https://github.com/Bluscream)
+- Repository: [vrcx-custom](https://github.com/Bluscream/vrcx-custom)
+
+---
 
 ## 🎉 Changelog
 
-### v2.1.1 (October 12, 2025) - Plugin Access Standardization
+### v1.7.1 (October 12, 2025) - Bug Fixes
 
-- 🔧 **Standardized Plugin Access Pattern**
-  - ✅ All plugins now use `window.customjs.pluginManager.getPlugin()` to access other plugins
-  - ❌ Removed direct access to non-existent properties (e.g., `window.customjs.utils`, `window.customjs.contextMenu`)
-  - 📝 Updated documentation to reflect proper plugin access patterns
-- 🐛 **Bug Fixes**
-  - Fixed protocol-links.js plugin not finding context-menu-api
-  - Fixed bio-updater.js plugin not finding api-helpers
-  - Fixed template.js plugin showing outdated access patterns
-  - Fixed all plugins to use `pluginManager.waitForPlugin()` when needed
-- 📚 **Documentation Updates**
-  - Added "How to Access Plugins" section with clear examples
-  - Updated best practices to discourage direct plugin exposure
-  - Clarified which `window.customjs.*` properties are valid
-  - Updated template.js with proper plugin access examples
+- 🐛 Fixed `loadTimeout` and `webhook` returning `[object Object]`
+- ✅ Added value extraction for PluginSetting objects
+- 🔧 Updated logger webhook access to use `.value` property
 
-### v2.1.0 (October 11, 2025) - Major Refactoring
+### v1.7.0 (October 12, 2025) - Subscription System
+
+- ✨ **Centralized Subscription Tracking**
+  - New `window.customjs.subscriptions` Map for global tracking
+  - `pluginManager.registerSubscription()` for centralized management
+  - `pluginManager.unregisterSubscriptions()` for cleanup
+- 🧹 **Improved Cleanup**
+  - Subscriptions tracked globally and cleaned up centrally
+  - Prevents double-cleanup issues
+  - Better debugging visibility
+
+### v1.6.0 (October 12, 2025) - Loader Configuration
+
+- ⚙️ **New Loader Config Structure**
+  - Moved plugin config to `vrcx.customjs.loader.plugins`
+  - Added `loadTimeout` as configurable setting
+  - Cleaner organization under `loader` category
+- 🔄 **Dynamic Plugin Loading**
+  - Plugins loaded from config, not hardcoded list
+  - Enable/disable states persist to config
+  - Merge with defaults for new plugins
+
+### v1.5.0 (October 12, 2025) - Configuration Overhaul
+
+- 📦 **New Config Structure**
+  - `vrcx.customjs.loader` - Loader settings and plugin states
+  - `vrcx.customjs.settings` - Plugin settings (was `.plugins`)
+  - `vrcx.customjs.logger` - Logger settings
+  - General settings support for non-plugin config
+- 💾 **Save All Settings**
+  - Changed from saving only modified settings to saving all
+  - Easier debugging and user editing
+- 🔧 **ConfigManager Enhancements**
+  - `registerGeneralCategory()` and `registerGeneralSetting()`
+  - Support for settings not tied to specific plugins
+
+### v1.4.0 (October 12, 2025) - Core Modules
+
+- 🧩 **Core Module System**
+  - Separated core modules from plugins
+  - `window.customjs.core_modules` array with full URLs
+  - Always loaded before plugins
+- 🎯 **Improved Plugin Tracking**
+  - Only actual plugins tracked in config
+  - Core modules excluded from plugin lists
+- 🛡️ **Fallback Logger**
+  - System continues working if logger fails to load
+  - Minimal console-based logger as fallback
+
+### v1.3.0 (October 12, 2025) - Initial Refactoring
 
 - ✨ **Complete Plugin System Refactoring**
   - All plugins extend unified `Plugin` base class
-  - Proper lifecycle: `load()` → `start()` → `onLogin()` → `stop()`
-  - Automatic resource cleanup (timers, observers, listeners)
-  - Event system for inter-plugin communication
-  - Hook system for function interception
-  - Hot reload support
+  - Proper lifecycle management
+  - Automatic resource cleanup
+  - Event and hook systems
 - 📁 **File Structure Reorganization**
-  - Base classes in `js/` directory
-  - All plugins in `js/plugins/` directory
-  - Clean, consistent URL patterns
+  - Core modules in `js/`
+  - Plugins in `js/plugins/`
 - 🌐 **Unified Namespace**
   - Everything under `window.customjs`
-  - Direct plugin access via `customjs.plugins` array
-  - Plugin management via `customjs.pluginManager`
-- ✅ **Refactored Plugins**
-  - config.js, utils.js, api-helpers.js
-  - bio-updater.js, debug.js, template.js
-- 📚 **Comprehensive Documentation**
-  - REFACTORING_SUMMARY.md
-  - STRUCTURE.md
-  - URL_REFERENCE.md
+  - No global namespace pollution
 
-### v1.5.0 (Previous)
+---
 
-- Navigation Menu API with automatic content management
-- Plugin Manager UI redesign
-- Utils module enhancements
-- Debug plugin improvements
+## 🆘 Support
+
+### Getting Help
+
+1. Check console for error messages
+2. Verify config.json structure
+3. Enable debug plugin for detailed logging
+4. Check GitHub issues for similar problems
+5. Open a new issue with:
+   - VRCX version
+   - Plugin system version
+   - Console errors
+   - Steps to reproduce
+
+### Useful Resources
+
+- **Config Location:** `%LOCALAPPDATA%\VRChat\VRChat\config.json`
+- **VRCX AppData:** `%APPDATA%\VRCX\`
+- **Console:** F12 in VRCX to open DevTools
+- **GitHub Repo:** https://github.com/Bluscream/vrcx-custom
+
+---
+
+**Last Updated:** October 12, 2025  
+**Maintained by:** Bluscream
