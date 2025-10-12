@@ -7,28 +7,7 @@
 window.customjs = {
   version: "{VERSION}",
   build: "{BUILD}",
-  config: {}, // User configuration (replaces old USER_CONFIG)
-  plugins: [], // Array of Plugin instances
-  pluginManager: null, // PluginManager instance (handles both management & loading)
-  events: {}, // Event registry: eventName -> [callbacks]
-  functions: {}, // Backed up functions: functionName -> original
-  hooks: {
-    pre: {}, // Pre-hooks: functionName -> [{plugin, callback}]
-    post: {}, // Post-hooks: functionName -> [{plugin, callback}]
-  },
-  // Note: Plugins are accessed via customjs.plugins array or customjs.pluginManager.getPlugin(id)
 };
-
-console.log(
-  `%c[VRCX Custom] %cStarting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
-  "font-weight: bold; color: #00ff00",
-  "color: #888"
-);
-console.log(
-  `%c[VRCX Custom] %cCache buster: ${Date.now()}`,
-  "font-weight: bold; color: #00ff00",
-  "color: #888"
-);
 
 // ============================================================================
 // USER CONFIGURATION
@@ -101,7 +80,7 @@ window.customjs.pluginConfig = {
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/protocol-links.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/registry-overrides.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/tag-manager.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/bio-updater.js",
+    // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/bio-updater.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-invite.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/managers.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/plugin-manager-ui.js",
@@ -115,6 +94,17 @@ window.customjs.pluginConfig = {
 // ============================================================================
 // PLUGIN MANAGER - Central plugin management and loading system
 // ============================================================================
+
+console.log(
+  `%c[VRCX Custom] %cStarting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
+  "font-weight: bold; color: #00ff00",
+  "color: #888"
+);
+console.log(
+  `%c[VRCX Custom] %cCache buster: ${Date.now()}`,
+  "font-weight: bold; color: #00ff00",
+  "color: #888"
+);
 
 class PluginManager {
   constructor() {
