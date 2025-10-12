@@ -27,7 +27,7 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   async load() {
-    this.log("Protocol Links plugin ready");
+    this.logger.log("Protocol Links plugin ready");
     this.loaded = true;
   }
 
@@ -39,7 +39,7 @@ class ProtocolLinksPlugin extends Plugin {
     this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
 
     if (!this.contextMenuApi) {
-      this.error("Context Menu API plugin not found after waiting");
+      this.logger.error("Context Menu API plugin not found after waiting");
       return;
     }
 
@@ -48,7 +48,7 @@ class ProtocolLinksPlugin extends Plugin {
 
     this.enabled = true;
     this.started = true;
-    this.log("Protocol Links plugin started, menu items added");
+    this.logger.log("Protocol Links plugin started, menu items added");
   }
 
   async onLogin(user) {
@@ -56,7 +56,7 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   async stop() {
-    this.log("Stopping Protocol Links plugin");
+    this.logger.log("Stopping Protocol Links plugin");
 
     // Remove all context menu items
     this.removeContextMenuItems();
@@ -70,7 +70,7 @@ class ProtocolLinksPlugin extends Plugin {
 
   setupContextMenuItems() {
     if (!this.contextMenuApi) {
-      this.error("Context Menu API plugin not available");
+      this.logger.error("Context Menu API plugin not available");
       return;
     }
 
@@ -120,7 +120,7 @@ class ProtocolLinksPlugin extends Plugin {
       onClick: (groupData) => this.copyGroupLink(groupData),
     });
 
-    this.log("All context menu items added");
+    this.logger.log("All context menu items added");
   }
 
   removeContextMenuItems() {
@@ -141,7 +141,7 @@ class ProtocolLinksPlugin extends Plugin {
     // Remove group items
     this.contextMenuApi.removeGroupItem("copy-group-link");
 
-    this.log("All context menu items removed");
+    this.logger.log("All context menu items removed");
   }
 
   // ============================================================================
@@ -224,7 +224,7 @@ class ProtocolLinksPlugin extends Plugin {
 
   async copyToClipboard(text, description) {
     if (!this.utils) {
-      this.error("Utils plugin not available");
+      this.logger.error("Utils plugin not available");
       return;
     }
 

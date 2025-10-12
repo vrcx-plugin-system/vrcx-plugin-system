@@ -23,14 +23,14 @@ class UtilsPlugin extends Plugin {
   }
 
   async load() {
-    this.log("Utility functions ready");
+    this.logger.log("Utility functions ready");
     this.loaded = true;
   }
 
   async start() {
     this.enabled = true;
     this.started = true;
-    this.log("Utils plugin started and ready");
+    this.logger.log("Utils plugin started and ready");
   }
 
   async onLogin(user) {
@@ -115,10 +115,10 @@ class UtilsPlugin extends Plugin {
 
     try {
       const decoded = atob(str);
-      this.log("Decoded base64 string");
+      this.logger.log("Decoded base64 string");
       return decoded;
     } catch (error) {
-      this.warn(`Failed to decode base64: ${error.message}`);
+      this.logger.warn(`Failed to decode base64: ${error.message}`);
       return str;
     }
   }
@@ -133,7 +133,7 @@ class UtilsPlugin extends Plugin {
   async getSteamPlaytime(steamId, apiKey, appId = "438100") {
     try {
       if (!steamId) {
-        this.warn("No Steam ID provided");
+        this.logger.warn("No Steam ID provided");
         return null;
       }
 
@@ -148,15 +148,15 @@ class UtilsPlugin extends Plugin {
 
       const game = data?.response?.games?.find((g) => g.appid == appId);
       if (!game) {
-        this.warn(`No playtime data found for app ${appId}`);
+        this.logger.warn(`No playtime data found for app ${appId}`);
         return null;
       }
 
       const playtimeMinutes = game.playtime_forever;
-      this.log(`Got Steam playtime: ${playtimeMinutes} minutes`);
+      this.logger.log(`Got Steam playtime: ${playtimeMinutes} minutes`);
       return playtimeMinutes;
     } catch (error) {
-      this.error(`Error getting Steam playtime: ${error.message}`);
+      this.logger.error(`Error getting Steam playtime: ${error.message}`);
       return null;
     }
   }
@@ -171,7 +171,7 @@ class UtilsPlugin extends Plugin {
     try {
       // Try modern clipboard API
       await navigator.clipboard.writeText(text);
-      this.log(`${description} copied to clipboard`);
+      this.logger.log(`${description} copied to clipboard`);
       return true;
     } catch (error) {
       // Fallback method
@@ -188,13 +188,15 @@ class UtilsPlugin extends Plugin {
         textArea.remove();
 
         if (successful) {
-          this.log(`${description} copied to clipboard (fallback method)`);
+          this.logger.log(
+            `${description} copied to clipboard (fallback method)`
+          );
           return true;
         } else {
           throw new Error("execCommand('copy') returned false");
         }
       } catch (fallbackError) {
-        this.error(
+        this.logger.error(
           `Failed to copy to clipboard: ${error.message} (fallback: ${fallbackError.message})`
         );
         return false;
@@ -208,7 +210,7 @@ class UtilsPlugin extends Plugin {
    */
   clearProcessedMenus() {
     this.processedMenus.clear();
-    this.log("Cleared processed menus registry");
+    this.logger.log("Cleared processed menus registry");
   }
 }
 

@@ -36,7 +36,7 @@ class NavMenuApiPlugin extends Plugin {
   }
 
   async load() {
-    this.log("Navigation Menu API ready");
+    this.logger.log("Navigation Menu API ready");
     this.loaded = true;
   }
 
@@ -55,18 +55,20 @@ class NavMenuApiPlugin extends Plugin {
 
     this.enabled = true;
     this.started = true;
-    this.log("Navigation Menu API started");
+    this.logger.log("Navigation Menu API started");
   }
 
   async onLogin(currentUser) {
-    this.log(`Setting up menu watcher for user: ${currentUser?.displayName}`);
+    this.logger.log(
+      `Setting up menu watcher for user: ${currentUser?.displayName}`
+    );
 
     // Setup Pinia watcher
     this.watchMenuChanges();
   }
 
   async stop() {
-    this.log("Stopping Navigation Menu API");
+    this.logger.log("Stopping Navigation Menu API");
 
     // Remove all items
     this.clearAllItems();
@@ -85,7 +87,7 @@ class NavMenuApiPlugin extends Plugin {
         this.navMenu = document.querySelector(".el-menu");
 
         if (this.navMenu) {
-          this.log("Navigation menu found");
+          this.logger.log("Navigation menu found");
           resolve();
         } else {
           setTimeout(checkNav, 500);
@@ -102,7 +104,7 @@ class NavMenuApiPlugin extends Plugin {
         this.contentParent = document.querySelector(".el-splitter");
 
         if (this.contentParent) {
-          this.log("Content area found, ready to add tab content");
+          this.logger.log("Content area found, ready to add tab content");
           resolve();
         } else {
           setTimeout(findContentArea, 500);
@@ -131,7 +133,7 @@ class NavMenuApiPlugin extends Plugin {
       subtree: true,
     });
 
-    this.log("Mutation observer setup complete");
+    this.logger.log("Mutation observer setup complete");
   }
 
   watchMenuChanges() {
@@ -152,9 +154,9 @@ class NavMenuApiPlugin extends Plugin {
           const currentIndex = window.$pinia.ui.menuActiveIndex;
           this.updateContentVisibility(currentIndex);
 
-          this.log("Pinia menu watcher setup complete");
+          this.logger.log("Pinia menu watcher setup complete");
         } catch (error) {
-          this.error("Error setting up menu watcher:", error);
+          this.logger.error("Error setting up menu watcher:", error);
         }
       } else {
         setTimeout(setupWatch, 500);
@@ -214,7 +216,7 @@ class NavMenuApiPlugin extends Plugin {
     };
 
     this.customItems.set(id, item);
-    this.log(`Added item: ${id}`);
+    this.logger.log(`Added item: ${id}`);
 
     if (this.navMenu) {
       this.renderItem(item);
@@ -242,7 +244,7 @@ class NavMenuApiPlugin extends Plugin {
    */
   createContentContainer(id, content) {
     if (!this.contentParent) {
-      this.warn(`Content parent not ready for ${id}`);
+      this.logger.warn(`Content parent not ready for ${id}`);
       return;
     }
 
@@ -276,7 +278,7 @@ class NavMenuApiPlugin extends Plugin {
     if (panel) {
       panel.appendChild(container);
       this.contentContainers.set(id, container);
-      this.log(`Created content container for: ${id}`);
+      this.logger.log(`Created content container for: ${id}`);
     }
   }
 
@@ -286,7 +288,7 @@ class NavMenuApiPlugin extends Plugin {
    */
   removeItem(id) {
     if (!this.customItems.has(id)) {
-      this.warn(`Item not found: ${id}`);
+      this.logger.warn(`Item not found: ${id}`);
       return false;
     }
 
@@ -307,7 +309,7 @@ class NavMenuApiPlugin extends Plugin {
       this.contentContainers.delete(id);
     }
 
-    this.log(`Removed item: ${id}`);
+    this.logger.log(`Removed item: ${id}`);
     return true;
   }
 
@@ -319,7 +321,7 @@ class NavMenuApiPlugin extends Plugin {
   updateItem(id, updates) {
     const item = this.customItems.get(id);
     if (!item) {
-      this.warn(`Item not found: ${id}`);
+      this.logger.warn(`Item not found: ${id}`);
       return false;
     }
 
@@ -334,7 +336,7 @@ class NavMenuApiPlugin extends Plugin {
       this.renderItem(item);
     }
 
-    this.log(`Updated item: ${id}`);
+    this.logger.log(`Updated item: ${id}`);
     return true;
   }
 
@@ -359,7 +361,7 @@ class NavMenuApiPlugin extends Plugin {
   clearAllItems() {
     const ids = Array.from(this.customItems.keys());
     ids.forEach((id) => this.removeItem(id));
-    this.log(`Cleared all ${ids.length} custom items`);
+    this.logger.log(`Cleared all ${ids.length} custom items`);
   }
 
   // ============================================================================
@@ -472,7 +474,7 @@ class NavMenuApiPlugin extends Plugin {
       this.navMenu.appendChild(menuItem);
     }
 
-    this.log(`Rendered item: ${item.id}`);
+    this.logger.log(`Rendered item: ${item.id}`);
   }
 
   renderAllItems() {

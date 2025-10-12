@@ -22,14 +22,14 @@ class ConfigPlugin extends Plugin {
     // Configuration is already available at window.customjs.config
     // This plugin just provides helper methods for accessing it
 
-    this.log("Configuration management ready");
+    this.logger.log("Configuration management ready");
     this.loaded = true;
   }
 
   async start() {
     this.enabled = true;
     this.started = true;
-    this.log("Configuration plugin started");
+    this.logger.log("Configuration plugin started");
   }
 
   async onLogin(user) {
@@ -53,7 +53,7 @@ class ConfigPlugin extends Plugin {
    */
   set(path, value) {
     this.setConfig(path, value);
-    this.log(`Config updated: ${path} = ${JSON.stringify(value)}`);
+    this.logger.log(`Config updated: ${path} = ${JSON.stringify(value)}`);
 
     // Emit event for config changes
     this.emit("config-changed", { path, value });
@@ -101,7 +101,7 @@ class ConfigPlugin extends Plugin {
 
     if (lastKey in target) {
       delete target[lastKey];
-      this.log(`Config deleted: ${path}`);
+      this.logger.log(`Config deleted: ${path}`);
       this.emit("config-deleted", { path });
       return true;
     }

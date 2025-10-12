@@ -44,7 +44,7 @@ class TemplatePlugin extends Plugin {
       eventsReceived: 0,
     };
 
-    this.log("🔨 Constructor called - Plugin instance created");
+    this.logger.log("🔨 Constructor called - Plugin instance created");
   }
 
   // ============================================================================
@@ -57,7 +57,7 @@ class TemplatePlugin extends Plugin {
    * Should NOT start timers or modify DOM - use start() for that
    */
   async load() {
-    this.log("📦 load() called - Setting up plugin...");
+    this.logger.log("📦 load() called - Setting up plugin...");
 
     // ========================================================================
     // PLUGIN ACCESS
@@ -78,13 +78,13 @@ class TemplatePlugin extends Plugin {
 
     // Example: Register a pre-hook to run BEFORE a function
     // this.registerPreHook('AppApi.SendIpc', (args) => {
-    //   this.log(`🪝 PRE-HOOK: SendIpc will be called with:`, args);
+    //   this.logger.log(`🪝 PRE-HOOK: SendIpc will be called with:`, args);
     //   // You can modify args here if needed
     // });
 
     // Example: Register a post-hook to run AFTER a function
     // this.registerPostHook('AppApi.SendIpc', (result, args) => {
-    //   this.log(`🪝 POST-HOOK: SendIpc returned:`, result);
+    //   this.logger.log(`🪝 POST-HOOK: SendIpc returned:`, result);
     // });
 
     // ========================================================================
@@ -93,17 +93,17 @@ class TemplatePlugin extends Plugin {
 
     // Example: Listen to events from other plugins
     // this.on("other-plugin:event-name", (data) => {
-    //   this.log("📨 Received event from other-plugin:", data);
+    //   this.logger.log("📨 Received event from other-plugin:", data);
     // });
 
     // Example: Listen to own events
     this.on("example-event", (data) => {
-      this.log("📨 Received example-event:", data);
+      this.logger.log("📨 Received example-event:", data);
       this.exampleData.eventsReceived++;
     });
 
     this.loaded = true;
-    this.log("✅ load() complete - Plugin ready for start()");
+    this.logger.log("✅ load() complete - Plugin ready for start()");
   }
 
   /**
@@ -111,7 +111,7 @@ class TemplatePlugin extends Plugin {
    * Use for: Setup that depends on other plugins, start timers, modify DOM
    */
   async start() {
-    this.log("▶️ start() called - Starting plugin operations...");
+    this.logger.log("▶️ start() called - Starting plugin operations...");
 
     // Wait for dependencies
     this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
@@ -138,7 +138,7 @@ class TemplatePlugin extends Plugin {
     this.timerInterval = this.registerTimer(
       setInterval(() => {
         this.counter++;
-        this.log(`⏱️ Timer tick #${this.counter}`);
+        this.logger.log(`⏱️ Timer tick #${this.counter}`);
 
         // Example: Emit an event for other plugins
         this.emit("timer-tick", {
@@ -154,7 +154,7 @@ class TemplatePlugin extends Plugin {
 
     // Example: Setup mutation observer with auto-cleanup
     const observer = new MutationObserver((mutations) => {
-      this.log(`👁️ DOM mutation detected: ${mutations.length} changes`);
+      this.logger.log(`👁️ DOM mutation detected: ${mutations.length} changes`);
     });
     this.registerObserver(observer);
     observer.observe(document.body, {
@@ -169,13 +169,13 @@ class TemplatePlugin extends Plugin {
 
     // Example: Access other plugins via PluginManager
     if (this.utils) {
-      this.log(`🔌 Found utils plugin v${this.utils.metadata.version}`);
+      this.logger.log(`🔌 Found utils plugin v${this.utils.metadata.version}`);
       const timestamp = this.utils.getTimestamp();
-      this.log(`🕐 Current timestamp: ${timestamp}`);
+      this.logger.log(`🕐 Current timestamp: ${timestamp}`);
     }
 
     this.started = true;
-    this.log("✅ start() complete - Plugin running");
+    this.logger.log("✅ start() complete - Plugin running");
   }
 
   /**
@@ -183,7 +183,7 @@ class TemplatePlugin extends Plugin {
    * @param {object} currentUser - Current user object from $pinia.user.currentUser
    */
   async onLogin(currentUser) {
-    this.log(
+    this.logger.log(
       `🔐 onLogin() called - User: ${currentUser?.displayName || "Unknown"}`
     );
 
@@ -198,10 +198,10 @@ class TemplatePlugin extends Plugin {
     const trustLevel = currentUser?.$trustLevel;
     const friendCount = currentUser?.friends?.length || 0;
 
-    this.log(`👤 User ID: ${userId}`);
-    this.log(`👤 Display Name: ${displayName}`);
-    this.log(`👤 Trust Level: ${trustLevel}`);
-    this.log(`👤 Friends: ${friendCount}`);
+    this.logger.log(`👤 User ID: ${userId}`);
+    this.logger.log(`👤 Display Name: ${displayName}`);
+    this.logger.log(`👤 Trust Level: ${trustLevel}`);
+    this.logger.log(`👤 Friends: ${friendCount}`);
 
     // ========================================================================
     // ACCESS PINIA STORES
@@ -209,12 +209,14 @@ class TemplatePlugin extends Plugin {
 
     // Example: Access location data
     const location = window.$pinia?.location?.lastLocation?.location;
-    this.log(`📍 Current location: ${location || "Unknown"}`);
+    this.logger.log(`📍 Current location: ${location || "Unknown"}`);
 
     // Example: Access friend data
     const friendsStore = window.$pinia?.friends;
     if (friendsStore) {
-      this.log(`👥 Online friends: ${friendsStore.onlineFriends?.length || 0}`);
+      this.logger.log(
+        `👥 Online friends: ${friendsStore.onlineFriends?.length || 0}`
+      );
     }
 
     // ========================================================================
@@ -223,7 +225,7 @@ class TemplatePlugin extends Plugin {
 
     // Example: Get config values
     const steamId = this.getConfig("steam.id", "not-set");
-    this.log(`⚙️ Steam ID from config: ${steamId}`);
+    this.logger.log(`⚙️ Steam ID from config: ${steamId}`);
 
     // Example: Set config values
     this.setConfig("template.lastLogin", Date.now());
@@ -234,16 +236,16 @@ class TemplatePlugin extends Plugin {
 
     // Example: Make authenticated API calls
     // const response = await window.request.userRequest.getUser({ userId });
-    // this.log('API response:', response);
+    // this.logger.log('API response:', response);
 
-    this.log("✅ onLogin() complete");
+    this.logger.log("✅ onLogin() complete");
   }
 
   /**
    * Called when plugin is stopped, disabled, or unloaded
    */
   async stop() {
-    this.log("⏹️ stop() called - Cleaning up...");
+    this.logger.log("⏹️ stop() called - Cleaning up...");
 
     // ========================================================================
     // REMOVE UI ELEMENTS
@@ -274,7 +276,7 @@ class TemplatePlugin extends Plugin {
     // - All Pinia subscriptions
     await super.stop();
 
-    this.log("✅ stop() complete - Plugin stopped");
+    this.logger.log("✅ stop() complete - Plugin stopped");
   }
 
   // ============================================================================
@@ -282,7 +284,7 @@ class TemplatePlugin extends Plugin {
   // ============================================================================
 
   setupUI() {
-    this.log("🎨 Setting up UI...");
+    this.logger.log("🎨 Setting up UI...");
 
     // ========================================================================
     // CONTEXT MENU ITEMS
@@ -295,7 +297,7 @@ class TemplatePlugin extends Plugin {
         icon: "el-icon-star",
         onClick: (userData) => this.handleUserClick(userData),
       });
-      this.log("📝 Added context menu item");
+      this.logger.log("📝 Added context menu item");
     }
 
     // ========================================================================
@@ -309,7 +311,7 @@ class TemplatePlugin extends Plugin {
         icon: "ri-file-code-line",
         content: this.createContent(),
       });
-      this.log("📝 Added navigation menu item");
+      this.logger.log("📝 Added navigation menu item");
     }
 
     // ========================================================================
@@ -322,10 +324,10 @@ class TemplatePlugin extends Plugin {
       this.registerListener(
         button,
         "click",
-        () => this.log("🖱️ Button clicked!"),
+        () => this.logger.log("🖱️ Button clicked!"),
         { once: false }
       );
-      this.log("🔘 Registered button click listener");
+      this.logger.log("🔘 Registered button click listener");
     }
 
     // ========================================================================
@@ -335,17 +337,19 @@ class TemplatePlugin extends Plugin {
     // Example: Subscribe to Pinia store with auto-cleanup
     if (window.$pinia?.user?.$subscribe) {
       const unsubscribe = window.$pinia.user.$subscribe((mutation, state) => {
-        this.log(`📊 User store changed: ${state.currentUser?.displayName}`);
+        this.logger.log(
+          `📊 User store changed: ${state.currentUser?.displayName}`
+        );
       });
       this.registerSubscription(unsubscribe);
-      this.log("📊 Subscribed to user store changes");
+      this.logger.log("📊 Subscribed to user store changes");
     }
 
-    this.log("✅ UI setup complete");
+    this.logger.log("✅ UI setup complete");
   }
 
   removeUI() {
-    this.log("🗑️ Removing UI...");
+    this.logger.log("🗑️ Removing UI...");
 
     // Remove context menu items
     if (this.contextMenuApi) {
@@ -359,7 +363,7 @@ class TemplatePlugin extends Plugin {
 
     // Event listeners are automatically removed by cleanupResources()
 
-    this.log("✅ UI removed");
+    this.logger.log("✅ UI removed");
   }
 
   createContent() {
@@ -383,7 +387,7 @@ class TemplatePlugin extends Plugin {
       const testBtn = container.querySelector("#template-test-btn");
       if (testBtn) {
         this.registerListener(testBtn, "click", () => {
-          this.log("🧪 Test button clicked!");
+          this.logger.log("🧪 Test button clicked!");
           this.emit("button-clicked", { timestamp: Date.now() });
 
           if (this.utils) {
@@ -395,7 +399,7 @@ class TemplatePlugin extends Plugin {
       const emitBtn = container.querySelector("#template-emit-btn");
       if (emitBtn) {
         this.registerListener(emitBtn, "click", () => {
-          this.log("📡 Emit button clicked - emitting example-event");
+          this.logger.log("📡 Emit button clicked - emitting example-event");
           this.emit("example-event", {
             message: "Hello from template!",
             timestamp: Date.now(),
@@ -408,7 +412,7 @@ class TemplatePlugin extends Plugin {
   }
 
   handleUserClick(userData) {
-    this.log("👤 User context menu clicked:", userData);
+    this.logger.log("👤 User context menu clicked:", userData);
 
     if (this.utils) {
       this.logger.showInfo(`Template action for: ${userData.displayName}`);
@@ -428,7 +432,7 @@ class TemplatePlugin extends Plugin {
    * @returns {string} Return value description
    */
   doSomething(param) {
-    this.log(`🔧 doSomething() called with: ${param}`);
+    this.logger.log(`🔧 doSomething() called with: ${param}`);
 
     // Do some work...
     const result = `Processed: ${param}`;

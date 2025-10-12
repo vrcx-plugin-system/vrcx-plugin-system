@@ -72,7 +72,9 @@ class BioUpdaterPlugin extends Plugin {
       await this.updateBio();
     }, config.initialDelay);
 
-    this.logger.log(`Initial bio update scheduled (delay: ${config.initialDelay}ms)`);
+    this.logger.log(
+      `Initial bio update scheduled (delay: ${config.initialDelay}ms)`
+    );
   }
 
   async stop() {
@@ -169,7 +171,10 @@ class BioUpdaterPlugin extends Plugin {
         .replace("{partners}", partners.map((f) => f.name).join(", "))
         .replace(
           "{autoinvite}",
-          this.autoInvite?.getAutoInviteUsersList()?.map(u => u.displayName).join(", ") ?? ""
+          this.autoInvite
+            ?.getAutoInviteUsersList()
+            ?.map((u) => u.displayName)
+            .join(", ") ?? ""
         )
         .replace("{tags_loaded}", this.tagManager?.getLoadedTagsCount() ?? 0)
         .replace("{userId}", currentUser.id)

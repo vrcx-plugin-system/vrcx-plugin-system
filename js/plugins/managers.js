@@ -29,7 +29,7 @@ class ManagersPlugin extends Plugin {
   }
 
   async load() {
-    this.log("Managers plugin ready");
+    this.logger.log("Managers plugin ready");
     this.loaded = true;
   }
 
@@ -45,7 +45,7 @@ class ManagersPlugin extends Plugin {
 
     this.enabled = true;
     this.started = true;
-    this.log("Managers plugin started, all hooks registered");
+    this.logger.log("Managers plugin started, all hooks registered");
   }
 
   async onLogin(user) {
@@ -53,7 +53,7 @@ class ManagersPlugin extends Plugin {
   }
 
   async stop() {
-    this.log("Stopping Managers plugin");
+    this.logger.log("Stopping Managers plugin");
     await super.stop();
   }
 
@@ -93,7 +93,7 @@ class ManagersPlugin extends Plugin {
       }
     );
 
-    this.log(
+    this.logger.log(
       "Instance monitoring hook registered (will activate when function available)"
     );
   }
@@ -129,7 +129,7 @@ class ManagersPlugin extends Plugin {
       this.handleNotification(noty);
     });
 
-    this.log(
+    this.logger.log(
       "Notification hook registered (will activate when function available)"
     );
   }
@@ -161,7 +161,7 @@ class ManagersPlugin extends Plugin {
         break;
 
       case "invite":
-        this.log("Invite notification received:", noty);
+        this.logger.log("Invite notification received:", noty);
         break;
     }
   }
@@ -189,7 +189,7 @@ class ManagersPlugin extends Plugin {
         );
       }
     } catch (error) {
-      this.error("Error handling tagged player join:", error);
+      this.logger.error("Error handling tagged player join:", error);
     }
   }
 
@@ -204,7 +204,7 @@ class ManagersPlugin extends Plugin {
     // Setup console debug functions
     this.setupConsoleFunctions();
 
-    this.log("Debug tools initialized");
+    this.logger.log("Debug tools initialized");
   }
 
   setupIPCLogging() {
@@ -214,7 +214,7 @@ class ManagersPlugin extends Plugin {
       console.log(`[IPC OUT]`, args); // eslint-disable-line no-console - Intentional debug output for IPC monitoring
     });
 
-    this.log(
+    this.logger.log(
       "IPC logging hook registered (will activate when function available)"
     );
   }
@@ -318,7 +318,7 @@ class ManagersPlugin extends Plugin {
     // Expose debug functions globally
     window.customjs.debugFunctions = debugFunctions;
 
-    this.log(
+    this.logger.log(
       "Console debug functions registered (will open DevTools when used)"
     );
   }

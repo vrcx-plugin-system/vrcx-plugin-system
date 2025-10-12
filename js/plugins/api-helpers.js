@@ -22,14 +22,14 @@ class ApiHelpersPlugin extends Plugin {
   async load() {
     // Note: Functions are automatically backed up in customjs.functions by the hook system
 
-    this.log("API helpers ready");
+    this.logger.log("API helpers ready");
     this.loaded = true;
   }
 
   async start() {
     this.enabled = true;
     this.started = true;
-    this.log("API helpers started");
+    this.logger.log("API helpers started");
   }
 
   async onLogin(user) {

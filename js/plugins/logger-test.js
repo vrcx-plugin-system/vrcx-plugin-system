@@ -22,7 +22,7 @@ class LoggerTestPlugin extends Plugin {
   }
 
   async load() {
-    this.log("Logger Test plugin loaded");
+    this.logger.log("Logger Test plugin loaded");
     this.loaded = true;
   }
 
@@ -37,23 +37,23 @@ class LoggerTestPlugin extends Plugin {
   }
 
   runTests() {
-    this.log("==================== LOGGER TESTS ====================");
+    this.logger.log("==================== LOGGER TESTS ====================");
 
     // Test 1: Basic logging methods
-    this.log("Test 1: Basic log methods");
+    this.logger.log("Test 1: Basic log methods");
     this.logger.logInfo("This is an info message");
     this.logger.logWarn("This is a warning message");
     this.logger.logError("This is an error message");
     this.logger.logDebug("This is a debug message with timestamp");
 
     // Test 2: Plugin's log/warn/error methods
-    this.log("Test 2: Plugin's log/warn/error methods");
-    this.log("Plugin log method");
-    this.warn("Plugin warn method");
-    this.error("Plugin error method");
+    this.logger.log("Test 2: Plugin's log/warn/error methods");
+    this.logger.log("Plugin log method");
+    this.logger.warn("Plugin warn method");
+    this.logger.error("Plugin error method");
 
     // Test 3: Show methods (Noty notifications)
-    this.log("Test 3: Show methods (Noty notifications)");
+    this.logger.log("Test 3: Show methods (Noty notifications)");
     setTimeout(() => {
       this.logger.showInfo("Test: Info notification");
     }, 500);
@@ -68,13 +68,13 @@ class LoggerTestPlugin extends Plugin {
     }, 2000);
 
     // Test 4: Combined logging
-    this.log("Test 4: Combined logging");
+    this.logger.log("Test 4: Combined logging");
     setTimeout(() => {
       this.logger.logAndShow("Test: Log and show message", "info");
     }, 2500);
 
     // Test 5: Advanced logging with options
-    this.log("Test 5: Advanced logging with options");
+    this.logger.log("Test 5: Advanced logging with options");
     setTimeout(() => {
       this.logger.log(
         "Test: Custom logging options",
@@ -85,19 +85,19 @@ class LoggerTestPlugin extends Plugin {
     }, 3000);
 
     // Test 6: VR notifications (if available)
-    this.log(
+    this.logger.log(
       "Test 6: VR notifications (will only work if VR overlay apps are running)"
     );
     setTimeout(() => {
       this.logger.notifyDesktop("Test: Desktop notification");
     }, 3500);
 
-    this.log("==================== TESTS COMPLETE ====================");
-    this.log("Check console and VRCX notifications for results");
+    this.logger.log("==================== TESTS COMPLETE ====================");
+    this.logger.log("Check console and VRCX notifications for results");
   }
 
   async onLogin(user) {
-    this.log(`User logged in: ${user?.displayName}`);
+    this.logger.log(`User logged in: ${user?.displayName}`);
   }
 }
 

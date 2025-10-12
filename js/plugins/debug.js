@@ -23,37 +23,37 @@ class DebugPlugin extends Plugin {
   }
 
   async load() {
-    this.log("Debug utilities ready");
+    this.logger.log("Debug utilities ready");
     this.loaded = true;
   }
 
   async start() {
     this.enabled = true;
     this.started = true;
-    this.log("Debug plugin started");
+    this.logger.log("Debug plugin started");
 
     // Print debug info
     this.printDebugInfo();
   }
 
   printDebugInfo() {
-    this.log("=== DEBUG INFO ===");
-    this.log(`Plugins loaded: ${window.customjs.plugins.length}`);
-    this.log(
+    this.logger.log("=== DEBUG INFO ===");
+    this.logger.log(`Plugins loaded: ${window.customjs.plugins.length}`);
+    this.logger.log(
       `Events registered: ${Object.keys(window.customjs.events).length}`
     );
-    this.log(
+    this.logger.log(
       `Hooks registered: pre=${
         Object.keys(window.customjs.hooks.pre).length
       }, post=${Object.keys(window.customjs.hooks.post).length}`
     );
-    this.log(
+    this.logger.log(
       `Functions backed up: ${Object.keys(window.customjs.functions).length}`
     );
 
     // List all plugins
     window.customjs.plugins.forEach((plugin) => {
-      this.log(
+      this.logger.log(
         `  - ${plugin.metadata.name} v${plugin.metadata.version} (${
           plugin.enabled ? "enabled" : "disabled"
         }, ${plugin.loaded ? "loaded" : "not loaded"}, ${
@@ -115,7 +115,7 @@ class DebugPlugin extends Plugin {
    */
   testEvent(eventName, data) {
     this.emit(eventName, data);
-    this.log(`Emitted event: ${eventName}`, data);
+    this.logger.log(`Emitted event: ${eventName}`, data);
   }
 }
 

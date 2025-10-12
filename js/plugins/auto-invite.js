@@ -1,7 +1,7 @@
 // ============================================================================
 // AUTO INVITE PLUGIN
-// Version: 3.0.0
-// Build: 1728735600
+// Version: 3.0.1
+// Build: 1760384722
 // ============================================================================
 
 /**
@@ -15,8 +15,8 @@ class AutoInvitePlugin extends Plugin {
       name: "Auto Invite Manager",
       description: "Automatic user invitation system with location tracking",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1728735600",
+      version: "3.0.1",
+      build: "1760384722",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
@@ -113,7 +113,9 @@ class AutoInvitePlugin extends Plugin {
           this.setupGameLogHook();
         }, 3000);
       } else {
-        this.logger.warn("Max retries reached, relying on location store polling");
+        this.logger.warn(
+          "Max retries reached, relying on location store polling"
+        );
       }
     }
   }
@@ -328,12 +330,10 @@ class AutoInvitePlugin extends Plugin {
     if (this.autoInviteUsers.has(user.id)) {
       // Remove user from list
       this.autoInviteUsers.delete(user.id);
-      this.logger.log(`Removed ${user.displayName} from Auto Invite list`);
       this.logger.showInfo(`Removed ${user.displayName} from Auto Invite list`);
     } else {
       // Add user to list
       this.autoInviteUsers.set(user.id, user);
-      this.logger.log(`Added ${user.displayName} to Auto Invite list`);
       this.logger.showSuccess(`Added ${user.displayName} to Auto Invite list`);
     }
 
@@ -378,7 +378,6 @@ class AutoInvitePlugin extends Plugin {
     const count = this.autoInviteUsers.size;
     this.autoInviteUsers.clear();
     this.lastInvitedTo = null;
-    this.logger.log(`Cleared ${count} user(s) from Auto Invite list`);
     this.logger.showSuccess(`Cleared ${count} user(s) from Auto Invite list`);
 
     // Update context menu button

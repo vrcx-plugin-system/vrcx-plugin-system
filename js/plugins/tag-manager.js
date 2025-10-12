@@ -30,7 +30,7 @@ class TagManagerPlugin extends Plugin {
   }
 
   async load() {
-    this.log("Tag Manager plugin ready");
+    this.logger.log("Tag Manager plugin ready");
     this.loaded = true;
   }
 
@@ -43,15 +43,17 @@ class TagManagerPlugin extends Plugin {
 
     this.enabled = true;
     this.started = true;
-    this.log("Tag Manager plugin started (waiting for login to load tags)");
+    this.logger.log(
+      "Tag Manager plugin started (waiting for login to load tags)"
+    );
   }
 
   async onLogin(currentUser) {
-    this.log(`User logged in: ${currentUser?.displayName}`);
+    this.logger.log(`User logged in: ${currentUser?.displayName}`);
 
     const tagConfig = this.getConfig("tags");
     if (!tagConfig) {
-      this.warn("Tags config not available, skipping tag loading");
+      this.logger.warn("Tags config not available, skipping tag loading");
       return;
     }
 
@@ -74,15 +76,15 @@ class TagManagerPlugin extends Plugin {
           "info"
         );
       } catch (error) {
-        this.log(`Tags loaded at ${new Date().toISOString()}`);
+        this.logger.log(`Tags loaded at ${new Date().toISOString()}`);
       }
     }, initialDelay);
 
-    this.log(`Tag loading scheduled (delay: ${initialDelay}ms)`);
+    this.logger.log(`Tag loading scheduled (delay: ${initialDelay}ms)`);
   }
 
   async stop() {
-    this.log("Stopping Tag Manager");
+    this.logger.log("Stopping Tag Manager");
 
     // Clear loaded tags
     this.loadedTags.clear();
@@ -99,28 +101,28 @@ class TagManagerPlugin extends Plugin {
     const tagConfig = this.getConfig("tags");
 
     if (!tagConfig?.urls || tagConfig.urls.length === 0) {
-      this.warn("No tag URLs configured");
+      this.logger.warn("No tag URLs configured");
       return;
     }
 
-    this.log(`Loading tags from ${tagConfig.urls.length} URLs...`);
+    this.logger.log(`Loading tags from ${tagConfig.urls.length} URLs...`);
 
     for (const url of tagConfig.urls) {
       try {
         await this.loadTagsFromUrl(url);
       } catch (error) {
-        this.error(`Failed to load tags from ${url}:`, error);
+        this.logger.error(`Failed to load tags from ${url}:`, error);
       }
     }
 
-    this.log(
+    this.logger.log(
       `✓ Tag loading complete (${this.getLoadedTagsCount()} tags loaded)`
     );
   }
 
   async loadTagsFromUrl(url) {
     try {
-      this.log(`Fetching tags from: ${url}`);
+      this.logger.log(`Fetching tags from: ${url}`);
 
       const response = await fetch(url);
       if (!response.ok) {
@@ -133,12 +135,12 @@ class TagManagerPlugin extends Plugin {
       if (tags.length > 0) {
         this.loadedTags.set(url, new Set(tags));
         await this.applyTags(tags);
-        this.log(`✓ Loaded ${tags.length} tags from ${url}`);
+        this.logger.log(`✓ Loaded ${tags.length} tags from ${url}`);
       } else {
-        this.warn(`No valid tags found in ${url}`);
+        this.logger.warn(`No valid tags found in ${url}`);
       }
     } catch (error) {
-      this.error(`Error loading tags from ${url}:`, error);
+      this.logger.error(`Error loading tags from ${url}:`, error);
       throw error;
     }
   }
@@ -169,7 +171,7 @@ class TagManagerPlugin extends Plugin {
     } else if (data.data && Array.isArray(data.data)) {
       tags.push(...data.data);
     } else {
-      this.warn(`Unknown data structure in ${url}`);
+      this.logger.warn(`Unknown data structure in ${url}`);
       return [];
     }
 
@@ -214,7 +216,7 @@ class TagManagerPlugin extends Plugin {
   async applyTags(tags) {
     const userStore = window.$pinia?.user;
     if (!userStore) {
-      this.warn("User store not available, cannot apply tags");
+      this.logger.warn("User store not available, cannot apply tags");
       return;
     }
 
@@ -226,7 +228,7 @@ class TagManagerPlugin extends Plugin {
           TagColour: tag.TagColour,
         });
       } catch (error) {
-        this.error(`Error applying tag for user ${tag.UserId}:`, error);
+        this.logger.error(`Error applying tag for user ${tag.UserId}:`, error);
       }
     }
 
@@ -244,7 +246,7 @@ class TagManagerPlugin extends Plugin {
         if (friendTag) {
           taggedFriendsCount++;
           const friendName = this.getFriendName(friendId);
-          this.log(
+          this.logger.log(
             `👥 Friend: ${friendName} (${friendId}) - Tag: ${friendTag.tag}`
           );
         }
@@ -260,7 +262,7 @@ class TagManagerPlugin extends Plugin {
         const moderatedTag = this.getUserTag(moderated.targetUserId);
         if (moderatedTag) {
           taggedBlockedCount++;
-          this.log(
+          this.logger.log(
             `🚫 Moderated: ${moderated.targetDisplayName} (${moderated.targetUserId}) - Tag: ${moderatedTag.tag}`
           );
         }
@@ -268,11 +270,11 @@ class TagManagerPlugin extends Plugin {
 
       // Summary
       const totalTagged = taggedFriendsCount + taggedBlockedCount;
-      this.log(
+      this.logger.log(
         `${totalTagged} Tagged Users > Friends: ${taggedFriendsCount}/${friends.length} | Moderated: ${taggedBlockedCount}/${moderations.length}`
       );
     } catch (error) {
-      this.error(
+      this.logger.error(
         "Error checking friends and moderated players for tags:",
         error
       );
@@ -284,12 +286,12 @@ class TagManagerPlugin extends Plugin {
 
     const intervalId = this.registerTimer(
       setInterval(async () => {
-        this.log("Periodic tag update triggered");
+        this.logger.log("Periodic tag update triggered");
         await this.loadAllTags();
       }, updateInterval)
     );
 
-    this.log(`Periodic updates started (interval: ${updateInterval}ms)`);
+    this.logger.log(`Periodic updates started (interval: ${updateInterval}ms)`);
   }
 
   // ============================================================================
@@ -323,7 +325,7 @@ class TagManagerPlugin extends Plugin {
    * Manually refresh tags from all configured URLs
    */
   async refreshTags() {
-    this.log("Manually refreshing tags...");
+    this.logger.log("Manually refreshing tags...");
     await this.loadAllTags();
   }
 
@@ -337,7 +339,7 @@ class TagManagerPlugin extends Plugin {
     try {
       const userStore = window.$pinia?.user;
       if (!userStore) {
-        this.warn("User store not available, cannot add tag");
+        this.logger.warn("User store not available, cannot add tag");
         return;
       }
 
@@ -346,9 +348,9 @@ class TagManagerPlugin extends Plugin {
         Tag: tag,
         TagColour: color,
       });
-      this.log(`Manually added tag: ${tag} for user ${userId}`);
+      this.logger.log(`Manually added tag: ${tag} for user ${userId}`);
     } catch (error) {
-      this.error("Error adding manual tag:", error);
+      this.logger.error("Error adding manual tag:", error);
     }
   }
 

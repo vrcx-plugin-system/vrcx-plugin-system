@@ -32,7 +32,7 @@ class RegistryOverridesPlugin extends Plugin {
     // Setup event handlers
     this.setupEventHandlers();
 
-    this.log("Registry Overrides plugin ready");
+    this.logger.log("Registry Overrides plugin ready");
     this.loaded = true;
   }
 
@@ -49,7 +49,9 @@ class RegistryOverridesPlugin extends Plugin {
 
     this.enabled = true;
     this.started = true;
-    this.log("Registry Overrides plugin started, periodic updates enabled");
+    this.logger.log(
+      "Registry Overrides plugin started, periodic updates enabled"
+    );
   }
 
   async onLogin(user) {
@@ -57,7 +59,7 @@ class RegistryOverridesPlugin extends Plugin {
   }
 
   async stop() {
-    this.log("Stopping Registry Overrides plugin");
+    this.logger.log("Stopping Registry Overrides plugin");
 
     // Parent cleanup will stop the timer automatically
     await super.stop();
@@ -82,7 +84,7 @@ class RegistryOverridesPlugin extends Plugin {
       this.applyRegistrySettings("INSTANCE_SWITCH_PRIVATE")
     );
 
-    this.log("Event handlers registered");
+    this.logger.log("Event handlers registered");
   }
 
   /**
@@ -92,10 +94,10 @@ class RegistryOverridesPlugin extends Plugin {
   triggerEvent(eventName) {
     const handler = this.eventHandlers.get(eventName);
     if (handler) {
-      this.log(`Triggering event: ${eventName}`);
+      this.logger.log(`Triggering event: ${eventName}`);
       handler();
     } else {
-      this.warn(`Unknown event: ${eventName}`);
+      this.logger.warn(`Unknown event: ${eventName}`);
     }
   }
 
@@ -149,7 +151,7 @@ class RegistryOverridesPlugin extends Plugin {
             continue;
           }
 
-          this.log(`[${triggerEvent}] ${key}: ${oldVal} → ${value}`);
+          this.logger.log(`[${triggerEvent}] ${key}: ${oldVal} → ${value}`);
 
           // Determine the registry type based on the value type
           let registryType = 3; // Default to REG_DWORD
@@ -162,11 +164,11 @@ class RegistryOverridesPlugin extends Plugin {
           // Apply registry setting
           await window.AppApi.SetVRChatRegistryKey(key, value, registryType);
         } catch (error) {
-          this.error(`Error setting registry key ${key}:`, error);
+          this.logger.error(`Error setting registry key ${key}:`, error);
         }
       }
     } catch (error) {
-      this.error("Error applying registry settings:", error);
+      this.logger.error("Error applying registry settings:", error);
     }
   }
 
@@ -179,7 +181,7 @@ class RegistryOverridesPlugin extends Plugin {
     try {
       return await window.AppApi.GetVRChatRegistryKey(key);
     } catch (error) {
-      this.error(`Error getting registry key ${key}:`, error);
+      this.logger.error(`Error getting registry key ${key}:`, error);
       return null;
     }
   }
@@ -193,10 +195,10 @@ class RegistryOverridesPlugin extends Plugin {
   async setRegistryValue(key, value, type = 3) {
     try {
       await window.AppApi.SetVRChatRegistryKey(key, value, type);
-      this.log(`Set registry key ${key} = ${value}`);
+      this.logger.log(`Set registry key ${key} = ${value}`);
       return true;
     } catch (error) {
-      this.error(`Error setting registry key ${key}:`, error);
+      this.logger.error(`Error setting registry key ${key}:`, error);
       return false;
     }
   }

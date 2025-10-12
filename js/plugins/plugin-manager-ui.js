@@ -28,7 +28,7 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   async load() {
-    this.log("Plugin Manager UI ready");
+    this.logger.log("Plugin Manager UI ready");
     this.loaded = true;
   }
 
@@ -40,7 +40,7 @@ class PluginManagerUIPlugin extends Plugin {
     this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
 
     if (!this.navMenuApi) {
-      this.error("Nav Menu API plugin not found after waiting");
+      this.logger.error("Nav Menu API plugin not found after waiting");
       return;
     }
 
@@ -49,7 +49,7 @@ class PluginManagerUIPlugin extends Plugin {
 
     this.enabled = true;
     this.started = true;
-    this.log("Plugin Manager UI started");
+    this.logger.log("Plugin Manager UI started");
   }
 
   async onLogin(user) {
@@ -57,7 +57,7 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   async stop() {
-    this.log("Stopping Plugin Manager UI");
+    this.logger.log("Stopping Plugin Manager UI");
 
     if (this.navMenuApi) {
       this.navMenuApi.removeItem("plugins");
@@ -72,7 +72,7 @@ class PluginManagerUIPlugin extends Plugin {
 
   setupNavMenuItem() {
     if (!this.navMenuApi) {
-      this.error("NavMenu plugin not found!");
+      this.logger.error("NavMenu plugin not found!");
       return;
     }
 
@@ -83,7 +83,7 @@ class PluginManagerUIPlugin extends Plugin {
       before: "settings",
     });
 
-    this.log("Navigation menu item added");
+    this.logger.log("Navigation menu item added");
   }
 
   setupMenuWatcher() {
@@ -96,7 +96,7 @@ class PluginManagerUIPlugin extends Plugin {
         });
 
         this.registerSubscription(unsubscribe);
-        this.log("Menu watcher ready");
+        this.logger.log("Menu watcher ready");
       } else {
         setTimeout(setupWatch, 500);
       }
@@ -138,7 +138,7 @@ class PluginManagerUIPlugin extends Plugin {
 
       this.refreshPluginList();
     } catch (error) {
-      this.error("Error rendering plugin manager content:", error);
+      this.logger.error("Error rendering plugin manager content:", error);
       container.innerHTML = `
         <div style="padding: 20px; text-align: center; color: #dc3545;">
           <h3>❌ Error Loading Plugin Manager</h3>
@@ -302,7 +302,7 @@ class PluginManagerUIPlugin extends Plugin {
         "#plugin-list-container"
       );
       if (!container) {
-        this.warn("Plugin list container not found");
+        this.logger.warn("Plugin list container not found");
         return;
       }
 
@@ -327,7 +327,7 @@ class PluginManagerUIPlugin extends Plugin {
       const systemSection = this.createSystemInfoSection();
       container.appendChild(systemSection);
     } catch (error) {
-      this.error("Error refreshing plugin list:", error);
+      this.logger.error("Error refreshing plugin list:", error);
     }
   }
 
@@ -360,7 +360,7 @@ class PluginManagerUIPlugin extends Plugin {
         const card = this.createEnhancedPluginCard(plugin);
         grid.appendChild(card);
       } catch (error) {
-        this.error(
+        this.logger.error(
           `Error creating card for plugin: ${
             plugin?.metadata?.name || "unknown"
           }`,
@@ -725,13 +725,13 @@ class PluginManagerUIPlugin extends Plugin {
     try {
       const plugin = window.customjs.pluginManager.getPlugin(pluginId);
       if (!plugin) {
-        this.error(`Plugin not found: ${pluginId}`);
+        this.logger.error(`Plugin not found: ${pluginId}`);
         this.logger.showError(`Plugin not found: ${pluginId}`);
         return;
       }
 
       await plugin.toggle();
-      this.log(
+      this.logger.log(
         `Toggled plugin ${pluginId}: ${plugin.enabled ? "enabled" : "disabled"}`
       );
 
@@ -740,20 +740,20 @@ class PluginManagerUIPlugin extends Plugin {
       const statusMsg = plugin.enabled ? "enabled" : "disabled";
       this.logger.showSuccess(`${plugin.metadata.name} ${statusMsg}`);
     } catch (error) {
-      this.error(`Error toggling plugin ${pluginId}:`, error);
+      this.logger.error(`Error toggling plugin ${pluginId}:`, error);
       this.logger.showError(`Error: ${error.message}`);
     }
   }
 
   async handleReloadPlugin(pluginUrl) {
     if (!pluginUrl) {
-      this.warn("No URL available for reload");
+      this.logger.warn("No URL available for reload");
       this.logger.showWarn("Plugin URL not available");
       return;
     }
 
     try {
-      this.log(`Reloading plugin from ${pluginUrl}`);
+      this.logger.log(`Reloading plugin from ${pluginUrl}`);
       this.logger.showInfo("Reloading plugin...");
 
       const result = await window.customjs.pluginManager.reloadPlugin(
@@ -761,15 +761,15 @@ class PluginManagerUIPlugin extends Plugin {
       );
 
       if (result.success) {
-        this.log("Plugin reloaded successfully");
+        this.logger.log("Plugin reloaded successfully");
         this.logger.showSuccess("Plugin reloaded successfully");
         setTimeout(() => this.refreshPluginList(), 500);
       } else {
-        this.error(`Reload failed: ${result.message}`);
+        this.logger.error(`Reload failed: ${result.message}`);
         this.logger.showError(`Reload failed: ${result.message}`);
       }
     } catch (error) {
-      this.error("Error reloading plugin:", error);
+      this.logger.error("Error reloading plugin:", error);
       this.logger.showError(`Error: ${error.message}`);
     }
   }
@@ -785,7 +785,7 @@ class PluginManagerUIPlugin extends Plugin {
 
   async handleRemovePlugin(pluginUrl) {
     if (!pluginUrl) {
-      this.warn("No URL available for removal");
+      this.logger.warn("No URL available for removal");
       this.logger.showWarn("Plugin URL not available");
       return;
     }
@@ -799,31 +799,31 @@ class PluginManagerUIPlugin extends Plugin {
     }
 
     try {
-      this.log(`Removing plugin from ${pluginUrl}`);
+      this.logger.log(`Removing plugin from ${pluginUrl}`);
 
       const result = await window.customjs.pluginManager.removePlugin(
         pluginUrl
       );
 
       if (result.success) {
-        this.log("Plugin removed successfully");
+        this.logger.log("Plugin removed successfully");
         this.logger.showSuccess(
           "Plugin removed (restart VRCX to fully unload)"
         );
         setTimeout(() => this.refreshPluginList(), 500);
       } else {
-        this.error(`Removal failed: ${result.message}`);
+        this.logger.error(`Removal failed: ${result.message}`);
         this.logger.showError(`Removal failed: ${result.message}`);
       }
     } catch (error) {
-      this.error("Error removing plugin:", error);
+      this.logger.error("Error removing plugin:", error);
       this.logger.showError(`Error: ${error.message}`);
     }
   }
 
   async handleRetryFailedPlugin(url) {
     try {
-      this.log(`Retrying failed plugin: ${url}`);
+      this.logger.log(`Retrying failed plugin: ${url}`);
       this.logger.showInfo("Retrying plugin load...");
 
       // Remove from failed set
@@ -839,7 +839,7 @@ class PluginManagerUIPlugin extends Plugin {
         this.logger.showError(`Failed again: ${result.message}`);
       }
     } catch (error) {
-      this.error("Error retrying plugin:", error);
+      this.logger.error("Error retrying plugin:", error);
       this.logger.showError(`Error: ${error.message}`);
     }
   }
