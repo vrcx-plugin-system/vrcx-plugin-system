@@ -18,8 +18,8 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       description:
         "Automatically creates a self-invite to a new instance when a blocked player joins your current instance",
       author: "Bluscream",
-      version: "{VERSION}",
-      build: "{BUILD}",
+      version: "2.0.0",
+      build: "1728778800",
       dependencies: [],
     });
 
@@ -29,61 +29,13 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
   }
 
   async load() {
-    // Register settings
-    this.registerSettingCategory(
-      "general",
-      "General Settings",
-      "Basic configuration"
-    );
-    this.registerSettingCategory(
-      "notifications",
-      "Notifications",
-      "Notification settings"
-    );
+    // Settings are accessed via this.get() with defaults
+    const enabled = this.get("general.enabled", true);
+    const delayMs = this.get("general.delayMs", 1000);
+    const cooldownMs = this.get("general.cooldownMs", 30000);
 
-    this.registerSetting(
-      "general",
-      "enabled",
-      "Enable Auto Self-Invite",
-      "boolean",
-      true,
-      "Enable automatic self-invite when blocked player joins"
-    );
-
-    this.registerSetting(
-      "general",
-      "delayMs",
-      "Delay (milliseconds)",
-      "number",
-      1000,
-      "Delay before creating self-invite (default: 1000ms)"
-    );
-
-    this.registerSetting(
-      "general",
-      "cooldownMs",
-      "Cooldown (milliseconds)",
-      "number",
-      30000,
-      "Minimum time between self-invites (default: 30 seconds)"
-    );
-
-    this.registerSetting(
-      "notifications",
-      "showNotification",
-      "Show Notification",
-      "boolean",
-      true,
-      "Show notification when creating self-invite"
-    );
-
-    this.registerSetting(
-      "notifications",
-      "showPlayerName",
-      "Show Player Name",
-      "boolean",
-      false,
-      "Include blocked player's name in notification (privacy consideration)"
+    this.logger.log(
+      `⚙️ Enabled: ${enabled}, Delay: ${delayMs}ms, Cooldown: ${cooldownMs}ms`
     );
 
     this.logger.log("Self Invite on Blocked Player plugin ready");
@@ -172,7 +124,7 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
   async handlePlayerJoin(entry) {
     try {
       // Check if feature is enabled
-      if (!this.config.general.enabled.value) {
+      if (!this.get("general.enabled", true)) {
         return;
       }
 
@@ -202,7 +154,7 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
 
       // Check cooldown
       const now = Date.now();
-      const cooldown = this.config.general.cooldownMs.value;
+      const cooldown = this.get("general.cooldownMs", 30000);
 
       if (
         this.lastBlockedPlayerJoin &&
@@ -241,7 +193,7 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       }
 
       // Create self-invite with delay
-      const delay = this.config.general.delayMs.value;
+      const delay = this.get("general.delayMs", 1000);
       this.logger.log(`Creating self-invite to new instance in ${delay}ms...`);
 
       setTimeout(() => {
@@ -276,8 +228,8 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       this.logger.log(`✓ Self-invite created for world: ${worldId}`);
 
       // Show notification if enabled
-      if (this.config.notifications.showNotification.value) {
-        const showName = this.config.notifications.showPlayerName.value;
+      if (this.get("notifications.showNotification", true)) {
+        const showName = this.get("notifications.showPlayerName", false);
         const message = showName
           ? `Blocked player ${blockedPlayerName} joined. Self-invite created to new instance of ${worldName}`
           : `Blocked player joined. Self-invite created to new instance of ${worldName}`;
@@ -370,8 +322,8 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
     return {
       lastBlockedPlayerJoin: this.lastBlockedPlayerJoin,
       inviteCreated: this.inviteCreated,
-      enabled: this.config.general.enabled.value,
-      cooldown: this.config.general.cooldownMs.value,
+      enabled: this.get("general.enabled", true),
+      cooldown: this.get("general.cooldownMs", 30000),
     };
   }
 

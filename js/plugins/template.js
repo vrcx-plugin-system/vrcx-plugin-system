@@ -7,8 +7,8 @@ class TemplatePlugin extends Plugin {
       description:
         "Example plugin demonstrating all available features and lifecycle events",
       author: "Bluscream",
-      version: "{VERSION}",
-      build: "{BUILD}",
+      version: "2.0.0",
+      build: "1728778800",
       dependencies: [
         // Always include plugin.js as first dependency
         // List URLs of other plugins this depends on (optional)
@@ -44,76 +44,30 @@ class TemplatePlugin extends Plugin {
     // You can still expose specific utility methods if really needed
     // window.customjs.templateMethod = () => this.doSomething();
 
-    // ✅ NEW: Register plugin settings with ConfigManager
-    // First, register categories for organizing settings
-    this.registerSettingCategory(
-      "general",
-      "General Settings",
-      "Basic plugin configuration"
-    );
-    this.registerSettingCategory(
-      "notifications",
-      "Notifications",
-      "Notification preferences"
-    );
+    // ✅ NEW: Simplified settings with get/set (auto-saved to localStorage)
+    // Use dot notation for categories: "category.key"
+    // Settings are automatically saved when you call this.set()
 
-    // Then register individual settings
-    this.registerSetting(
-      "general",
-      "enableFeature",
-      "Enable Feature",
-      "boolean",
-      true,
-      "Enable the main feature of this plugin"
-    );
-    this.registerSetting(
-      "general",
-      "updateInterval",
-      "Update Interval (ms)",
-      "number",
-      60000,
-      "How often to update in milliseconds"
-    );
-    this.registerSetting(
-      "general",
-      "username",
-      "Username",
-      "string",
-      "Guest",
-      "Your username"
-    );
-    this.registerSetting(
-      "notifications",
-      "showDesktop",
-      "Desktop Notifications",
-      "boolean",
-      false,
-      "Show desktop notifications"
-    );
-    this.registerSetting(
-      "notifications",
-      "soundEnabled",
-      "Sound Enabled",
-      "boolean",
-      true,
-      "Play sound for notifications"
-    );
+    // Example: Get settings with defaults
+    const enableFeature = this.get("general.enableFeature", true);
+    const updateInterval = this.get("general.updateInterval", 60000);
+    const username = this.get("general.username", "Guest");
+    const showDesktop = this.get("notifications.showDesktop", false);
+    const soundEnabled = this.get("notifications.soundEnabled", true);
 
-    // Now you can access settings via this.config.categoryKey.settingKey
-    // this.config returns PluginSetting objects with metadata
-    this.logger.log(
-      `⚙️ Feature enabled: ${this.config.general.enableFeature.value} (default: ${this.config.general.enableFeature.defaultValue})`
-    );
-    this.logger.log(
-      `⚙️ Update interval: ${this.config.general.updateInterval.value}ms`
-    );
-    this.logger.log(`⚙️ Username: ${this.config.general.username.value}`);
-    this.logger.log(
-      `⚙️ Is username modified? ${this.config.general.username.isModified()}`
-    );
+    this.logger.log(`⚙️ Feature enabled: ${enableFeature}`);
+    this.logger.log(`⚙️ Update interval: ${updateInterval}ms`);
+    this.logger.log(`⚙️ Username: ${username}`);
+    this.logger.log(`⚙️ Desktop notifications: ${showDesktop}`);
+    this.logger.log(`⚙️ Sound enabled: ${soundEnabled}`);
 
-    // You can also access direct values via window.customjs.config.plugins.template
-    // this.logger.log(`⚙️ Via global proxy (direct value): ${window.customjs.config.plugins.template.general.enableFeature}`);
+    // Example: Set a setting (instantly saved to localStorage)
+    // this.set("general.enableFeature", false);
+    // this.set("general.username", "Bluscream");
+
+    // Example: Get all settings for this plugin as an object
+    // const allSettings = this.getAllSettings();
+    // this.logger.log("All settings:", allSettings);
 
     // Example: Register a pre-hook to run BEFORE a function
     // this.registerPreHook('AppApi.SendIpc', (args) => {
@@ -178,13 +132,13 @@ class TemplatePlugin extends Plugin {
     this.setupUI();
 
     // Example: Use settings to control behavior
-    const interval = this.config.general.updateInterval.value;
+    const interval = this.get("general.updateInterval", 60000);
 
     // Example: Register a timer with auto-cleanup when plugin stops
     this.timerInterval = this.registerTimer(
       setInterval(() => {
         // Only run if feature is enabled
-        if (this.config.general.enableFeature.value) {
+        if (this.get("general.enableFeature", true)) {
           this.counter++;
           this.logger.log(`⏱️ Timer tick #${this.counter}`);
 
@@ -258,18 +212,11 @@ class TemplatePlugin extends Plugin {
     // Example: Set global config values (not plugin settings)
     this.setConfig("template.lastLogin", Date.now());
 
-    // Example: Update plugin settings
-    this.config.general.username.value = displayName || "Unknown";
-    this.logger.log(
-      `⚙️ Updated username to: ${this.config.general.username.value}`
-    );
-    this.logger.log(
-      `⚙️ Username is now modified: ${this.config.general.username.isModified()}`
-    );
-
-    // Example: Save settings to disk (only modified settings are saved)
-    await this.saveSettings();
-    this.logger.log("💾 Settings saved to disk");
+    // Example: Update plugin settings (instantly saved)
+    this.set("general.username", displayName || "Unknown");
+    this.logger.log(`⚙️ Updated username to: ${this.get("general.username")}`);
+    // Settings are now instantly saved to localStorage!
+    this.logger.log("💾 Setting automatically saved to localStorage");
 
     // Example: Make authenticated API calls
     // const response = await window.request.userRequest.getUser({ userId });
@@ -381,18 +328,19 @@ class TemplatePlugin extends Plugin {
       <p><strong>Events Received:</strong> <span id="template-events">0</span></p>
       <hr>
       <h3>⚙️ Settings</h3>
-      <p><strong>Feature Enabled:</strong> ${
-        this.config.general.enableFeature.value
-      } (default: ${this.config.general.enableFeature.defaultValue})</p>
-      <p><strong>Update Interval:</strong> ${
-        this.config.general.updateInterval.value
-      }ms</p>
-      <p><strong>Username:</strong> ${this.config.general.username.value} ${
-      this.config.general.username.isModified() ? "(modified)" : "(default)"
-    }</p>
-      <p><strong>Desktop Notifications:</strong> ${
-        this.config.notifications.showDesktop.value
-      }</p>
+      <p><strong>Feature Enabled:</strong> ${this.get(
+        "general.enableFeature",
+        true
+      )}</p>
+      <p><strong>Update Interval:</strong> ${this.get(
+        "general.updateInterval",
+        60000
+      )}ms</p>
+      <p><strong>Username:</strong> ${this.get("general.username", "Guest")}</p>
+      <p><strong>Desktop Notifications:</strong> ${this.get(
+        "notifications.showDesktop",
+        false
+      )}</p>
       <hr>
       <button id="template-test-btn" class="el-button el-button--primary">
         🧪 Test Button
@@ -436,16 +384,12 @@ class TemplatePlugin extends Plugin {
       const toggleBtn = container.querySelector("#template-toggle-btn");
       if (toggleBtn) {
         this.registerListener(toggleBtn, "click", () => {
-          this.config.general.enableFeature.value =
-            !this.config.general.enableFeature.value;
-          this.logger.log(
-            `🔄 Feature toggled: ${this.config.general.enableFeature.value}`
-          );
+          const newValue = !this.get("general.enableFeature", true);
+          this.set("general.enableFeature", newValue);
+          this.logger.log(`🔄 Feature toggled: ${newValue}`);
           if (this.utils) {
             this.logger.showSuccess(
-              `Feature ${
-                this.config.general.enableFeature.value ? "enabled" : "disabled"
-              }`
+              `Feature ${newValue ? "enabled" : "disabled"}`
             );
           }
         });
@@ -454,10 +398,10 @@ class TemplatePlugin extends Plugin {
       const saveBtn = container.querySelector("#template-save-btn");
       if (saveBtn) {
         this.registerListener(saveBtn, "click", async () => {
-          await this.saveSettings();
-          this.logger.log("💾 Settings saved!");
+          // Settings are now auto-saved to localStorage instantly!
+          this.logger.log("💾 Settings are auto-saved!");
           if (this.utils) {
-            this.logger.showSuccess("Settings saved to disk");
+            this.logger.showSuccess("All settings are automatically saved");
           }
         });
       }

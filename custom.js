@@ -1,7 +1,7 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "2.0.0",
-  build: "1760486400",
+  version: "2.1.0",
+  build: "1728778800",
 };
 
 console.log(
@@ -180,6 +180,78 @@ class CoreModule extends Module {
       window.customjs.coreModules = new Map();
     }
     window.customjs.coreModules.set(this.metadata.id, this);
+  }
+
+  /**
+   * Get value from localStorage (direct access, no ConfigManager needed)
+   * @param {string} key - Key to get (will be prefixed with "customjs.")
+   * @param {any} defaultValue - Default value if not found
+   * @returns {any} Value from storage or default
+   */
+  get(key, defaultValue = null) {
+    try {
+      const fullKey = `customjs.${key}`;
+      const stored = localStorage.getItem(fullKey);
+
+      if (stored === null) {
+        return defaultValue;
+      }
+
+      // Try to parse as JSON
+      try {
+        return JSON.parse(stored);
+      } catch {
+        // If not JSON, return as string
+        return stored;
+      }
+    } catch (error) {
+      this.error(`Error getting ${key}: ${error.message}`);
+      return defaultValue;
+    }
+  }
+
+  /**
+   * Set value in localStorage (direct access, no ConfigManager needed)
+   * @param {string} key - Key to set (will be prefixed with "customjs.")
+   * @param {any} value - Value to store
+   * @returns {boolean} Success status
+   */
+  set(key, value) {
+    try {
+      const fullKey = `customjs.${key}`;
+      const jsonValue = JSON.stringify(value);
+      localStorage.setItem(fullKey, jsonValue);
+      return true;
+    } catch (error) {
+      this.error(`Error setting ${key}: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Delete value from localStorage (direct access, no ConfigManager needed)
+   * @param {string} key - Key to delete (will be prefixed with "customjs.")
+   * @returns {boolean} Success status
+   */
+  delete(key) {
+    try {
+      const fullKey = `customjs.${key}`;
+      localStorage.removeItem(fullKey);
+      return true;
+    } catch (error) {
+      this.error(`Error deleting ${key}: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Check if key exists in localStorage (direct access, no ConfigManager needed)
+   * @param {string} key - Key to check (will be prefixed with "customjs.")
+   * @returns {boolean} True if key exists
+   */
+  has(key) {
+    const fullKey = `customjs.${key}`;
+    return localStorage.getItem(fullKey) !== null;
   }
 }
 

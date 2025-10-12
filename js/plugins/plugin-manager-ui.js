@@ -4,8 +4,8 @@ class PluginManagerUIPlugin extends Plugin {
       name: "Plugin Manager UI",
       description: "Visual UI for managing VRCX custom plugins",
       author: "Bluscream",
-      version: "5.1.1",
-      build: "1760532400",
+      version: "5.2.0",
+      build: "1728778800",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -890,10 +890,7 @@ class PluginManagerUIPlugin extends Plugin {
         const config = window.customjs.pluginManager.getPluginConfig();
         config[plugin.metadata.url] = plugin.enabled;
         window.customjs.pluginManager.savePluginConfig(config);
-
-        if (window.customjs?.configManager) {
-          await window.customjs.configManager.save();
-        }
+        // Settings are now auto-saved to localStorage!
       }
 
       setTimeout(() => this.refreshPluginList(), 100);
@@ -1007,9 +1004,9 @@ class PluginManagerUIPlugin extends Plugin {
 
   handleShowSettings(plugin) {
     // Check if plugin has settings
-    const hasSettings =
-      window.customjs?.configManager?.settings?.get(plugin.metadata.id)?.size >
-      0;
+    const settings =
+      window.customjs?.configManager?.getPluginConfig(plugin.metadata.id) || {};
+    const hasSettings = Object.keys(settings).length > 0;
 
     if (!hasSettings) {
       this.logger.showWarn("This plugin has no configurable settings");
@@ -1134,9 +1131,9 @@ class PluginManagerUIPlugin extends Plugin {
           `Reset all settings for "${plugin.metadata.name}" to their default values?`
         )
       ) {
-        window.customjs.configManager.reset(plugin.metadata.id);
-        await window.customjs.configManager.save();
-        this.logger.showSuccess("Settings reset to defaults");
+        // Clear all settings for this plugin
+        plugin.clearAllSettings();
+        this.logger.showSuccess("Settings cleared (will use defaults)");
         // Refresh the modal
         content.innerHTML = "";
         content.appendChild(this.buildSettingsUI(plugin));
@@ -1158,14 +1155,11 @@ class PluginManagerUIPlugin extends Plugin {
   buildSettingsUI(plugin) {
     const container = document.createElement("div");
 
-    const categories =
-      window.customjs.configManager.categories.get(plugin.metadata.id) ||
-      new Map();
-    const settings =
-      window.customjs.configManager.settings.get(plugin.metadata.id) ||
-      new Map();
+    // Get all settings for this plugin as nested object
+    const allSettings =
+      window.customjs.configManager.getPluginConfig(plugin.metadata.id) || {};
 
-    if (settings.size === 0) {
+    if (Object.keys(allSettings).length === 0) {
       container.innerHTML = `
         <div style="text-align: center; padding: 40px; color: #6c757d;">
           <i class="ri-inbox-line" style="font-size: 48px; opacity: 0.5;"></i>
@@ -1175,13 +1169,8 @@ class PluginManagerUIPlugin extends Plugin {
       return container;
     }
 
-    // Render each category
-    settings.forEach((categorySettings, categoryKey) => {
-      const categoryInfo = categories.get(categoryKey) || {
-        name: categoryKey,
-        description: "",
-      };
-
+    // Render each category (top-level keys)
+    Object.entries(allSettings).forEach(([categoryKey, categorySettings]) => {
       // Category header
       const categoryHeader = document.createElement("div");
       categoryHeader.style.cssText = `
@@ -1191,13 +1180,8 @@ class PluginManagerUIPlugin extends Plugin {
       `;
       categoryHeader.innerHTML = `
         <h4 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: #212529;">
-          ${categoryInfo.name}
+          ${this.formatCategoryName(categoryKey)}
         </h4>
-        ${
-          categoryInfo.description
-            ? `<p style="margin: 0; font-size: 13px; color: #6c757d;">${categoryInfo.description}</p>`
-            : ""
-        }
       `;
       container.appendChild(categoryHeader);
 
@@ -1206,14 +1190,23 @@ class PluginManagerUIPlugin extends Plugin {
       settingsContainer.style.cssText =
         "display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;";
 
-      categorySettings.forEach((setting, settingKey) => {
-        const settingRow = this.createSettingInput(
-          plugin,
-          categoryKey,
-          setting
+      // Render each setting in the category
+      if (
+        typeof categorySettings === "object" &&
+        !Array.isArray(categorySettings)
+      ) {
+        Object.entries(categorySettings).forEach(
+          ([settingKey, settingValue]) => {
+            const settingRow = this.createSettingInput(
+              plugin,
+              categoryKey,
+              settingKey,
+              settingValue
+            );
+            settingsContainer.appendChild(settingRow);
+          }
         );
-        settingsContainer.appendChild(settingRow);
-      });
+      }
 
       container.appendChild(settingsContainer);
     });
@@ -1221,7 +1214,48 @@ class PluginManagerUIPlugin extends Plugin {
     return container;
   }
 
-  createSettingInput(plugin, categoryKey, setting) {
+  /**
+   * Format category name for display
+   * @param {string} key - Category key
+   * @returns {string} Formatted name
+   */
+  formatCategoryName(key) {
+    // Convert camelCase or snake_case to Title Case
+    return key
+      .replace(/([A-Z])/g, " $1")
+      .replace(/_/g, " ")
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
+  }
+
+  /**
+   * Format setting name for display
+   * @param {string} key - Setting key
+   * @returns {string} Formatted name
+   */
+  formatSettingName(key) {
+    return key
+      .replace(/([A-Z])/g, " $1")
+      .replace(/_/g, " ")
+      .replace(/^./, (str) => str.toUpperCase())
+      .trim();
+  }
+
+  /**
+   * Infer type from value
+   * @param {any} value - Value to check
+   * @returns {string} Type name
+   */
+  inferType(value) {
+    if (value === null || value === undefined) return "string";
+    if (typeof value === "boolean") return "boolean";
+    if (typeof value === "number") return "number";
+    if (Array.isArray(value)) return "array";
+    if (typeof value === "object") return "object";
+    return "string";
+  }
+
+  createSettingInput(plugin, categoryKey, settingKey, settingValue) {
     const row = document.createElement("div");
     row.style.cssText = `
       display: flex;
@@ -1239,24 +1273,24 @@ class PluginManagerUIPlugin extends Plugin {
     const label = document.createElement("div");
     label.style.cssText =
       "font-size: 14px; font-weight: 500; color: #212529; margin-bottom: 3px;";
-    label.textContent = setting.name;
+    label.textContent = this.formatSettingName(settingKey);
 
     const description = document.createElement("div");
-    description.style.cssText = "font-size: 12px; color: #6c757d;";
-    description.textContent = setting.description || "";
+    description.style.cssText =
+      "font-size: 12px; color: #6c757d; font-family: monospace;";
+    description.textContent = `${categoryKey}.${settingKey}`;
 
     labelSection.appendChild(label);
-    if (setting.description) {
-      labelSection.appendChild(description);
-    }
+    labelSection.appendChild(description);
 
     // Input section
     const inputSection = document.createElement("div");
     inputSection.style.cssText = "margin-left: 15px; min-width: 200px;";
 
     let input;
+    const settingType = this.inferType(settingValue);
 
-    switch (setting.type) {
+    switch (settingType) {
       case "boolean":
         input = document.createElement("label");
         input.className = "el-switch";
@@ -1265,7 +1299,7 @@ class PluginManagerUIPlugin extends Plugin {
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
         checkbox.className = "el-switch__input";
-        checkbox.checked = setting.value;
+        checkbox.checked = settingValue;
         checkbox.style.cssText = "display: none;";
 
         const core = document.createElement("span");
@@ -1276,7 +1310,7 @@ class PluginManagerUIPlugin extends Plugin {
           width: 40px;
           height: 20px;
           border-radius: 10px;
-          background: ${setting.value ? "#409eff" : "#dcdfe6"};
+          background: ${settingValue ? "#409eff" : "#dcdfe6"};
           transition: background-color 0.3s;
           cursor: pointer;
         `;
@@ -1286,7 +1320,7 @@ class PluginManagerUIPlugin extends Plugin {
         action.style.cssText = `
           position: absolute;
           top: 1px;
-          left: ${setting.value ? "21px" : "1px"};
+          left: ${settingValue ? "21px" : "1px"};
           width: 18px;
           height: 18px;
           border-radius: 50%;
@@ -1299,13 +1333,12 @@ class PluginManagerUIPlugin extends Plugin {
         input.appendChild(core);
 
         this.registerListener(input, "click", async () => {
-          const newValue = !setting.value;
-          setting.value = newValue;
+          const newValue = !plugin.get(`${categoryKey}.${settingKey}`, false);
+          plugin.set(`${categoryKey}.${settingKey}`, newValue);
           checkbox.checked = newValue;
           core.style.background = newValue ? "#409eff" : "#dcdfe6";
           action.style.left = newValue ? "21px" : "1px";
-          await window.customjs.configManager.save();
-          this.logger.log(`Updated ${setting.name} to ${newValue}`);
+          this.logger.log(`Updated ${settingKey} to ${newValue}`);
         });
         break;
 
@@ -1313,7 +1346,7 @@ class PluginManagerUIPlugin extends Plugin {
         input = document.createElement("input");
         input.type = "number";
         input.className = "el-input__inner";
-        input.value = setting.value;
+        input.value = settingValue;
         input.style.cssText = `
           width: 100%;
           padding: 8px 12px;
@@ -1325,9 +1358,8 @@ class PluginManagerUIPlugin extends Plugin {
         this.registerListener(input, "change", async () => {
           const newValue = parseFloat(input.value);
           if (!isNaN(newValue)) {
-            setting.value = newValue;
-            await window.customjs.configManager.save();
-            this.logger.log(`Updated ${setting.name} to ${newValue}`);
+            plugin.set(`${categoryKey}.${settingKey}`, newValue);
+            this.logger.log(`Updated ${settingKey} to ${newValue}`);
           }
         });
         break;
@@ -1336,7 +1368,7 @@ class PluginManagerUIPlugin extends Plugin {
         input = document.createElement("input");
         input.type = "text";
         input.className = "el-input__inner";
-        input.value = setting.value;
+        input.value = settingValue;
         input.style.cssText = `
           width: 100%;
           padding: 8px 12px;
@@ -1346,9 +1378,8 @@ class PluginManagerUIPlugin extends Plugin {
         `;
 
         this.registerListener(input, "change", async () => {
-          setting.value = input.value;
-          await window.customjs.configManager.save();
-          this.logger.log(`Updated ${setting.name} to ${input.value}`);
+          plugin.set(`${categoryKey}.${settingKey}`, input.value);
+          this.logger.log(`Updated ${settingKey} to ${input.value}`);
         });
         break;
 
@@ -1356,7 +1387,7 @@ class PluginManagerUIPlugin extends Plugin {
       case "object":
         input = document.createElement("textarea");
         input.className = "el-textarea__inner";
-        input.value = JSON.stringify(setting.value, null, 2);
+        input.value = JSON.stringify(settingValue, null, 2);
         input.rows = 4;
         input.style.cssText = `
           width: 100%;
@@ -1371,10 +1402,9 @@ class PluginManagerUIPlugin extends Plugin {
         this.registerListener(input, "change", async () => {
           try {
             const newValue = JSON.parse(input.value);
-            setting.value = newValue;
-            await window.customjs.configManager.save();
+            plugin.set(`${categoryKey}.${settingKey}`, newValue);
             input.style.borderColor = "#dcdfe6";
-            this.logger.log(`Updated ${setting.name}`);
+            this.logger.log(`Updated ${settingKey}`);
           } catch (error) {
             input.style.borderColor = "#f56c6c";
             this.logger.showError("Invalid JSON format");
@@ -1384,7 +1414,7 @@ class PluginManagerUIPlugin extends Plugin {
 
       default:
         input = document.createElement("span");
-        input.textContent = `Unsupported type: ${setting.type}`;
+        input.textContent = `Unsupported type: ${settingType}`;
         input.style.cssText = "color: #f56c6c; font-size: 13px;";
     }
 

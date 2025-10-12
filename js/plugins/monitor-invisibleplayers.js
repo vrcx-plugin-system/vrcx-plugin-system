@@ -17,8 +17,8 @@ class InvisiblePlayersMonitorPlugin extends Plugin {
       description:
         "Detects and notifies when potentially invisible players are in your instance",
       author: "Bluscream",
-      version: "{VERSION}",
-      build: "{BUILD}",
+      version: "2.0.0",
+      build: "1728778800",
       dependencies: [],
     });
 
@@ -26,52 +26,12 @@ class InvisiblePlayersMonitorPlugin extends Plugin {
   }
 
   async load() {
-    // Register settings
-    this.registerSettingCategory(
-      "general",
-      "General Settings",
-      "Basic configuration"
-    );
-    this.registerSettingCategory(
-      "notifications",
-      "Notifications",
-      "Notification settings"
-    );
+    // Settings are accessed via this.get() with defaults
+    const enabled = this.get("general.enabled", true);
+    const modifyInstanceName = this.get("general.modifyInstanceName", true);
 
-    this.registerSetting(
-      "general",
-      "enabled",
-      "Enable Monitoring",
-      "boolean",
-      true,
-      "Enable invisible player detection"
-    );
-
-    this.registerSetting(
-      "general",
-      "modifyInstanceName",
-      "Modify Instance Display Name",
-      "boolean",
-      true,
-      "Add invisible player count to instance display name"
-    );
-
-    this.registerSetting(
-      "notifications",
-      "showNotification",
-      "Show Notification",
-      "boolean",
-      true,
-      "Show notification when invisible players are detected"
-    );
-
-    this.registerSetting(
-      "notifications",
-      "notifyOnlyOnChange",
-      "Only Notify on Change",
-      "boolean",
-      true,
-      "Only show notification when invisible player count changes"
+    this.logger.log(
+      `⚙️ Enabled: ${enabled}, Modify instance name: ${modifyInstanceName}`
     );
 
     this.logger.log("Invisible Players Monitor plugin ready");
@@ -133,7 +93,7 @@ class InvisiblePlayersMonitorPlugin extends Plugin {
   handleInstanceData(instanceArgs) {
     try {
       // Check if monitoring is enabled
-      if (!this.config.general.enabled.value) {
+      if (!this.get("general.enabled", true)) {
         return;
       }
 
@@ -143,7 +103,7 @@ class InvisiblePlayersMonitorPlugin extends Plugin {
 
       if (invisiblePlayers > 0) {
         // Modify instance display name if enabled
-        if (this.config.general.modifyInstanceName.value) {
+        if (this.get("general.modifyInstanceName", true)) {
           instanceArgs.json.invisiblePlayers = invisiblePlayers;
           instanceArgs.json.displayName = `${
             instanceArgs.json.displayName ?? instanceArgs.json.name
@@ -156,10 +116,10 @@ class InvisiblePlayersMonitorPlugin extends Plugin {
         );
 
         // Show notification if enabled
-        if (this.config.notifications.showNotification.value) {
+        if (this.get("notifications.showNotification", true)) {
           // Check if we should only notify on change
           if (
-            this.config.notifications.notifyOnlyOnChange.value &&
+            this.get("notifications.notifyOnlyOnChange", true) &&
             invisiblePlayers === this.lastInvisiblePlayers
           ) {
             return;

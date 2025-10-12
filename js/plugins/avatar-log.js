@@ -5,8 +5,8 @@ class AvatarLogPlugin extends Plugin {
       description:
         "Logs and submits avatar IDs to various avatar database providers (avtrDB, NSVR, PAW, VRCDB, VRCWB)",
       author: "Bluscream",
-      version: "1.0.5",
-      build: "1728758900",
+      version: "2.0.0",
+      build: "1728778800",
       dependencies: [],
     });
 
@@ -44,116 +44,20 @@ class AvatarLogPlugin extends Plugin {
   async load() {
     this.logger.log("📦 Loading Avatar Logger...");
 
-    // Register settings
-    this.registerSettingCategory(
-      "general",
-      "General Settings",
-      "Basic configuration"
-    );
-    this.registerSettingCategory(
-      "providers",
-      "Avatar Database Providers",
-      "Enable/disable providers"
-    );
-    this.registerSettingCategory(
-      "advanced",
-      "Advanced Settings",
-      "Advanced configuration"
-    );
+    // Settings are accessed via this.get() with defaults
+    // Log current provider settings
+    const providers = {
+      avtrDB: this.get("providers.enableAvtrDB", true),
+      nsvr: this.get("providers.enableNSVR", true),
+      paw: this.get("providers.enablePAW", true),
+      vrcdb: this.get("providers.enableVRCDB", true),
+      vrcwb: this.get("providers.enableVRCWB", true),
+    };
 
-    // General settings
-    this.registerSetting(
-      "general",
-      "attribution",
-      "Discord User ID (Attribution)",
-      "string",
-      "",
-      "Your Discord User ID for attribution (leave empty for anonymous)"
-    );
-    this.registerSetting(
-      "general",
-      "logToConsole",
-      "Log to Console",
-      "boolean",
-      true,
-      "Log avatar processing to browser console"
-    );
-
-    // Provider settings
-    this.registerSetting(
-      "providers",
-      "enableAvtrDB",
-      "Enable avtrDB",
-      "boolean",
-      true,
-      "avtrDB - Avatar Search (api.avtrdb.com)"
-    );
-    this.registerSetting(
-      "providers",
-      "enableNSVR",
-      "Enable NSVR",
-      "boolean",
-      true,
-      "NSVR - NekoSune Community (avtr.nekosunevr.co.uk)"
-    );
-    this.registerSetting(
-      "providers",
-      "enablePAW",
-      "Enable PAW",
-      "boolean",
-      true,
-      "PAW - Puppy's Avatar World (paw-api.amelia.fun)"
-    );
-    this.registerSetting(
-      "providers",
-      "enableVRCDB",
-      "Enable VRCDB",
-      "boolean",
-      true,
-      "VRCDB - Avatar Search (search.bs002.de)"
-    );
-    this.registerSetting(
-      "providers",
-      "enableVRCWB",
-      "Enable VRCWB",
-      "boolean",
-      true,
-      "VRCWB - World Balancer (avatar.worldbalancer.com)"
-    );
-
-    // Advanced settings
-    this.registerSetting(
-      "advanced",
-      "batchSize",
-      "Batch Size",
-      "number",
-      5,
-      "Number of avatars to process simultaneously"
-    );
-    this.registerSetting(
-      "advanced",
-      "queueDelay",
-      "Queue Delay (ms)",
-      "number",
-      2000,
-      "Delay between processing batches"
-    );
-    this.registerSetting(
-      "advanced",
-      "retryAttempts",
-      "Retry Attempts",
-      "number",
-      3,
-      "Number of retry attempts for failed requests"
-    );
-    this.registerSetting(
-      "advanced",
-      "scanOnStartup",
-      "Scan Stores on Startup",
-      "boolean",
-      true,
-      "Scan avatar stores on login"
-    );
+    const enabledProviders = Object.entries(providers)
+      .filter(([k, v]) => v)
+      .map(([k]) => k);
+    this.logger.log(`⚙️ Enabled providers: ${enabledProviders.join(", ")}`);
 
     // Load processed avatars from storage
     this.loadProcessedAvatars();
@@ -171,7 +75,7 @@ class AvatarLogPlugin extends Plugin {
   }
 
   async onLogin() {
-    if (!this.config.advanced.scanOnStartup.value) return;
+    if (!this.get("advanced.scanOnStartup", true)) return;
 
     this.logger.log("👤 User logged in, scanning avatar stores...");
 
@@ -261,7 +165,7 @@ class AvatarLogPlugin extends Plugin {
       return;
     }
 
-    if (this.config.general.logToConsole.value) {
+    if (this.get("general.logToConsole", true)) {
       this.logger.log(`📋 Queuing avatar: ${avatarId} (from: ${source})`);
     }
 
@@ -283,7 +187,7 @@ class AvatarLogPlugin extends Plugin {
     this.isProcessing = true;
 
     try {
-      const batchSize = this.config.advanced.batchSize.value;
+      const batchSize = this.get("advanced.batchSize", 5);
       const batch = Array.from(this.pendingQueue).slice(0, batchSize);
 
       // Process batch
@@ -295,7 +199,7 @@ class AvatarLogPlugin extends Plugin {
 
       // Continue processing if more in queue
       if (this.pendingQueue.size > 0) {
-        const delay = this.config.advanced.queueDelay.value;
+        const delay = this.get("advanced.queueDelay", 2000);
         setTimeout(() => {
           this.isProcessing = false;
           this.processQueue();
@@ -312,7 +216,7 @@ class AvatarLogPlugin extends Plugin {
 
   // Send avatar ID to all enabled providers
   async sendToProviders(avatarId) {
-    const attribution = this.config.general.attribution.value || "";
+    const attribution = this.get("general.attribution", "");
     const userId = attribution || "1007655277732651069"; // VRC-LOG Dev ID as default
 
     const results = {
@@ -321,23 +225,23 @@ class AvatarLogPlugin extends Plugin {
     };
 
     // Send to each enabled provider
-    if (this.config.providers.enableAvtrDB.value) {
+    if (this.get("providers.enableAvtrDB", true)) {
       results.providers.avtrdb = await this.sendToAvtrDB(avatarId, userId);
     }
-    if (this.config.providers.enableNSVR.value) {
+    if (this.get("providers.enableNSVR", true)) {
       results.providers.nsvr = await this.sendToNSVR(avatarId, userId);
     }
-    if (this.config.providers.enablePAW.value) {
+    if (this.get("providers.enablePAW", true)) {
       results.providers.paw = await this.sendToPAW(avatarId);
     }
-    if (this.config.providers.enableVRCDB.value) {
+    if (this.get("providers.enableVRCDB", true)) {
       results.providers.vrcdb = await this.sendToVRCDB(avatarId, userId);
     }
-    if (this.config.providers.enableVRCWB.value) {
+    if (this.get("providers.enableVRCWB", true)) {
       results.providers.vrcwb = await this.sendToVRCWB(avatarId, userId);
     }
 
-    if (this.config.general.logToConsole.value) {
+    if (this.get("general.logToConsole", true)) {
       this.logger.log(`✅ Processed ${avatarId}:`, results.providers);
     }
 

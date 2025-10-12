@@ -30,8 +30,8 @@ class AutoFollowPlugin extends Plugin {
       description:
         "Automatic location tracking system that follows selected users",
       author: "Bluscream",
-      version: "{VERSION}",
-      build: "{BUILD}",
+      version: "2.0.0",
+      build: "1728778800",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
       ],
@@ -49,21 +49,10 @@ class AutoFollowPlugin extends Plugin {
   }
 
   async load() {
-    // Register settings
-    this.registerSettingCategory(
-      "messages",
-      "Messages",
-      "Invite message configuration"
-    );
+    // Settings are accessed via this.get() with defaults
+    const message = this.get("messages.customInviteMessage", "Can I join you?");
 
-    this.registerSetting(
-      "messages",
-      "customInviteMessage",
-      "Custom Invite Message",
-      "string",
-      "Can I join you?",
-      "Message template for invite requests when following users"
-    );
+    this.logger.log(`⚙️ Custom invite message: "${message}"`);
 
     this.logger.log("Auto Follow plugin ready");
     this.loaded = true;
@@ -249,7 +238,10 @@ class AutoFollowPlugin extends Plugin {
 
     try {
       // Get custom message template from config
-      const messageTemplate = this.config.messages.customInviteMessage.value;
+      const messageTemplate = this.get(
+        "messages.customInviteMessage",
+        "Can I join you?"
+      );
 
       // Process template
       let customMessage = null;
@@ -264,9 +256,12 @@ class AutoFollowPlugin extends Plugin {
       }
 
       // Fallback to default config if null
-      if (!customMessage && this.config.messages.customInviteMessage.value) {
+      if (
+        !customMessage &&
+        this.get("messages.customInviteMessage", "Can I join you?")
+      ) {
         customMessage = this.processInviteMessageTemplate(
-          this.config.messages.customInviteMessage.value,
+          this.get("messages.customInviteMessage", "Can I join you?"),
           user,
           worldName,
           instanceId
@@ -478,7 +473,7 @@ class AutoFollowPlugin extends Plugin {
    * @returns {string|null} Current message template or null if disabled
    */
   getCustomInviteMessage() {
-    return this.config.messages.customInviteMessage.value;
+    return this.get("messages.customInviteMessage", "Can I join you?");
   }
 
   /**
@@ -503,7 +498,7 @@ class AutoFollowPlugin extends Plugin {
    * Set to null to omit custom messages (will use default config or no message)
    */
   async setCustomInviteMessage(message) {
-    this.config.messages.customInviteMessage.value = message;
+    this.set("messages.customInviteMessage", message);
     await this.saveSettings();
     if (message === null) {
       this.logger.log("Custom invite message disabled");

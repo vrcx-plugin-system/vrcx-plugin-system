@@ -36,9 +36,6 @@ class Plugin extends Module {
     // Create personal logger instance for this plugin
     this.logger = new window.customjs.Logger(this.metadata.id);
 
-    // Initialize config object (will be populated by ConfigManager)
-    this.config = {};
-
     // Add hooks tracking to resources
     this.resources.hooks = new Set();
 
@@ -342,100 +339,119 @@ class Plugin extends Module {
   }
 
   /**
-   * Get configuration value from customjs.config (global config, not plugin settings)
-   * @param {string} path - Dot-notation path (e.g., "steam.id")
+   * Get setting value (auto-prepends plugin ID)
+   * @param {string} key - Setting key (can use dot notation for categories)
    * @param {any} defaultValue - Default value if not found
+   * @returns {any} Setting value or default
+   * @example
+   * // Simple key
+   * const message = this.get("message", "default");
+   *
+   * // With category
+   * const enabled = this.get("general.enabled", true);
    */
-  getConfig(path, defaultValue = null) {
-    const keys = path.split(".");
-    let value = window.customjs?.config;
-
-    for (const key of keys) {
-      value = value?.[key];
-      if (value === undefined) return defaultValue;
-    }
-
-    return value;
-  }
-
-  /**
-   * Set configuration value (global config, not plugin settings)
-   * @param {string} path - Dot-notation path
-   * @param {any} value - Value to set
-   */
-  setConfig(path, value) {
-    const keys = path.split(".");
-    const lastKey = keys.pop();
-    let target = window.customjs.config;
-
-    for (const key of keys) {
-      target[key] = target[key] || {};
-      target = target[key];
-    }
-
-    target[lastKey] = value;
-  }
-
-  /**
-   * Register a setting category for this plugin
-   * @param {string} key - Category key
-   * @param {string} name - Display name
-   * @param {string} description - Description
-   */
-  registerSettingCategory(key, name, description = "") {
+  get(key, defaultValue = null) {
     if (!window.customjs?.configManager) {
       this.warn("ConfigManager not available");
-      return;
+      return defaultValue;
     }
-    window.customjs.configManager.registerPluginSettingCategory(
-      this,
-      key,
-      name,
-      description
-    );
+
+    const fullKey = `${this.metadata.id}.${key}`;
+    return window.customjs.configManager.get(fullKey, defaultValue);
   }
 
   /**
-   * Register a setting for this plugin
-   * @param {string} categoryKey - Category key
+   * Set setting value (auto-prepends plugin ID)
+   * @param {string} key - Setting key (can use dot notation for categories)
+   * @param {any} value - Value to store
+   * @returns {boolean} Success status
+   * @example
+   * // Simple key
+   * this.set("message", "Hello World");
+   *
+   * // With category
+   * this.set("general.enabled", false);
+   */
+  set(key, value) {
+    if (!window.customjs?.configManager) {
+      this.warn("ConfigManager not available");
+      return false;
+    }
+
+    const fullKey = `${this.metadata.id}.${key}`;
+    return window.customjs.configManager.set(fullKey, value);
+  }
+
+  /**
+   * Delete setting (auto-prepends plugin ID)
    * @param {string} key - Setting key
-   * @param {string} name - Display name
-   * @param {string} type - Type (string, number, boolean, object, array)
-   * @param {any} defaultValue - Default value
-   * @param {string} description - Optional description
+   * @returns {boolean} Success status
    */
-  registerSetting(
-    categoryKey,
-    key,
-    name,
-    type,
-    defaultValue,
-    description = ""
-  ) {
+  deleteSetting(key) {
     if (!window.customjs?.configManager) {
       this.warn("ConfigManager not available");
-      return;
+      return false;
     }
-    window.customjs.configManager.registerPluginSetting(
-      this,
-      categoryKey,
-      key,
-      name,
-      type,
-      defaultValue,
-      description
-    );
+
+    const fullKey = `${this.metadata.id}.${key}`;
+    return window.customjs.configManager.delete(fullKey);
   }
 
   /**
-   * Save plugin settings to disk
+   * Check if setting exists (auto-prepends plugin ID)
+   * @param {string} key - Setting key
+   * @returns {boolean} True if setting exists
    */
-  async saveSettings() {
+  hasSetting(key) {
+    if (!window.customjs?.configManager) {
+      this.warn("ConfigManager not available");
+      return false;
+    }
+
+    const fullKey = `${this.metadata.id}.${key}`;
+    return window.customjs.configManager.has(fullKey);
+  }
+
+  /**
+   * Get all settings keys for this plugin
+   * @returns {string[]} Array of setting keys (without plugin ID prefix)
+   */
+  getAllSettingKeys() {
+    if (!window.customjs?.configManager) {
+      this.warn("ConfigManager not available");
+      return [];
+    }
+
+    return window.customjs.configManager.keys(this.metadata.id);
+  }
+
+  /**
+   * Get all settings for this plugin as a nested object
+   * @returns {object} All settings for this plugin
+   * @example
+   * const settings = this.getAllSettings();
+   * // Returns: { general: { enabled: true }, notifications: { ... } }
+   */
+  getAllSettings() {
+    if (!window.customjs?.configManager) {
+      this.warn("ConfigManager not available");
+      return {};
+    }
+
+    return window.customjs.configManager.getPluginConfig(this.metadata.id);
+  }
+
+  /**
+   * Clear all settings for this plugin
+   */
+  clearAllSettings() {
     if (!window.customjs?.configManager) {
       this.warn("ConfigManager not available");
       return;
     }
-    await window.customjs.configManager.save();
+
+    window.customjs.configManager.clear(this.metadata.id);
+    this.log("✓ Cleared all settings");
   }
 }
 
@@ -1257,25 +1273,7 @@ class PluginManager {
       }
     }
 
-    // Phase 2: Initialize ConfigManager (if exists)
-    if (window.customjs?.configManager) {
-      console.log(
-        `%c[CJS|PluginManager] %cInitializing ConfigManager...`,
-        "font-weight: bold; color: #00aaff",
-        "color: #888"
-      );
-      try {
-        await window.customjs.configManager.init();
-        console.log("[CJS|PluginManager] ✓ ConfigManager initialized");
-      } catch (error) {
-        console.error(
-          "[CJS|PluginManager] ✗ Error initializing ConfigManager:",
-          error
-        );
-      }
-    }
-
-    // Phase 3: Get plugin list from config (merge with defaults)
+    // Phase 2: Get plugin list from config (merge with defaults)
     const pluginConfig = this.getPluginConfig();
     const enabledPlugins = Object.entries(pluginConfig)
       .filter(([url, enabled]) => enabled)
@@ -1294,7 +1292,7 @@ class PluginManager {
       });
     }
 
-    // Phase 4: Load enabled plugins using PluginLoader
+    // Phase 3: Load enabled plugins using PluginLoader
     if (window.customjs?.PluginLoader) {
       const pluginLoader = new window.customjs.PluginLoader(this);
 
@@ -1318,7 +1316,7 @@ class PluginManager {
       );
     }
 
-    // Phase 5: Call load() on all plugins
+    // Phase 4: Call load() on all plugins
     console.log(
       `%c[CJS|PluginManager] %cCalling load() on ${window.customjs.plugins.length} plugins...`,
       "font-weight: bold; color: #00aaff",
@@ -1335,17 +1333,14 @@ class PluginManager {
       }
     }
 
-    // Phase 6: Call start() on all plugins
+    // Phase 5: Call start() on all plugins
     await this.startAllPlugins();
 
-    // Phase 7: Start login monitoring
+    // Phase 6: Start login monitoring
     this.startLoginMonitoring();
 
-    // Phase 8: Save plugin config to disk
+    // Phase 7: Save plugin config
     this.savePluginConfig(pluginConfig);
-    if (window.customjs?.configManager) {
-      await window.customjs.configManager.save();
-    }
 
     console.log(
       `%c[CJS|PluginManager] %c✓ Plugin system ready!`,
@@ -1399,13 +1394,10 @@ class PluginManager {
         );
       }
 
-      // Add to plugin config and save
+      // Add to plugin config
       const config = this.getPluginConfig();
       config[url] = true;
       this.savePluginConfig(config);
-      if (window.customjs?.configManager) {
-        await window.customjs.configManager.save();
-      }
 
       return { success: true, message: "Loaded successfully" };
     } catch (error) {
@@ -1425,13 +1417,10 @@ class PluginManager {
     this.unregisterPlugin(plugin.metadata.id);
     this.loadedUrls.delete(url);
 
-    // Remove from plugin config and save
+    // Remove from plugin config
     const config = this.getPluginConfig();
     delete config[url];
     this.savePluginConfig(config);
-    if (window.customjs?.configManager) {
-      await window.customjs.configManager.save();
-    }
 
     console.log(`[CJS|PluginManager] ✓ Removed: ${plugin.metadata.name}`);
     console.warn(

@@ -4,8 +4,8 @@ class TagManagerPlugin extends Plugin {
       name: "Tag Manager",
       description: "Custom user tags management with URL-based loading",
       author: "Bluscream",
-      version: "{VERSION}",
-      build: "{BUILD}",
+      version: "2.0.0",
+      build: "1728778800",
       dependencies: [],
     });
 
@@ -14,57 +14,12 @@ class TagManagerPlugin extends Plugin {
   }
 
   async load() {
-    // Register settings
-    this.registerSettingCategory(
-      "sources",
-      "Tag Sources",
-      "URLs to load tags from"
-    );
-    this.registerSettingCategory(
-      "timing",
-      "Timing",
-      "Update timing configuration"
-    );
-    this.registerSettingCategory(
-      "notifications",
-      "Notifications",
-      "Notification settings"
-    );
+    // Settings are accessed via this.get() with defaults
+    const urls = this.get("sources.urls", [
+      "https://github.com/Bluscream/FewTags/raw/refs/heads/main/usertags.json",
+    ]);
 
-    this.registerSetting(
-      "sources",
-      "urls",
-      "Tag URLs",
-      "array",
-      [
-        "https://github.com/Bluscream/FewTags/raw/refs/heads/main/usertags.json",
-      ],
-      "URLs to load user tags from"
-    );
-    this.registerSetting(
-      "timing",
-      "updateInterval",
-      "Update Interval (ms)",
-      "number",
-      3600000,
-      "How often to reload tags (default: 1 hour)"
-    );
-    this.registerSetting(
-      "timing",
-      "initialDelay",
-      "Initial Delay (ms)",
-      "number",
-      5000,
-      "Delay before first tag load after login (default: 5 seconds)"
-    );
-    this.registerSetting(
-      "notifications",
-      "notifyOnPlayerJoin",
-      "Notify When Tagged Player Joins",
-      "boolean",
-      true,
-      "Show notification when a tagged player joins your instance"
-    );
+    this.logger.log(`⚙️ Configured tag sources: ${urls.length}`);
 
     this.logger.log("Tag Manager plugin ready");
     this.loaded = true;
@@ -84,7 +39,7 @@ class TagManagerPlugin extends Plugin {
   async onLogin(currentUser) {
     this.logger.log(`User logged in: ${currentUser?.displayName}`);
 
-    const initialDelay = this.config.timing.initialDelay.value;
+    const initialDelay = this.get("timing.initialDelay", 5000);
 
     // Schedule initial tag load
     setTimeout(async () => {
@@ -122,7 +77,9 @@ class TagManagerPlugin extends Plugin {
   }
 
   async loadAllTags() {
-    const urls = this.config.sources.urls.value;
+    const urls = this.get("sources.urls", [
+      "https://github.com/Bluscream/FewTags/raw/refs/heads/main/usertags.json",
+    ]);
 
     if (!urls || urls.length === 0) {
       this.logger.warn("No tag URLs configured");
@@ -306,7 +263,7 @@ class TagManagerPlugin extends Plugin {
   }
 
   startPeriodicUpdates() {
-    const updateInterval = this.config.timing.updateInterval.value;
+    const updateInterval = this.get("timing.updateInterval", 3600000);
 
     const intervalId = this.registerTimer(
       setInterval(async () => {
@@ -368,7 +325,7 @@ class TagManagerPlugin extends Plugin {
   handlePlayerJoin(entry) {
     try {
       // Check if notifications are enabled
-      if (!this.config.notifications.notifyOnPlayerJoin.value) {
+      if (!this.get("notifications.notifyOnPlayerJoin", true)) {
         return;
       }
 

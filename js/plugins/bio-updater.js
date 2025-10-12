@@ -5,8 +5,8 @@ class BioUpdaterPlugin extends Plugin {
       description:
         "Automatic bio updating with user statistics and custom templates",
       author: "Bluscream",
-      version: "{VERSION}",
-      build: "{BUILD}",
+      version: "2.0.0",
+      build: "1728778800",
       dependencies: [],
     });
 
@@ -14,65 +14,8 @@ class BioUpdaterPlugin extends Plugin {
   }
 
   async load() {
-    // Register settings
-    this.registerSettingCategory(
-      "timing",
-      "Timing",
-      "Update timing configuration"
-    );
-    this.registerSettingCategory(
-      "content",
-      "Content",
-      "Bio content configuration"
-    );
-    this.registerSettingCategory("steam", "Steam", "Steam API configuration");
-
-    this.registerSetting(
-      "timing",
-      "updateInterval",
-      "Update Interval (ms)",
-      "number",
-      7200000,
-      "How often to update bio (default: 2 hours)"
-    );
-    this.registerSetting(
-      "timing",
-      "initialDelay",
-      "Initial Delay (ms)",
-      "number",
-      20000,
-      "Delay before first update after login (default: 20 seconds)"
-    );
-    this.registerSetting(
-      "steam",
-      "steamId",
-      "Steam ID",
-      "string",
-      "",
-      "Your Steam ID64 (can be base64 encoded)"
-    );
-    this.registerSetting(
-      "steam",
-      "apiKey",
-      "Steam API Key",
-      "string",
-      "",
-      "Your Steam Web API key (can be base64 encoded)"
-    );
-    this.registerSetting(
-      "steam",
-      "appId",
-      "Steam App ID",
-      "string",
-      "438100",
-      "Steam app ID for VRChat (default: 438100)"
-    );
-    this.registerSetting(
-      "content",
-      "template",
-      "Bio Template",
-      "string",
-      `-
+    // Settings are accessed via this.get() with defaults
+    const defaultTemplate = `-
 Relationship: {partners} <3
 Auto Accept: {autojoin}
 Auto Invite: {autoinvite}
@@ -86,9 +29,13 @@ Tags loaded: {tags_loaded}
 
 User ID: {userId}
 Steam ID: {steamId}
-Oculus ID: {oculusId}`,
-      "Bio template with placeholders"
-    );
+Oculus ID: {oculusId}`;
+
+    const updateInterval = this.get("timing.updateInterval", 7200000);
+    const template = this.get("content.template", defaultTemplate);
+
+    this.logger.log(`⚙️ Update interval: ${updateInterval}ms`);
+    this.logger.log(`⚙️ Template configured: ${template.length} chars`);
 
     this.logger.log("Bio updater ready (waiting for login)");
     this.loaded = true;
@@ -115,8 +62,8 @@ Oculus ID: {oculusId}`,
     this.logger.log(`User logged in: ${currentUser?.displayName}`);
 
     // Use settings from ConfigManager
-    const updateInterval = this.config.timing.updateInterval.value;
-    const initialDelay = this.config.timing.initialDelay.value;
+    const updateInterval = this.get("timing.updateInterval", 7200000);
+    const initialDelay = this.get("timing.initialDelay", 20000);
 
     // Register update timer with automatic cleanup
     this.updateTimerId = this.registerTimer(
@@ -163,9 +110,9 @@ Oculus ID: {oculusId}`,
       const oldBio = currentUser.bio.split("\n-\n")[0];
 
       // Get Steam playtime if configured
-      const steamId = this.config.steam.steamId.value;
-      const steamKey = this.config.steam.apiKey.value;
-      const steamAppId = this.config.steam.appId.value;
+      const steamId = this.get("steam.steamId", "");
+      const steamKey = this.get("steam.apiKey", "");
+      const steamAppId = this.get("steam.appId", "438100");
       const steamPlayTime = await this.getSteamPlaytime(
         steamId,
         steamKey,
@@ -205,7 +152,7 @@ Oculus ID: {oculusId}`,
       );
 
       // Apply template with replacements
-      const bioTemplate = this.config.content.template.value;
+      const bioTemplate = this.get("content.template", "");
 
       const newBio = bioTemplate
         .replace("{last_activity}", this.timeToText(now - last_activity))

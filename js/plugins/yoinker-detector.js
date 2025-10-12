@@ -5,8 +5,8 @@ class YoinkerDetectorPlugin extends Plugin {
       description:
         "Automatically checks users against yoinker detection database and applies tags + notifications",
       author: "Bluscream",
-      version: "1.0.0",
-      build: "1728770400",
+      version: "2.0.0",
+      build: "1728778800",
       dependencies: [],
     });
 
@@ -38,132 +38,17 @@ class YoinkerDetectorPlugin extends Plugin {
   async load() {
     this.logger.log("📦 Loading Yoinker Detector...");
 
-    // Register settings
-    this.registerSettingCategory(
-      "general",
-      "General Settings",
-      "Basic configuration"
-    );
-    this.registerSettingCategory(
-      "notifications",
-      "Notifications",
-      "Notification settings"
-    );
-    this.registerSettingCategory(
-      "advanced",
-      "Advanced Settings",
-      "Advanced configuration"
-    );
+    // Settings are now accessed via this.get() with defaults
+    // No registration needed! Settings are instantly saved when set.
 
-    // General settings
-    this.registerSetting(
-      "general",
-      "enabled",
-      "Enable Yoinker Detection",
-      "boolean",
-      true,
-      "Enable or disable yoinker detection"
-    );
-    this.registerSetting(
-      "general",
-      "logToConsole",
-      "Log to Console",
-      "boolean",
-      true,
-      "Log detection results to browser console"
-    );
-    this.registerSetting(
-      "general",
-      "checkOnDialogOpen",
-      "Check on User Dialog Open",
-      "boolean",
-      true,
-      "Check users when their profile dialog is opened"
-    );
-    this.registerSetting(
-      "general",
-      "checkOnPlayerJoin",
-      "Check on Player Join",
-      "boolean",
-      true,
-      "Check users when they join your instance"
-    );
+    // Log current settings
+    const enabled = this.get("general.enabled", true);
+    const autoTag = this.get("advanced.autoTag", true);
+    const endpoint = this.get("advanced.endpoint", "https://yd.just-h.party/");
 
-    // Notification settings
-    this.registerSetting(
-      "notifications",
-      "notifyOnDetection",
-      "Notify When Yoinker Detected",
-      "boolean",
-      true,
-      "Show notification when a yoinker is detected"
-    );
-    this.registerSetting(
-      "notifications",
-      "desktopNotification",
-      "Desktop Notification",
-      "boolean",
-      true,
-      "Show desktop notification for yoinker detection"
-    );
-    this.registerSetting(
-      "notifications",
-      "vrNotification",
-      "VR Notification",
-      "boolean",
-      true,
-      "Show VR notification (XSOverlay, OVR Toolkit) for yoinker detection"
-    );
-
-    // Advanced settings
-    this.registerSetting(
-      "advanced",
-      "autoTag",
-      "Auto-Tag Yoinkers",
-      "boolean",
-      true,
-      "Automatically apply 'Yoinker' tag to detected users"
-    );
-    this.registerSetting(
-      "advanced",
-      "tagName",
-      "Tag Name",
-      "string",
-      "Yoinker",
-      "Tag name to apply to detected yoinkers"
-    );
-    this.registerSetting(
-      "advanced",
-      "tagColor",
-      "Tag Color",
-      "string",
-      "#ff0000",
-      "Tag color (hex format, e.g., #ff0000)"
-    );
-    this.registerSetting(
-      "advanced",
-      "cacheExpiration",
-      "Cache Expiration (minutes)",
-      "number",
-      30,
-      "How long to cache check results"
-    );
-    this.registerSetting(
-      "advanced",
-      "skipExistingTags",
-      "Skip Users with Existing Tags",
-      "boolean",
-      true,
-      "Don't check users who already have a custom tag"
-    );
-    this.registerSetting(
-      "advanced",
-      "endpoint",
-      "Detection Endpoint",
-      "string",
-      "https://yd.just-h.party/",
-      "Yoinker detection API endpoint"
-    );
+    this.logger.log(`⚙️ Enabled: ${enabled}`);
+    this.logger.log(`⚙️ Auto-tag: ${autoTag}`);
+    this.logger.log(`⚙️ Endpoint: ${endpoint}`);
 
     // Load cached data from storage
     this.loadProcessedUsers();
@@ -190,7 +75,7 @@ class YoinkerDetectorPlugin extends Plugin {
   hookUserEvents() {
     try {
       // Hook into showUserDialog
-      if (this.config.general.checkOnDialogOpen.value) {
+      if (this.get("general.checkOnDialogOpen", true)) {
         this.registerPostHook("$pinia.user.showUserDialog", (result, args) => {
           const userId = args[0];
           if (userId) {
@@ -201,7 +86,7 @@ class YoinkerDetectorPlugin extends Plugin {
       }
 
       // Hook into player join events
-      if (this.config.general.checkOnPlayerJoin.value) {
+      if (this.get("general.checkOnPlayerJoin", true)) {
         this.registerPostHook("$pinia.gameLog.addGameLog", (result, args) => {
           const entry = args[0];
           if (entry?.type === "OnPlayerJoined" && entry.userId) {
@@ -222,7 +107,7 @@ class YoinkerDetectorPlugin extends Plugin {
     if (!userId || typeof userId !== "string") return;
 
     // Check if detection is enabled
-    if (!this.config.general.enabled.value) return;
+    if (!this.get("general.enabled", true)) return;
 
     // Validate user ID format (usr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
     if (
@@ -232,10 +117,10 @@ class YoinkerDetectorPlugin extends Plugin {
     }
 
     // Check if user already has a custom tag (if enabled)
-    if (this.config.advanced.skipExistingTags.value) {
+    if (this.get("advanced.skipExistingTags", true)) {
       const existingTag = this.getUserTag(userId);
       if (existingTag) {
-        if (this.config.general.logToConsole.value) {
+        if (this.get("general.logToConsole", true)) {
           this.logger.log(
             `⏭️ Skipping ${userId} - already has tag: ${existingTag.tag}`
           );
@@ -249,7 +134,7 @@ class YoinkerDetectorPlugin extends Plugin {
       return;
     }
 
-    if (this.config.general.logToConsole.value) {
+    if (this.get("general.logToConsole", true)) {
       this.logger.log(`📋 Queuing user: ${userId} (from: ${source})`);
     }
 
@@ -301,12 +186,12 @@ class YoinkerDetectorPlugin extends Plugin {
     const cached = this.yoinkerCheckCache.get(userId);
     if (cached) {
       const cacheAge = (Date.now() - cached.timestamp) / 1000 / 60; // minutes
-      if (cacheAge < this.config.advanced.cacheExpiration.value) {
+      if (cacheAge < this.get("advanced.cacheExpiration", 30) * 60000) {
         this.stats.cacheHits++;
         if (cached.isYoinker) {
           this.handleYoinkerDetected(cached);
         } else {
-          if (this.config.general.logToConsole.value) {
+          if (this.get("general.logToConsole", true)) {
             this.logger.log(`✅ User ${userId} not a yoinker (cached result)`);
           }
         }
@@ -324,7 +209,10 @@ class YoinkerDetectorPlugin extends Plugin {
       // Hash the userId like StandaloneNotifier does
       const hash = await this.hashUserId(userId);
 
-      const endpoint = this.config.advanced.endpoint.value;
+      const endpoint = this.get(
+        "advanced.endpoint",
+        "https://yd.just-h.party/"
+      );
       const url = `${endpoint}${hash}`;
 
       const response = await fetch(url, {
@@ -343,7 +231,7 @@ class YoinkerDetectorPlugin extends Plugin {
         };
         this.yoinkerCheckCache.set(userId, result);
 
-        if (this.config.general.logToConsole.value) {
+        if (this.get("general.logToConsole", true)) {
           this.logger.log(`✅ User ${userId} not found in yoinker database`);
         }
         return;
@@ -387,7 +275,7 @@ class YoinkerDetectorPlugin extends Plugin {
         };
         this.yoinkerCheckCache.set(userId, result);
 
-        if (this.config.general.logToConsole.value) {
+        if (this.get("general.logToConsole", true)) {
           this.logger.log(`✅ User ${userId} checked - not a yoinker`);
         }
       }
@@ -402,22 +290,22 @@ class YoinkerDetectorPlugin extends Plugin {
     const message = `User ${result.userName} has been found ${result.reason}. (detection year: ${result.year})`;
 
     // Apply custom tag if enabled
-    if (this.config.advanced.autoTag.value) {
+    if (this.get("advanced.autoTag", true)) {
       this.applyYoinkerTag(result.userId);
     }
 
     // Show notifications if enabled
-    if (this.config.notifications.notifyOnDetection.value) {
+    if (this.get("notifications.notifyOnDetection", true)) {
       const notifyOptions = {
-        console: this.config.general.logToConsole.value,
-        desktop: this.config.notifications.desktopNotification.value,
-        xsoverlay: this.config.notifications.vrNotification.value,
-        ovrtoolkit: this.config.notifications.vrNotification.value,
+        console: this.get("general.logToConsole", true),
+        desktop: this.get("notifications.desktopNotification", true),
+        xsoverlay: this.get("notifications.vrNotification", true),
+        ovrtoolkit: this.get("notifications.vrNotification", true),
       };
 
       this.logger.log(message, notifyOptions, "warn");
     } else {
-      if (this.config.general.logToConsole.value) {
+      if (this.get("general.logToConsole", true)) {
         this.logger.log(`⚠️ ${message}`);
       }
     }
@@ -432,8 +320,8 @@ class YoinkerDetectorPlugin extends Plugin {
         return;
       }
 
-      const tagName = this.config.advanced.tagName.value || "Yoinker";
-      const tagColor = this.config.advanced.tagColor.value || "#ff0000";
+      const tagName = this.get("advanced.tagName", "Yoinker");
+      const tagColor = this.get("advanced.tagColor", "#ff0000");
 
       userStore.addCustomTag({
         UserId: userId,
@@ -441,7 +329,7 @@ class YoinkerDetectorPlugin extends Plugin {
         TagColour: tagColor,
       });
 
-      if (this.config.general.logToConsole.value) {
+      if (this.get("general.logToConsole", true)) {
         this.logger.log(`🏷️ Applied tag "${tagName}" to user ${userId}`);
       }
     } catch (error) {
@@ -494,7 +382,7 @@ class YoinkerDetectorPlugin extends Plugin {
         // Load cache (with expiration check)
         if (data.cache) {
           const cacheExpiration =
-            this.config.advanced?.cacheExpiration?.value || 30;
+            this.get("advanced.cacheExpiration", 30) * 60000;
           for (const [userId, result] of Object.entries(data.cache)) {
             const cacheAge = (Date.now() - result.timestamp) / 1000 / 60;
             if (cacheAge < cacheExpiration) {
