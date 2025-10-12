@@ -4,8 +4,8 @@ class PluginManagerUIPlugin extends Plugin {
       name: "Plugin Manager UI",
       description: "Visual UI for managing VRCX custom plugins",
       author: "Bluscream",
-      version: "5.0.0",
-      build: "1760411000",
+      version: "5.1.0",
+      build: "1760532000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -411,7 +411,14 @@ class PluginManagerUIPlugin extends Plugin {
       gap: 20px;
     `;
 
-    plugins.forEach((plugin) => {
+    // Sort plugins by name alphabetically
+    const sortedPlugins = [...plugins].sort((a, b) => {
+      const nameA = (a.metadata?.name || "Unknown").toLowerCase();
+      const nameB = (b.metadata?.name || "Unknown").toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+
+    sortedPlugins.forEach((plugin) => {
       try {
         const card = this.createEnhancedPluginCard(plugin);
         grid.appendChild(card);
@@ -527,6 +534,11 @@ class PluginManagerUIPlugin extends Plugin {
          </div>`
         : '<div style="font-size: 11px; color: #999; margin-top: 8px; font-style: italic;">No active resources</div>';
 
+    // Check if plugin has settings
+    const hasSettings =
+      window.customjs?.configManager?.settings?.get(plugin.metadata.id)?.size >
+      0;
+
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
         <div style="flex: 1;">
@@ -550,6 +562,21 @@ class PluginManagerUIPlugin extends Plugin {
           ${resourcesHtml}
         </div>
       </div>
+      ${
+        hasSettings
+          ? `
+      <div class="settings-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e9ecef;">
+        <div class="settings-toggle" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; cursor: pointer; margin-bottom: 10px;">
+          <span style="font-size: 14px; font-weight: 600; color: #212529;">
+            <i class="ri-settings-3-line"></i> Plugin Settings
+          </span>
+          <i class="ri-arrow-down-s-line toggle-icon" style="font-size: 20px; color: #6c757d; transition: transform 0.3s;"></i>
+        </div>
+        <div class="settings-content" style="display: block; max-height: 400px; overflow-y: auto; padding: 0 5px;"></div>
+      </div>
+      `
+          : ""
+      }
       <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e9ecef;">
         <button class="toggle-btn el-button el-button--small ${
           plugin.enabled ? "el-button--warning" : "el-button--success"
@@ -561,9 +588,6 @@ class PluginManagerUIPlugin extends Plugin {
         </button>
         <button class="reload-btn el-button el-button--small el-button--info" style="flex: 1;">
           <i class="ri-restart-line"></i> Reload
-        </button>
-        <button class="settings-btn el-button el-button--small el-button--primary" style="flex: 1;">
-          <i class="ri-settings-3-line"></i> Settings
         </button>
         <button class="details-btn el-button el-button--small" style="flex: 1;">
           <i class="ri-information-line"></i> Details
@@ -589,7 +613,6 @@ class PluginManagerUIPlugin extends Plugin {
     setTimeout(() => {
       const toggleBtn = card.querySelector(".toggle-btn");
       const reloadBtn = card.querySelector(".reload-btn");
-      const settingsBtn = card.querySelector(".settings-btn");
       const detailsBtn = card.querySelector(".details-btn");
       const removeBtn = card.querySelector(".remove-btn");
 
@@ -607,13 +630,6 @@ class PluginManagerUIPlugin extends Plugin {
         });
       }
 
-      if (settingsBtn) {
-        this.registerListener(settingsBtn, "click", (e) => {
-          e.stopPropagation();
-          this.handleShowSettings(plugin);
-        });
-      }
-
       if (detailsBtn) {
         this.registerListener(detailsBtn, "click", (e) => {
           e.stopPropagation();
@@ -626,6 +642,31 @@ class PluginManagerUIPlugin extends Plugin {
           e.stopPropagation();
           await this.handleRemovePlugin(plugin.metadata.url);
         });
+      }
+
+      // Settings section toggle
+      if (hasSettings) {
+        const settingsToggle = card.querySelector(".settings-toggle");
+        const settingsContent = card.querySelector(".settings-content");
+        const toggleIcon = card.querySelector(".toggle-icon");
+
+        if (settingsToggle && settingsContent) {
+          // Populate settings content
+          settingsContent.appendChild(this.buildSettingsUI(plugin));
+
+          // Add toggle functionality
+          let isExpanded = true; // Start expanded by default
+          this.registerListener(settingsToggle, "click", (e) => {
+            e.stopPropagation();
+            isExpanded = !isExpanded;
+            settingsContent.style.display = isExpanded ? "block" : "none";
+            if (toggleIcon) {
+              toggleIcon.style.transform = isExpanded
+                ? "rotate(0deg)"
+                : "rotate(-90deg)";
+            }
+          });
+        }
       }
     }, 0);
 
