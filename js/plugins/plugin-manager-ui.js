@@ -163,9 +163,7 @@ class PluginManagerUIPlugin extends Plugin {
           <h2 style="margin: 0; font-size: 28px; font-weight: 600;">
             🔌 Plugins
           </h2>
-          <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;">
-            Core Modules: ${coreModules.length} • Plugins: ${pluginCount} • Subscriptions: ${subscriptionCount}
-          </p>
+          <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;"></p>
         </div>
         <div style="display: flex; gap: 10px;">
           <div style="text-align: center; padding: 10px 20px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(23,162,184,0.3);">
