@@ -24,6 +24,11 @@ window.customjs.default_plugins = [
     enabled: true,
   },
   {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/invite-message-api.js",
+    enabled: true,
+  },
+
+  {
     url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/protocol-links.js",
     enabled: true,
   },
@@ -42,6 +47,10 @@ window.customjs.default_plugins = [
   {
     url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-follow.js",
     enabled: true,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/bio-updater.js",
+    enabled: false,
   },
   {
     url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/plugin-manager-ui.js",
