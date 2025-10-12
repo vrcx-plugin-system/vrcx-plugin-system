@@ -12,7 +12,6 @@
 class ContextMenuApiPlugin extends Plugin {
   constructor() {
     super({
-      id: "context-menu-api",
       name: "Context Menu API",
       description: "Custom context menu management for VRCX dialogs",
       author: "Bluscream",
@@ -44,12 +43,6 @@ class ContextMenuApiPlugin extends Plugin {
     this.menuTypes.forEach((menuType) => {
       this.items.set(menuType, new Map());
     });
-
-    // Expose to global namespace
-    window.customjs.contextMenu = this;
-
-    // Legacy compatibility
-    window.CustomContextMenu = this.constructor;
 
     this.log("Context Menu API ready");
     this.loaded = true;

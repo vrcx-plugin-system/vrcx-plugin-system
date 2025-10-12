@@ -12,7 +12,6 @@
 class RegistryOverridesPlugin extends Plugin {
   constructor() {
     super({
-      id: "registry-overrides",
       name: "Registry Overrides",
       description:
         "VRChat registry settings management with event-based triggers",
@@ -30,9 +29,6 @@ class RegistryOverridesPlugin extends Plugin {
   }
 
   async load() {
-    // Expose to global namespace
-    window.customjs.registryOverrides = this;
-
     // Setup event handlers
     this.setupEventHandlers();
 

@@ -7,7 +7,6 @@
 class ApiHelpersPlugin extends Plugin {
   constructor() {
     super({
-      id: "api-helpers",
       name: "API Helpers Plugin",
       description:
         "API wrapper functions, logging, and location management for VRCX",
@@ -22,19 +21,7 @@ class ApiHelpersPlugin extends Plugin {
   }
 
   async load() {
-    // Expose API methods globally
-    window.customjs.api = this.API;
-    window.customjs.logger = this.Logger;
-    window.customjs.location = this.LocationManager;
-    window.customjs.apiHelpers = this;
-
-    // Legacy support
-    window.API = this.API;
-    window.Logger = this.Logger;
-    window.LocationManager = this.LocationManager;
-
-    // Note: window.bak removed - use customjs.functions for backed up functions
-    // The hook system automatically backs up functions in customjs.functions
+    // Note: Functions are automatically backed up in customjs.functions by the hook system
 
     this.log("API helpers ready");
     this.loaded = true;

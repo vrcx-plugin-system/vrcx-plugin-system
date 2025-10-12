@@ -12,7 +12,6 @@
 class ProtocolLinksPlugin extends Plugin {
   constructor() {
     super({
-      id: "protocol-links",
       name: "VRCX Protocol Links",
       description:
         "Adds context menu items to copy VRCX protocol links for users, avatars, worlds, groups, and instances",
@@ -28,9 +27,6 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   async load() {
-    // Expose to global namespace
-    window.customjs.protocolLinks = this;
-
     this.log("Protocol Links plugin ready");
     this.loaded = true;
   }

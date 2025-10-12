@@ -287,65 +287,60 @@ customjs.plugins.find((p) => p.metadata.id === "utils").toggle();
 ### Plugin Instances (`window.customjs`)
 
 ```javascript
-// Core plugins
-customjs.config; // Configuration
-customjs.utils; // Utilities
-customjs.api; // API helpers
-customjs.logger; // Logging
-customjs.apiHelpers; // API helpers instance
-
-// Feature plugins
-customjs.bioUpdater; // Bio updater
-customjs.debug; // Debug tools
-customjs.configManager; // Config manager
-
 // System
-customjs.plugins; // Array of Plugin instances
+customjs.version; // Plugin system version
+customjs.build; // Build timestamp
+customjs.config; // User configuration
+customjs.plugins; // Array of all Plugin instances
 customjs.pluginManager; // PluginManager instance (handles loading & management)
 customjs.events; // Event registry
 customjs.functions; // Backed up functions
 customjs.hooks; // Hook registry (pre & post)
+
+// Access plugins via manager
+customjs.pluginManager.getPlugin("plugin-id"); // Get plugin by ID
+customjs.pluginManager.waitForPlugin("plugin-id"); // Wait for plugin to load
 ```
 
 ### Configuration
 
 ```javascript
-// Access config
+// Access config directly
 customjs.config.steam.id;
-customjs.configManager.get("steam.id");
 
-// Set config
-customjs.configManager.set("steam.id", "value");
-
-// Check if exists
-customjs.configManager.has("steam.id");
-
-// Get all config
-customjs.configManager.getAll();
+// Or use the config plugin helper methods
+const config = customjs.pluginManager.getPlugin("config");
+config.get("steam.id");
+config.set("steam.id", "value");
+config.has("steam.id");
+config.getAll();
 ```
 
 ### Utilities
 
 ```javascript
+// Get plugin instance
+const utils = customjs.pluginManager.getPlugin("utils");
+
 // Clipboard
-await customjs.utils.copyToClipboard("text", "Description");
+await utils.copyToClipboard("text", "Description");
 
 // Notifications
-customjs.utils.showSuccess("Success!");
-customjs.utils.showError("Error!");
-customjs.utils.showInfo("Info!");
+utils.showSuccess("Success!");
+utils.showError("Error!");
+utils.showInfo("Info!");
 
 // Time formatting
-customjs.utils.timeToText(milliseconds);
-customjs.utils.getTimestamp();
-customjs.utils.formatDateTime();
+utils.timeToText(milliseconds);
+utils.getTimestamp();
+utils.formatDateTime();
 
 // Steam API
-await customjs.utils.getSteamPlaytime(steamId, apiKey);
+await utils.getSteamPlaytime(steamId, apiKey);
 
 // Helpers
-customjs.utils.isEmpty(value);
-customjs.utils.tryDecodeBase64(string);
+utils.isEmpty(value);
+utils.tryDecodeBase64(string);
 
 // Register login callback
 customjs.pluginManager.onLogin((currentUser) => {
@@ -442,20 +437,23 @@ Uncomment in `custom.js`:
 ### Debug Commands
 
 ```javascript
+// Access debug functions (provided by managers plugin)
+const debugFns = customjs.debugFunctions; // or window.debugVRCX
+
 // List plugins
-customjs.debug.listPlugins();
+debugFns.listPlugins();
 
 // List events
-customjs.debug.listEvents();
+debugFns.listEvents();
 
 // List hooks
-customjs.debug.listHooks();
+debugFns.listHooks();
 
-// Test event
-customjs.debug.testEvent("event-name", { data: "value" });
+// Inspect specific plugin
+debugFns.inspectPlugin("plugin-id");
 
-// Print debug info
-customjs.debug.printDebugInfo();
+// Get plugin by ID
+debugFns.getPlugin("plugin-id");
 ```
 
 ### Console Commands

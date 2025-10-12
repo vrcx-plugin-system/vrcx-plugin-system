@@ -12,7 +12,6 @@
 class NavMenuApiPlugin extends Plugin {
   constructor() {
     super({
-      id: "nav-menu-api",
       name: "Navigation Menu API",
       description: "API for adding custom navigation menu items to VRCX",
       author: "Bluscream",
@@ -37,12 +36,6 @@ class NavMenuApiPlugin extends Plugin {
   }
 
   async load() {
-    // Expose to global namespace
-    window.customjs.navMenu = this;
-
-    // Legacy compatibility
-    window.NavMenuAPI = this.constructor;
-
     this.log("Navigation Menu API ready");
     this.loaded = true;
   }

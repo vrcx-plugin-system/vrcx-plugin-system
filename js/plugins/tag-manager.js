@@ -12,7 +12,6 @@
 class TagManagerPlugin extends Plugin {
   constructor() {
     super({
-      id: "tag-manager",
       name: "Tag Manager",
       description: "Custom user tags management with URL-based loading",
       author: "Bluscream",
@@ -31,12 +30,6 @@ class TagManagerPlugin extends Plugin {
   }
 
   async load() {
-    // Expose to global namespace
-    window.customjs.tagManager = this;
-
-    // Legacy compatibility
-    window.CustomTagManager = this.constructor;
-
     this.log("Tag Manager plugin ready");
     this.loaded = true;
   }

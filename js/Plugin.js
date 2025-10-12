@@ -13,20 +13,33 @@
  */
 class Plugin {
   constructor(metadata = {}) {
-    // Validate required metadata
-    if (!metadata.id) {
-      throw new Error("Plugin metadata must include an 'id' field");
+    // Get URL from metadata or from global scope (set by PluginManager)
+    const pluginUrl = metadata.url || window.__CURRENT_PLUGIN_URL__ || null;
+
+    // Auto-derive ID from URL if not provided
+    let pluginId = metadata.id;
+    if (!pluginId && pluginUrl) {
+      // Extract filename without extension from URL
+      const urlParts = pluginUrl.split("/");
+      const filename = urlParts[urlParts.length - 1];
+      pluginId = filename.replace(/\.js$/, "");
+    }
+
+    if (!pluginId) {
+      throw new Error(
+        "Plugin must be loaded via PluginManager to auto-derive ID, or provide 'id' in metadata"
+      );
     }
 
     this.metadata = {
-      id: metadata.id,
-      name: metadata.name || metadata.id,
+      id: pluginId,
+      name: metadata.name || pluginId,
       description: metadata.description || "",
       author: metadata.author || "Unknown",
       version: metadata.version || "1.0.0",
       build: metadata.build || Date.now().toString(),
       dependencies: metadata.dependencies || [],
-      url: metadata.url || null, // URL this plugin was loaded from
+      url: pluginUrl,
     };
 
     this.enabled = false;

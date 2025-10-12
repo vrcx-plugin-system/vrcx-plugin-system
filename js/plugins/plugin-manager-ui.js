@@ -12,7 +12,6 @@
 class PluginManagerUIPlugin extends Plugin {
   constructor() {
     super({
-      id: "plugin-manager-ui",
       name: "Plugin Manager UI",
       description: "Visual UI for managing VRCX custom plugins",
       author: "Bluscream",
@@ -29,7 +28,6 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   async load() {
-    window.customjs.pluginManagerUI = this;
     this.log("Plugin Manager UI ready");
     this.loaded = true;
   }
@@ -55,8 +53,9 @@ class PluginManagerUIPlugin extends Plugin {
   async stop() {
     this.log("Stopping Plugin Manager UI");
 
-    if (window.customjs?.navMenu) {
-      window.customjs.navMenu.removeItem("plugins");
+    const navMenu = window.customjs?.pluginManager?.getPlugin("nav-menu-api");
+    if (navMenu) {
+      navMenu.removeItem("plugins");
     }
 
     await super.stop();
@@ -77,7 +76,13 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   setupNavMenuItem() {
-    window.customjs.navMenu.addItem("plugins", {
+    const navMenu = window.customjs?.pluginManager?.getPlugin("nav-menu-api");
+    if (!navMenu) {
+      this.error("NavMenu plugin not found!");
+      return;
+    }
+
+    navMenu.addItem("plugins", {
       label: "Plugins",
       icon: "ri-plug-line",
       content: () => this.createPanelContent(),
@@ -124,19 +129,32 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   renderContent(container) {
-    container.innerHTML = "";
+    try {
+      container.innerHTML = "";
 
-    const header = this.createHeader();
-    container.appendChild(header);
+      const header = this.createHeader();
+      container.appendChild(header);
 
-    const loadSection = this.createLoadPluginSection();
-    container.appendChild(loadSection);
+      const loadSection = this.createLoadPluginSection();
+      container.appendChild(loadSection);
 
-    const pluginList = document.createElement("div");
-    pluginList.id = "plugin-list-container";
-    container.appendChild(pluginList);
+      const pluginList = document.createElement("div");
+      pluginList.id = "plugin-list-container";
+      container.appendChild(pluginList);
 
-    this.refreshPluginList();
+      this.refreshPluginList();
+    } catch (error) {
+      this.error("Error rendering plugin manager content:", error);
+      container.innerHTML = `
+        <div style="padding: 20px; text-align: center; color: #dc3545;">
+          <h3>❌ Error Loading Plugin Manager</h3>
+          <p>${error.message}</p>
+          <button class="el-button el-button--primary" onclick="location.reload()">
+            <i class="ri-restart-line"></i> Reload VRCX
+          </button>
+        </div>
+      `;
+    }
   }
 
   createHeader() {
@@ -285,30 +303,38 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   refreshPluginList() {
-    const container = this.contentContainer?.querySelector(
-      "#plugin-list-container"
-    );
-    if (!container) return;
+    try {
+      const container = this.contentContainer?.querySelector(
+        "#plugin-list-container"
+      );
+      if (!container) {
+        this.warn("Plugin list container not found");
+        return;
+      }
 
-    container.innerHTML = "";
+      container.innerHTML = "";
 
-    // Get plugin info from customjs
-    const allPlugins = window.customjs.plugins || [];
-    const failedUrls = window.customjs.pluginManager?.failedUrls || new Set();
+      // Get plugin info from customjs
+      const allPlugins = window.customjs?.plugins || [];
+      const failedUrls =
+        window.customjs?.pluginManager?.failedUrls || new Set();
 
-    // Loaded plugins section
-    const loadedSection = this.createPluginCardsSection(allPlugins);
-    container.appendChild(loadedSection);
+      // Loaded plugins section
+      const loadedSection = this.createPluginCardsSection(allPlugins);
+      container.appendChild(loadedSection);
 
-    // Failed plugins section
-    if (failedUrls.size > 0) {
-      const failedSection = this.createFailedSection(Array.from(failedUrls));
-      container.appendChild(failedSection);
+      // Failed plugins section
+      if (failedUrls.size > 0) {
+        const failedSection = this.createFailedSection(Array.from(failedUrls));
+        container.appendChild(failedSection);
+      }
+
+      // System info section
+      const systemSection = this.createSystemInfoSection();
+      container.appendChild(systemSection);
+    } catch (error) {
+      this.error("Error refreshing plugin list:", error);
     }
-
-    // System info section
-    const systemSection = this.createSystemInfoSection();
-    container.appendChild(systemSection);
   }
 
   createPluginCardsSection(plugins) {
@@ -336,8 +362,17 @@ class PluginManagerUIPlugin extends Plugin {
     `;
 
     plugins.forEach((plugin) => {
-      const card = this.createEnhancedPluginCard(plugin);
-      grid.appendChild(card);
+      try {
+        const card = this.createEnhancedPluginCard(plugin);
+        grid.appendChild(card);
+      } catch (error) {
+        this.error(
+          `Error creating card for plugin: ${
+            plugin?.metadata?.name || "unknown"
+          }`,
+          error
+        );
+      }
     });
 
     section.appendChild(grid);
@@ -441,18 +476,18 @@ class PluginManagerUIPlugin extends Plugin {
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
         <div style="flex: 1;">
           <h4 style="margin: 0 0 5px 0; font-size: 18px; font-weight: 600; color: #212529;">
-            ${plugin.metadata.name}
+            ${plugin.metadata?.name || "Unknown Plugin"}
           </h4>
           <div style="font-size: 11px; color: #6c757d; font-family: monospace; margin-bottom: 8px;">
-            ID: ${plugin.metadata.id} • v${plugin.metadata.version} • Build: ${
-      plugin.metadata.build
-    }
+            ID: ${plugin.metadata?.id || "unknown"} • v${
+      plugin.metadata?.version || "0.0.0"
+    } • Build: ${plugin.metadata?.build || "unknown"}
           </div>
           <div style="margin-bottom: 8px;">
             ${badges.join("")}
           </div>
           ${
-            plugin.metadata.description
+            plugin.metadata?.description
               ? `<p style="font-size: 13px; color: #666; margin: 8px 0 0 0; line-height: 1.4;">${plugin.metadata.description}</p>`
               : ""
           }

@@ -7,7 +7,6 @@
 class BioUpdaterPlugin extends Plugin {
   constructor() {
     super({
-      id: "bio-updater",
       name: "Bio Updater",
       description:
         "Automatic bio updating with user statistics and custom templates",
@@ -26,9 +25,6 @@ class BioUpdaterPlugin extends Plugin {
   }
 
   async load() {
-    // Expose to global namespace
-    window.customjs.bioUpdater = this;
-
     this.log("Bio updater ready (waiting for login)");
     this.loaded = true;
   }
@@ -92,13 +88,13 @@ class BioUpdaterPlugin extends Plugin {
       // Split bio to preserve custom text before separator
       const oldBio = currentUser.bio.split("\n-\n")[0];
 
+      // Get utils plugin for helper functions
+      const utils = window.customjs?.pluginManager?.getPlugin("utils");
+
       // Get Steam playtime if configured
       const steamId = this.getConfig("steam.id");
       const steamKey = this.getConfig("steam.key");
-      const steamPlayTime = await window.customjs.utils?.getSteamPlaytime(
-        steamId,
-        steamKey
-      );
+      const steamPlayTime = await utils?.getSteamPlaytime(steamId, steamKey);
 
       let steamHours,
         steamSeconds = null;
@@ -110,9 +106,7 @@ class BioUpdaterPlugin extends Plugin {
       }
 
       // Calculate playtime text
-      let playTimeText = window.customjs.utils?.timeToText(
-        steamSeconds ?? stats.timeSpent
-      );
+      let playTimeText = utils?.timeToText(steamSeconds ?? stats.timeSpent);
       if (steamHours) playTimeText += ` (${steamHours})`;
 
       // Get moderations

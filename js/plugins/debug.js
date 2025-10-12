@@ -11,7 +11,6 @@
 class DebugPlugin extends Plugin {
   constructor() {
     super({
-      id: "debug",
       name: "Debug Plugin",
       description: "Debug utilities and console commands for development",
       author: "Bluscream",
@@ -24,9 +23,6 @@ class DebugPlugin extends Plugin {
   }
 
   async load() {
-    // Expose debug utilities globally
-    window.customjs.debug = this;
-
     this.log("Debug utilities ready");
     this.loaded = true;
   }

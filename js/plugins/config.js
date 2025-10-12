@@ -7,7 +7,6 @@
 class ConfigPlugin extends Plugin {
   constructor() {
     super({
-      id: "config",
       name: "Config Plugin",
       description: "Configuration management and metadata access",
       author: "Bluscream",
@@ -22,12 +21,6 @@ class ConfigPlugin extends Plugin {
   async load() {
     // Configuration is already available at window.customjs.config
     // This plugin just provides helper methods for accessing it
-
-    // Register in global namespace
-    window.customjs.configManager = this;
-
-    // Legacy support
-    window.CONFIG = window.customjs.config;
 
     this.log("Configuration management ready");
     this.loaded = true;

@@ -7,7 +7,6 @@
 class UtilsPlugin extends Plugin {
   constructor() {
     super({
-      id: "utils",
       name: "Utils Plugin",
       description:
         "Utility functions for time, clipboard, notifications, and Steam API",
@@ -24,13 +23,7 @@ class UtilsPlugin extends Plugin {
   }
 
   async load() {
-    // Expose utility methods globally
-    window.customjs.utils = this;
-
-    // Legacy support - also expose as window.Utils
-    window.Utils = this;
-
-    this.log("Utility functions registered globally");
+    this.log("Utility functions ready");
     this.loaded = true;
   }
 

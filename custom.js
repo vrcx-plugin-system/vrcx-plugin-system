@@ -16,12 +16,7 @@ window.customjs = {
     pre: {}, // Pre-hooks: functionName -> [{plugin, callback}]
     post: {}, // Post-hooks: functionName -> [{plugin, callback}]
   },
-  // Utility references (set by plugins)
-  utils: null,
-  api: null,
-  logger: null,
-  contextMenu: null,
-  navMenu: null,
+  // Note: Plugins are accessed via customjs.plugins array or customjs.pluginManager.getPlugin(id)
 };
 
 console.log(
@@ -174,6 +169,26 @@ class PluginManager {
 
   getPlugin(pluginId) {
     return window.customjs.plugins.find((p) => p.metadata.id === pluginId);
+  }
+
+  /**
+   * Wait for a plugin to be available
+   * @param {string} pluginId - Plugin ID to wait for
+   * @param {number} timeout - Timeout in milliseconds (default: 10000)
+   * @returns {Promise<Plugin>} - Resolves with plugin instance
+   */
+  async waitForPlugin(pluginId, timeout = 10000) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+      const plugin = this.getPlugin(pluginId);
+      if (plugin && plugin.loaded) {
+        return plugin;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    throw new Error(`Timeout waiting for plugin: ${pluginId}`);
   }
 
   getAllPlugins() {
@@ -500,6 +515,9 @@ class PluginManager {
 
       // Wrap in IIFE to isolate scope, but don't auto-execute plugin initialization
       const wrappedCode = `(function() { 
+        // Store the plugin URL for auto-ID derivation
+        window.__CURRENT_PLUGIN_URL__ = "${pluginUrl}";
+        
         ${pluginCode}
         
         // After plugin class is defined, try to detect it and instantiate
@@ -508,11 +526,12 @@ class PluginManager {
           try {
             const PluginClass = window.__LAST_PLUGIN_CLASS__;
             const pluginInstance = new PluginClass();
-            pluginInstance.metadata.url = "${pluginUrl}";
-            console.log(\`[PluginManager] ✓ Instantiated plugin: \${pluginInstance.metadata.name}\`);
+            console.log(\`[PluginManager] ✓ Instantiated plugin: \${pluginInstance.metadata.name} (\${pluginInstance.metadata.id})\`);
             delete window.__LAST_PLUGIN_CLASS__;
+            delete window.__CURRENT_PLUGIN_URL__;
           } catch (e) {
             console.error('[PluginManager] Error instantiating plugin:', e);
+            delete window.__CURRENT_PLUGIN_URL__;
           }
         }
       })();`;

@@ -12,7 +12,6 @@
 class ManagersPlugin extends Plugin {
   constructor() {
     super({
-      id: "managers",
       name: "Managers",
       description:
         "Management classes for instance monitoring, notifications, and debug tools",
@@ -30,9 +29,6 @@ class ManagersPlugin extends Plugin {
   }
 
   async load() {
-    // Expose to global namespace
-    window.customjs.managers = this;
-
     this.log("Managers plugin ready");
     this.loaded = true;
   }
@@ -144,18 +140,22 @@ class ManagersPlugin extends Plugin {
         break;
 
       case "BlockedOnPlayerJoined":
-        if (window.customjs?.autoInviteManager?.lastJoined && window.$app) {
-          const p = window.$app.parseLocation(
-            window.customjs.autoInviteManager.lastJoined
-          );
+        const autoInvite = window.customjs?.plugins?.find(
+          (p) => p.metadata?.id === "auto-invite"
+        );
+        if (autoInvite?.lastJoined && window.$app) {
+          const p = window.$app.parseLocation(autoInvite.lastJoined);
           window.$app.newInstanceSelfInvite(p.worldId);
         }
         break;
 
       case "GameStarted":
         // Trigger registry overrides when game starts
-        if (window.customjs?.registryOverrides) {
-          window.customjs.registryOverrides.triggerEvent("GAME_START");
+        const registryPlugin = window.customjs?.plugins?.find(
+          (p) => p.metadata?.id === "registry-overrides"
+        );
+        if (registryPlugin?.triggerEvent) {
+          registryPlugin.triggerEvent("GAME_START");
         }
         break;
 
@@ -300,9 +300,8 @@ class ManagersPlugin extends Plugin {
       },
     };
 
-    // Expose debug functions
+    // Expose debug functions globally
     window.customjs.debugFunctions = debugFunctions;
-    window.debugVRCX = debugFunctions; // Legacy
 
     this.log(
       "Console debug functions registered (will open DevTools when used)"

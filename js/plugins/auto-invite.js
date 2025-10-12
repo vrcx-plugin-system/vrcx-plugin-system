@@ -12,7 +12,6 @@
 class AutoInvitePlugin extends Plugin {
   constructor() {
     super({
-      id: "auto-invite",
       name: "Auto Invite Manager",
       description: "Automatic user invitation system with location tracking",
       author: "Bluscream",
@@ -37,12 +36,6 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async load() {
-    // Expose to global namespace
-    window.customjs.autoInviteManager = this;
-
-    // Legacy compatibility
-    window.AutoInviteManager = this.constructor;
-
     this.log("Auto Invite plugin ready");
     this.loaded = true;
   }
@@ -78,8 +71,10 @@ class AutoInvitePlugin extends Plugin {
     this.log("Stopping Auto Invite plugin");
 
     // Remove context menu items
-    if (window.customjs?.contextMenu) {
-      window.customjs.contextMenu.removeUserItem("autoInvite");
+    const contextMenu =
+      window.customjs?.pluginManager?.getPlugin("context-menu-api");
+    if (contextMenu) {
+      contextMenu.removeUserItem("autoInvite");
     }
 
     // Clear auto-invite user
@@ -256,13 +251,16 @@ class AutoInvitePlugin extends Plugin {
       this.log(`User arrived at: ${location}`);
 
       // Trigger registry overrides for instance switching
-      if (window.customjs?.registryOverrides) {
+      const registryPlugin = window.customjs?.plugins?.find(
+        (p) => p.metadata?.id === "registry-overrides"
+      );
+      if (registryPlugin?.triggerEvent) {
         const isPublic =
           location.includes("~public") || location.includes("~hidden");
         const eventType = isPublic
           ? "INSTANCE_SWITCH_PUBLIC"
           : "INSTANCE_SWITCH_PRIVATE";
-        window.customjs.registryOverrides.triggerEvent(eventType);
+        registryPlugin.triggerEvent(eventType);
       }
     }
   }
@@ -286,7 +284,9 @@ class AutoInvitePlugin extends Plugin {
     this.log(`Inviting ${userName} to "${worldName}" (${instanceId})`);
 
     try {
-      await window.customjs.api.sendInvite(
+      const apiHelpers =
+        window.customjs?.pluginManager?.getPlugin("api-helpers");
+      await apiHelpers?.API.sendInvite(
         {
           instanceId: instanceId,
           worldId: worldId,
