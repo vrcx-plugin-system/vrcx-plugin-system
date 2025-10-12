@@ -130,10 +130,16 @@ class BioUpdaterPlugin extends Plugin {
 
       // Apply template with replacements
       const bioTemplate = this.getConfig("bio.template");
+
+      // Get plugin references
+      const utils = window.customjs.pluginManager.getPlugin("utils");
+      const autoInvite = window.customjs.pluginManager.getPlugin("auto-invite");
+      const tagManager = window.customjs.pluginManager.getPlugin("tag-manager");
+
       const newBio = bioTemplate
         .replace(
           "{last_activity}",
-          window.customjs.utils?.timeToText(now - last_activity) ?? ""
+          utils?.timeToText(now - last_activity) ?? ""
         )
         .replace("{playtime}", playTimeText)
         .replace("{date_joined}", currentUser.date_joined ?? "Unknown")
@@ -146,24 +152,14 @@ class BioUpdaterPlugin extends Plugin {
           "{muted}",
           moderations.filter((item) => item.type === "mute").length ?? "?"
         )
-        .replace(
-          "{now}",
-          window.customjs.utils?.formatDateTime() ?? new Date().toISOString()
-        )
+        .replace("{now}", utils?.formatDateTime() ?? new Date().toISOString())
         .replace("{autojoin}", joiners.map((f) => f.name).join(", "))
         .replace("{partners}", partners.map((f) => f.name).join(", "))
         .replace(
           "{autoinvite}",
-          window.customjs.plugins
-            ?.find((p) => p.metadata.id === "auto-invite")
-            ?.getAutoInviteUser()?.displayName ?? ""
+          autoInvite?.getAutoInviteUser()?.displayName ?? ""
         )
-        .replace(
-          "{tags_loaded}",
-          window.customjs.plugins
-            ?.find((p) => p.metadata.id === "tag-manager")
-            ?.getLoadedTagsCount() ?? 0
-        )
+        .replace("{tags_loaded}", tagManager?.getLoadedTagsCount() ?? 0)
         .replace("{userId}", currentUser.id)
         .replace("{steamId}", currentUser.steamId)
         .replace("{oculusId}", currentUser.oculusId)
@@ -186,7 +182,12 @@ class BioUpdaterPlugin extends Plugin {
       this.log(`Updating bio (${bio.length} chars)`);
 
       // Save bio via API
-      await window.customjs.api?.saveBio(bio);
+      const apiHelpers = window.customjs.pluginManager.getPlugin("api-helpers");
+      if (!apiHelpers) {
+        this.error("API Helpers plugin not available");
+        return;
+      }
+      await apiHelpers.API.saveBio(bio);
 
       this.log("✓ Bio updated successfully");
 

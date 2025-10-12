@@ -81,7 +81,7 @@ class DebugPlugin extends Plugin {
    * Get plugin by ID
    */
   getPlugin(id) {
-    return window.customjs.plugins.find((p) => p.metadata.id === id);
+    return window.customjs.pluginManager.getPlugin(id);
   }
 
   /**

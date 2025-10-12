@@ -32,10 +32,13 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   async start() {
-    // Wait for context menu to be available
-    if (!window.customjs?.contextMenu) {
-      this.warn("Context menu not available, waiting...");
-      await this.waitForContextMenu();
+    // Wait for context menu API to be available
+    const contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
+      "context-menu-api"
+    );
+    if (!contextMenuApi) {
+      this.error("Context Menu API plugin not found after waiting");
+      return;
     }
 
     // Setup context menu items
@@ -63,21 +66,13 @@ class ProtocolLinksPlugin extends Plugin {
   // SETUP
   // ============================================================================
 
-  async waitForContextMenu() {
-    return new Promise((resolve) => {
-      const check = () => {
-        if (window.customjs?.contextMenu) {
-          resolve();
-        } else {
-          setTimeout(check, 500);
-        }
-      };
-      check();
-    });
-  }
-
   setupContextMenuItems() {
-    const contextMenu = window.customjs.contextMenu;
+    const contextMenu =
+      window.customjs.pluginManager.getPlugin("context-menu-api");
+    if (!contextMenu) {
+      this.error("Context Menu API plugin not available");
+      return;
+    }
 
     // User dialog items
     contextMenu.addUserItem("copy-user-link", {
@@ -129,7 +124,8 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   removeContextMenuItems() {
-    const contextMenu = window.customjs?.contextMenu;
+    const contextMenu =
+      window.customjs.pluginManager.getPlugin("context-menu-api");
     if (!contextMenu) return;
 
     // Remove user items
@@ -229,7 +225,7 @@ class ProtocolLinksPlugin extends Plugin {
   // ============================================================================
 
   async copyToClipboard(text, description) {
-    const utils = window.customjs?.utils;
+    const utils = window.customjs.pluginManager.getPlugin("utils");
     if (!utils) {
       this.error("Utils plugin not available");
       return;
@@ -244,11 +240,17 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   showSuccess(message) {
-    window.customjs?.utils?.showSuccess(message);
+    const utils = window.customjs.pluginManager.getPlugin("utils");
+    if (utils) {
+      utils.showSuccess(message);
+    }
   }
 
   showError(message) {
-    window.customjs?.utils?.showError(message);
+    const utils = window.customjs.pluginManager.getPlugin("utils");
+    if (utils) {
+      utils.showError(message);
+    }
   }
 
   // ============================================================================

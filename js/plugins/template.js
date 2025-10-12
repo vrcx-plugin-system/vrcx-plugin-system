@@ -60,13 +60,16 @@ class TemplatePlugin extends Plugin {
     this.log("📦 load() called - Setting up plugin...");
 
     // ========================================================================
-    // EXPOSE TO GLOBAL SCOPE
+    // PLUGIN ACCESS
     // ========================================================================
 
-    // Expose this plugin to customjs namespace
-    window.customjs.template = this;
+    // ⚠️ OLD WAY (Not Recommended): Expose plugin directly
+    // window.customjs.template = this;
 
-    // You can also expose specific methods globally if needed
+    // ✅ NEW WAY (Recommended): Access plugins via PluginManager
+    // Other plugins should use: window.customjs.pluginManager.getPlugin("template")
+
+    // You can still expose specific utility methods if really needed
     // window.customjs.templateMethod = () => this.doSomething();
 
     // ========================================================================
@@ -155,17 +158,16 @@ class TemplatePlugin extends Plugin {
     // ACCESS OTHER PLUGINS
     // ========================================================================
 
-    // Example: Access other plugins via customjs
-    const utilsPlugin = window.customjs.plugins.find(
-      (p) => p.metadata.id === "utils"
-    );
+    // Example: Access other plugins via PluginManager
+    const utilsPlugin = window.customjs.pluginManager.getPlugin("utils");
     if (utilsPlugin) {
       this.log(`🔌 Found utils plugin v${utilsPlugin.metadata.version}`);
     }
 
     // Example: Use utilities from other plugins
-    if (window.customjs.utils) {
-      const timestamp = window.customjs.utils.getTimestamp();
+    const utils = window.customjs.pluginManager.getPlugin("utils");
+    if (utils) {
+      const timestamp = utils.getTimestamp();
       this.log(`🕐 Current timestamp: ${timestamp}`);
     }
 
@@ -284,8 +286,10 @@ class TemplatePlugin extends Plugin {
     // ========================================================================
 
     // Example: Add a context menu item (requires context-menu-api plugin)
-    if (window.customjs?.contextMenu) {
-      window.customjs.contextMenu.addUserItem("template-action", {
+    const contextMenu =
+      window.customjs.pluginManager.getPlugin("context-menu-api");
+    if (contextMenu) {
+      contextMenu.addUserItem("template-action", {
         text: "🔧 Template Action",
         icon: "el-icon-star",
         onClick: (userData) => this.handleUserClick(userData),
@@ -298,8 +302,9 @@ class TemplatePlugin extends Plugin {
     // ========================================================================
 
     // Example: Add a navigation menu item (requires nav-menu-api plugin)
-    if (window.customjs?.navMenu) {
-      window.customjs.navMenu.addItem("template", {
+    const navMenu = window.customjs.pluginManager.getPlugin("nav-menu-api");
+    if (navMenu) {
+      navMenu.addItem("template", {
         label: "Template",
         icon: "ri-file-code-line",
         content: this.createContent(),
@@ -343,13 +348,16 @@ class TemplatePlugin extends Plugin {
     this.log("🗑️ Removing UI...");
 
     // Remove context menu items
-    if (window.customjs?.contextMenu) {
-      window.customjs.contextMenu.removeUserItem("template-action");
+    const contextMenu =
+      window.customjs.pluginManager.getPlugin("context-menu-api");
+    if (contextMenu) {
+      contextMenu.removeUserItem("template-action");
     }
 
     // Remove navigation menu items
-    if (window.customjs?.navMenu) {
-      window.customjs.navMenu.removeItem("template");
+    const navMenu = window.customjs.pluginManager.getPlugin("nav-menu-api");
+    if (navMenu) {
+      navMenu.removeItem("template");
     }
 
     // Event listeners are automatically removed by cleanupResources()
@@ -381,10 +389,9 @@ class TemplatePlugin extends Plugin {
           this.log("🧪 Test button clicked!");
           this.emit("button-clicked", { timestamp: Date.now() });
 
-          if (window.customjs?.utils) {
-            window.customjs.utils.showSuccess(
-              "Template plugin test button clicked!"
-            );
+          const utils = window.customjs.pluginManager.getPlugin("utils");
+          if (utils) {
+            utils.showSuccess("Template plugin test button clicked!");
           }
         });
       }
@@ -407,10 +414,9 @@ class TemplatePlugin extends Plugin {
   handleUserClick(userData) {
     this.log("👤 User context menu clicked:", userData);
 
-    if (window.customjs?.utils) {
-      window.customjs.utils.showInfo(
-        `Template action for: ${userData.displayName}`
-      );
+    const utils = window.customjs.pluginManager.getPlugin("utils");
+    if (utils) {
+      utils.showInfo(`Template action for: ${userData.displayName}`);
     }
 
     // Example: Emit event for other plugins
