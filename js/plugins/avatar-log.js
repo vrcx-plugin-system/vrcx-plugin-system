@@ -5,8 +5,8 @@ class AvatarLogPlugin extends Plugin {
       description:
         "Logs and submits avatar IDs to various avatar database providers (avtrDB, NSVR, PAW, VRCDB, VRCWB)",
       author: "Bluscream",
-      version: "1.0.4",
-      build: "1728758800",
+      version: "1.0.5",
+      build: "1728758900",
       dependencies: [],
     });
 
@@ -62,14 +62,6 @@ class AvatarLogPlugin extends Plugin {
     );
 
     // General settings
-    this.registerSetting(
-      "general",
-      "enabled",
-      "Enable Avatar Logging",
-      "boolean",
-      true,
-      "Master switch for avatar logging"
-    );
     this.registerSetting(
       "general",
       "attribution",
@@ -170,11 +162,6 @@ class AvatarLogPlugin extends Plugin {
   }
 
   async start() {
-    if (!this.config.general.enabled.value) {
-      this.logger.log("⏸️ Avatar Logger is disabled in settings");
-      return;
-    }
-
     this.logger.log("🚀 Starting Avatar Logger...");
 
     // Hook into avatar-related events and functions
@@ -184,7 +171,6 @@ class AvatarLogPlugin extends Plugin {
   }
 
   async onLogin() {
-    if (!this.config.general.enabled.value) return;
     if (!this.config.advanced.scanOnStartup.value) return;
 
     this.logger.log("👤 User logged in, scanning avatar stores...");
@@ -259,7 +245,6 @@ class AvatarLogPlugin extends Plugin {
 
   // Process a single avatar ID
   processAvatarId(avatarId, source = "unknown") {
-    if (!this.config.general.enabled.value) return;
     if (!avatarId || typeof avatarId !== "string") return;
 
     // Validate avatar ID format (avtr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
