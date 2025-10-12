@@ -222,8 +222,8 @@ if ([string]::IsNullOrWhiteSpace($changes)) {
     Write-Host "No changes detected. Nothing to commit." -ForegroundColor Yellow
 }
 else {
-    Write-Host "Changes detected:" -ForegroundColor Green
-    git status --short
+    # Write-Host "Changes detected:" -ForegroundColor Green
+    # git status --short
     
     # Add all changes
     Write-Host "Adding all changes..." -ForegroundColor Yellow
