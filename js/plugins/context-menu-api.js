@@ -235,15 +235,24 @@ class ContextMenuApiPlugin extends Plugin {
 
     // Get highest z-index dropdown
     const highestDropdown = dropdowns[0];
-    if (!highestDropdown) return null;
+    if (!highestDropdown) {
+      this.log("No visible dropdowns found");
+      return null;
+    }
 
     // Check if our menu is in this dropdown
-    if (!highestDropdown.contains(menuContainer)) return null;
+    if (!highestDropdown.contains(menuContainer)) {
+      this.log("Menu container not in highest dropdown");
+      return null;
+    }
 
     // Find triggering button via aria-controls
     const ariaId = highestDropdown.id;
     const triggerButton = document.querySelector(`[aria-controls="${ariaId}"]`);
-    if (!triggerButton) return null;
+    if (!triggerButton) {
+      this.log(`No trigger button found for aria-controls="${ariaId}"`);
+      return null;
+    }
 
     // Detect dialog type from aria-controls button
     const userDialog = triggerButton.closest(".x-user-dialog");
@@ -251,11 +260,24 @@ class ContextMenuApiPlugin extends Plugin {
     const worldDialog = triggerButton.closest(".x-world-dialog");
     const groupDialog = triggerButton.closest(".x-group-dialog");
 
-    if (userDialog) return "user";
-    if (avatarDialog) return "avatar";
-    if (worldDialog) return "world";
-    if (groupDialog) return "group";
+    if (userDialog) {
+      this.log("Detected user dialog menu");
+      return "user";
+    }
+    if (avatarDialog) {
+      this.log("Detected avatar dialog menu");
+      return "avatar";
+    }
+    if (worldDialog) {
+      this.log("Detected world dialog menu");
+      return "world";
+    }
+    if (groupDialog) {
+      this.log("Detected group dialog menu");
+      return "group";
+    }
 
+    this.log("Could not detect dialog type from trigger button");
     return null;
   }
 
@@ -264,10 +286,15 @@ class ContextMenuApiPlugin extends Plugin {
     this.menuContainers.set(menuId, { menuType, container: menuContainer });
 
     const items = this.items.get(menuType);
-    if (!items || items.size === 0) return;
+    if (!items || items.size === 0) {
+      this.log(`No items to add for ${menuType} menu`);
+      return;
+    }
 
+    this.log(`Processing ${menuType} menu (${items.size} items to add)`);
     items.forEach((item, itemId) => {
       this.addMenuItemToContainer(menuContainer, menuType, itemId, item);
+      this.log(`✓ Added ${menuType} menu item to DOM: ${itemId}`);
     });
   }
 
