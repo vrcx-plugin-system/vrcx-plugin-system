@@ -36,11 +36,10 @@ class AutoFollowPlugin extends Plugin {
       description:
         "Automatic location tracking system that follows selected users",
       author: "Bluscream",
-      version: "1.1.0",
-      build: Math.floor(Date.now() / 1000).toString(),
+      version: "2.0.0",
+      build: "1760390100",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
@@ -85,9 +84,6 @@ class AutoFollowPlugin extends Plugin {
       "context-menu-api"
     );
     this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
-    this.apiHelpers = await window.customjs.pluginManager.waitForPlugin(
-      "api-helpers"
-    );
 
     // Setup context menu buttons
     this.setupUserButtons();
@@ -199,7 +195,7 @@ class AutoFollowPlugin extends Plugin {
   async checkUserLocation(userId, data) {
     try {
       // Fetch user data from API
-      const userResponse = await this.apiHelpers.API.getUser(userId);
+      const userResponse = await window.customjs.functions.API.getUser(userId);
       if (!userResponse || !userResponse.json) return;
 
       const user = userResponse.json;
@@ -297,7 +293,7 @@ class AutoFollowPlugin extends Plugin {
       }
 
       // Send invite request
-      await this.apiHelpers.API.sendInviteRequest(inviteParams, user.id);
+      await window.customjs.functions.API.sendInviteRequest(inviteParams, user.id);
 
       this.lastRequestedFrom.set(user.id, location);
       this.logger.log(`✓ Successfully requested invite from ${userName}`);

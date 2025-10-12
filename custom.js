@@ -20,11 +20,12 @@ window.customjs.pluginConfig = {
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/logger.js",
     // ConfigManager must be loaded second (before Plugin base class)
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
-    // Base Plugin class must be loaded third
+    // API must be loaded third (before Plugin base class and plugins that use it)
+    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api.js",
+    // Base Plugin class must be loaded fourth
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
     // Core plugins
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
     // UI plugins
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
@@ -35,7 +36,6 @@ window.customjs.pluginConfig = {
     // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/bio-updater.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-invite.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-follow.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/managers.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/plugin-manager-ui.js",
     // Optional/Debug plugins (uncomment to enable)
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js",
@@ -481,11 +481,12 @@ class PluginManager {
       // Store the number of plugins before loading
       const pluginCountBefore = window.customjs.plugins.length;
 
-      // Check if this is the logger, config manager, or base Plugin class (utility files, not plugins)
+      // Check if this is the logger, config manager, API, or base Plugin class (utility files, not plugins)
       const isLogger = pluginUrl.includes("/logger.js");
       const isConfigManager = pluginUrl.includes("/config.js");
+      const isApi = pluginUrl.includes("/api.js");
       const isBaseClass = pluginUrl.includes("/plugin.js");
-      const isUtilityFile = isLogger || isConfigManager || isBaseClass;
+      const isUtilityFile = isLogger || isConfigManager || isApi || isBaseClass;
 
       // Wrap in IIFE to isolate scope, but don't auto-execute plugin initialization
       const wrappedCode = `(function() { 
@@ -544,11 +545,13 @@ class PluginManager {
               );
             }
           } else {
-            // Utility file loaded (logger, config manager, or base class)
+            // Utility file loaded (logger, config manager, API, or base class)
             const utilityName = isLogger
               ? "Logger utility"
               : isConfigManager
               ? "ConfigManager utility"
+              : isApi
+              ? "API utility"
               : "base Plugin class";
             console.log(`[CJS|[PluginManager] ✓ Loaded ${utilityName}`);
           }

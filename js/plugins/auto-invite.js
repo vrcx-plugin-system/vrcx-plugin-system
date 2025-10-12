@@ -5,11 +5,10 @@ class AutoInvitePlugin extends Plugin {
       description:
         "Automatic user invitation system with location tracking and custom messages",
       author: "Bluscream",
-      version: "3.2.0",
-      build: Math.floor(Date.now() / 1000).toString(),
+      version: "4.0.0",
+      build: "1760390000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
@@ -294,9 +293,6 @@ class AutoInvitePlugin extends Plugin {
     );
 
     try {
-      const apiHelpers =
-        window.customjs?.pluginManager?.getPlugin("api-helpers");
-
       // Get custom message template from config
       const messageTemplate = this.config.messages.customInviteMessage.value;
 
@@ -340,7 +336,7 @@ class AutoInvitePlugin extends Plugin {
             inviteParams.message = customMessage;
           }
 
-          return apiHelpers?.API.sendInvite(inviteParams, user.id);
+          return window.customjs.functions.API.sendInvite(inviteParams, user.id);
         }
       );
 

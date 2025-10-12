@@ -5,13 +5,11 @@ class BioUpdaterPlugin extends Plugin {
       description:
         "Automatic bio updating with user statistics and custom templates",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1728668400",
+      version: "3.0.0",
+      build: "1760390200",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
       ],
     });
 
@@ -30,6 +28,7 @@ class BioUpdaterPlugin extends Plugin {
       "Content",
       "Bio content configuration"
     );
+    this.registerSettingCategory("steam", "Steam", "Steam API configuration");
 
     this.registerSetting(
       "timing",
@@ -46,6 +45,30 @@ class BioUpdaterPlugin extends Plugin {
       "number",
       20000,
       "Delay before first update after login (default: 20 seconds)"
+    );
+    this.registerSetting(
+      "steam",
+      "steamId",
+      "Steam ID",
+      "string",
+      "",
+      "Your Steam ID64 (can be base64 encoded)"
+    );
+    this.registerSetting(
+      "steam",
+      "apiKey",
+      "Steam API Key",
+      "string",
+      "",
+      "Your Steam Web API key (can be base64 encoded)"
+    );
+    this.registerSetting(
+      "steam",
+      "appId",
+      "Steam App ID",
+      "string",
+      "438100",
+      "Steam app ID for VRChat (default: 438100)"
     );
     this.registerSetting(
       "content",
@@ -76,10 +99,6 @@ Oculus ID: {oculusId}`,
 
   async start() {
     // Wait for dependencies
-    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
-    this.apiHelpers = await window.customjs.pluginManager.waitForPlugin(
-      "api-helpers"
-    );
     this.autoInvite = await window.customjs.pluginManager.waitForPlugin(
       "auto-invite"
     );
@@ -144,11 +163,13 @@ Oculus ID: {oculusId}`,
       const oldBio = currentUser.bio.split("\n-\n")[0];
 
       // Get Steam playtime if configured
-      const steamId = this.getConfig("steam.id");
-      const steamKey = this.getConfig("steam.key");
-      const steamPlayTime = await this.utils?.getSteamPlaytime(
+      const steamId = this.config.steam.steamId.value;
+      const steamKey = this.config.steam.apiKey.value;
+      const steamAppId = this.config.steam.appId.value;
+      const steamPlayTime = await this.getSteamPlaytime(
         steamId,
-        steamKey
+        steamKey,
+        steamAppId
       );
 
       let steamHours,
@@ -161,9 +182,7 @@ Oculus ID: {oculusId}`,
       }
 
       // Calculate playtime text
-      let playTimeText = this.utils?.timeToText(
-        steamSeconds ?? stats.timeSpent
-      );
+      let playTimeText = this.timeToText(steamSeconds ?? stats.timeSpent);
       if (steamHours) playTimeText += ` (${steamHours})`;
 
       // Get moderations
@@ -189,10 +208,7 @@ Oculus ID: {oculusId}`,
       const bioTemplate = this.config.content.template.value;
 
       const newBio = bioTemplate
-        .replace(
-          "{last_activity}",
-          this.utils?.timeToText(now - last_activity) ?? ""
-        )
+        .replace("{last_activity}", this.timeToText(now - last_activity))
         .replace("{playtime}", playTimeText)
         .replace("{date_joined}", currentUser.date_joined ?? "Unknown")
         .replace("{friends}", currentUser.friends.length ?? "?")
@@ -204,10 +220,7 @@ Oculus ID: {oculusId}`,
           "{muted}",
           moderations.filter((item) => item.type === "mute").length ?? "?"
         )
-        .replace(
-          "{now}",
-          this.utils?.formatDateTime() ?? new Date().toISOString()
-        )
+        .replace("{now}", this.formatDateTime())
         .replace("{autojoin}", joiners.map((f) => f.name).join(", "))
         .replace("{partners}", partners.map((f) => f.name).join(", "))
         .replace(
@@ -240,11 +253,7 @@ Oculus ID: {oculusId}`,
       this.logger.log(`Updating bio (${bio.length} chars)`);
 
       // Save bio via API
-      if (!this.apiHelpers) {
-        this.logger.error("API Helpers plugin not available");
-        return;
-      }
-      await this.apiHelpers.API.saveBio(bio);
+      await window.customjs.functions.API.saveBio(bio);
 
       this.logger.log("✓ Bio updated successfully");
 
@@ -261,6 +270,98 @@ Oculus ID: {oculusId}`,
   async triggerUpdate() {
     this.logger.log("Manual bio update triggered");
     await this.updateBio();
+  }
+
+  /**
+   * Convert milliseconds to human-readable text
+   * @param {number} ms - Milliseconds
+   * @returns {string} Human-readable time (e.g., "2d 3h")
+   */
+  timeToText(ms) {
+    if (!ms || ms < 0) return "0s";
+
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days}d ${hours % 24}h`;
+    if (hours > 0) return `${hours}h ${minutes % 60}m`;
+    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+    return `${seconds}s`;
+  }
+
+  /**
+   * Format date/time as YYYY-MM-DD HH:MM:SS GMT+1
+   * @param {Date} now - Optional date object (defaults to now)
+   * @returns {string} Formatted date/time
+   */
+  formatDateTime(now = null) {
+    now = now ?? new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const seconds = String(now.getSeconds()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds} GMT+1`;
+  }
+
+  /**
+   * Try to decode base64 string (if it looks like base64)
+   * @param {string} str - String to decode
+   * @returns {string} Decoded string or original if not base64
+   */
+  tryDecodeBase64(str) {
+    if (!str || typeof str !== "string") return str;
+    if (!str.endsWith("=")) return str;
+
+    try {
+      const decoded = atob(str);
+      this.logger.log("Decoded base64 string");
+      return decoded;
+    } catch (error) {
+      this.logger.warn(`Failed to decode base64: ${error.message}`);
+      return str;
+    }
+  }
+
+  /**
+   * Get Steam playtime for an app
+   * @param {string} steamId - Steam ID (can be base64 encoded)
+   * @param {string} apiKey - Steam API key (can be base64 encoded)
+   * @param {string} appId - Steam app ID (default: 438100 for VRChat)
+   * @returns {Promise<number|null>} Playtime in minutes or null
+   */
+  async getSteamPlaytime(steamId, apiKey, appId = "438100") {
+    try {
+      if (!steamId) {
+        this.logger.warn("No Steam ID provided");
+        return null;
+      }
+
+      // Decode base64 if needed
+      steamId = this.tryDecodeBase64(steamId);
+      apiKey = this.tryDecodeBase64(apiKey);
+
+      const response = await fetch(
+        `https://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key=${apiKey}&steamid=${steamId}&format=json&include_played_free_games=1`
+      );
+      const data = await response.json();
+
+      const game = data?.response?.games?.find((g) => g.appid == appId);
+      if (!game) {
+        this.logger.warn(`No playtime data found for app ${appId}`);
+        return null;
+      }
+
+      const playtimeMinutes = game.playtime_forever;
+      this.logger.log(`Got Steam playtime: ${playtimeMinutes} minutes`);
+      return playtimeMinutes;
+    } catch (error) {
+      this.logger.error(`Error getting Steam playtime: ${error.message}`);
+      return null;
+    }
   }
 }
 

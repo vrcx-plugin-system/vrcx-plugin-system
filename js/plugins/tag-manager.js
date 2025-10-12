@@ -4,12 +4,11 @@ class TagManagerPlugin extends Plugin {
       name: "Tag Manager",
       description: "Custom user tags management with URL-based loading",
       author: "Bluscream",
-      version: "2.2.0",
-      build: Math.floor(Date.now() / 1000).toString(),
+      version: "3.0.0",
+      build: "1760390300",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
       ],
     });
@@ -65,9 +64,6 @@ class TagManagerPlugin extends Plugin {
   async start() {
     // Wait for dependencies
     this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
-    this.apiHelpers = await window.customjs.pluginManager.waitForPlugin(
-      "api-helpers"
-    );
 
     this.enabled = true;
     this.started = true;

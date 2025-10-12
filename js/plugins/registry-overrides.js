@@ -5,7 +5,7 @@ class RegistryOverridesPlugin extends Plugin {
       description:
         "VRChat registry settings management with event-based triggers",
       author: "Bluscream",
-      version: "2.2.0",
+      version: "2.2.1",
       build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
@@ -171,11 +171,11 @@ class RegistryOverridesPlugin extends Plugin {
           // Apply registry setting
           await window.AppApi.SetVRChatRegistryKey(key, value, registryType);
         } catch (error) {
-          this.logger.error(`Error setting registry key ${key}:`, error);
+          this.error(`Error setting registry key ${key}:`, error);
         }
       }
     } catch (error) {
-      this.logger.error("Error applying registry settings:", error);
+      this.error("Error applying registry settings:", error);
     }
   }
 
@@ -188,7 +188,7 @@ class RegistryOverridesPlugin extends Plugin {
     try {
       return await window.AppApi.GetVRChatRegistryKey(key);
     } catch (error) {
-      this.logger.error(`Error getting registry key ${key}:`, error);
+      this.error(`Error getting registry key ${key}:`, error);
       return null;
     }
   }

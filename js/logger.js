@@ -241,11 +241,27 @@ class Logger {
   }
 
   /**
+   * Alias for logInfo (for convenience)
+   * @param {string} msg - Message to log
+   */
+  info(msg) {
+    this.logInfo(msg);
+  }
+
+  /**
    * Log warning message to console only
    * @param {string} msg - Message to log
    */
   logWarn(msg) {
     this.log(msg, { console: true }, "warn", false);
+  }
+
+  /**
+   * Alias for logWarn (for convenience)
+   * @param {string} msg - Message to log
+   */
+  warn(msg) {
+    this.logWarn(msg);
   }
 
   /**
@@ -257,11 +273,27 @@ class Logger {
   }
 
   /**
+   * Alias for logError (for convenience)
+   * @param {string} msg - Message to log
+   */
+  error(msg) {
+    this.logError(msg);
+  }
+
+  /**
    * Log debug message to console only with timestamp
    * @param {string} msg - Message to log
    */
   logDebug(msg) {
     this.log(msg, { console: true }, "log", true);
+  }
+
+  /**
+   * Alias for logDebug (for convenience)
+   * @param {string} msg - Message to log
+   */
+  debug(msg) {
+    this.logDebug(msg);
   }
 
   /**
@@ -410,5 +442,5 @@ class Logger {
 if (typeof window !== "undefined") {
   window.customjs = window.customjs || {};
   window.customjs.Logger = Logger;
-  console.log("[CJS] [Logger] Logger class loaded and ready");
+  console.log("[CJS|Logger] Logger class loaded and ready (v1.1.0)");
 }
