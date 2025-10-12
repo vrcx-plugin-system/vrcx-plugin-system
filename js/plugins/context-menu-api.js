@@ -1,14 +1,3 @@
-// ============================================================================
-// CONTEXT MENU API PLUGIN
-// Version: 2.1.0
-// Build: 1760196200
-// ============================================================================
-
-/**
- * Context Menu API Plugin
- * Provides API for adding custom menu items to VRCX dialog context menus
- * Supports: user, avatar, world, group, and instance dialogs
- */
 class ContextMenuApiPlugin extends Plugin {
   constructor() {
     super({
@@ -96,10 +85,6 @@ class ContextMenuApiPlugin extends Plugin {
     // Parent cleanup (will disconnect observer automatically)
     await super.stop();
   }
-
-  // ============================================================================
-  // MUTATION HANDLING
-  // ============================================================================
 
   handleMutations(mutations) {
     mutations.forEach((mutation) => {
@@ -197,10 +182,6 @@ class ContextMenuApiPlugin extends Plugin {
       }
     }
   }
-
-  // ============================================================================
-  // MENU DETECTION & PROCESSING
-  // ============================================================================
 
   debouncedMenuDetection(menuId, menuType, menuElement) {
     // Clear any existing timer for this menu
@@ -419,10 +400,6 @@ class ContextMenuApiPlugin extends Plugin {
 
     return null;
   }
-
-  // ============================================================================
-  // PUBLIC API
-  // ============================================================================
 
   addUserItem(itemId, item) {
     return this.addItem("user", itemId, item);

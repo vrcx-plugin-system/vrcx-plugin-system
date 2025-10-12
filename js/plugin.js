@@ -1,10 +1,3 @@
-/**
- * Base class for all VRCX custom plugins
- * Provides lifecycle management, resource tracking, and standardized API
- *
- * @class Plugin
- * @description All plugins should extend this class and override lifecycle methods
- */
 class Plugin {
   constructor(metadata = {}) {
     // Get URL from metadata or from global scope (set by PluginManager)
@@ -62,9 +55,6 @@ class Plugin {
     }
   }
 
-  // ============================================================================
-  // LIFECYCLE METHODS (Override these in your plugin)
-  // ============================================================================
 
   /**
    * Called immediately when plugin code is executed (before loading)
@@ -122,9 +112,6 @@ class Plugin {
     this.cleanupResources();
   }
 
-  // ============================================================================
-  // PLUGIN STATE MANAGEMENT
-  // ============================================================================
 
   /**
    * Enable the plugin
@@ -169,9 +156,6 @@ class Plugin {
     return this.enabled ? await this.disable() : await this.enable();
   }
 
-  // ============================================================================
-  // RESOURCE TRACKING
-  // ============================================================================
 
   /**
    * Register a timer (setInterval/setTimeout) for automatic cleanup
@@ -268,9 +252,6 @@ class Plugin {
     }
   }
 
-  // ============================================================================
-  // EVENT SYSTEM
-  // ============================================================================
 
   /**
    * Emit an event that other plugins can listen to
@@ -308,9 +289,6 @@ class Plugin {
     window.customjs.events[fullEventName].push(callback);
   }
 
-  // ============================================================================
-  // HOOK SYSTEM
-  // ============================================================================
 
   /**
    * Register a pre-hook to run before a function
@@ -346,9 +324,6 @@ class Plugin {
     this.resources.hooks.add({ type: "post", functionPath, callback });
   }
 
-  // ============================================================================
-  // UTILITY METHODS
-  // ============================================================================
 
   /**
    * Log info message (uses personal logger instance)

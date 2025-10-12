@@ -1,8 +1,3 @@
-/**
- * Navigation Menu API Plugin
- * Provides API for adding custom navigation menu items to VRCX
- * Supports automatic content management and Pinia integration
- */
 class NavMenuApiPlugin extends Plugin {
   constructor() {
     super({
@@ -70,10 +65,6 @@ class NavMenuApiPlugin extends Plugin {
     // Parent cleanup (will disconnect observer automatically)
     await super.stop();
   }
-
-  // ============================================================================
-  // SETUP & INITIALIZATION
-  // ============================================================================
 
   async waitForNavMenu() {
     return new Promise((resolve) => {
@@ -180,10 +171,6 @@ class NavMenuApiPlugin extends Plugin {
       }
     });
   }
-
-  // ============================================================================
-  // PUBLIC API
-  // ============================================================================
 
   /**
    * Add a custom navigation menu item with optional content container
@@ -357,10 +344,6 @@ class NavMenuApiPlugin extends Plugin {
     ids.forEach((id) => this.removeItem(id));
     this.logger.log(`Cleared all ${ids.length} custom items`);
   }
-
-  // ============================================================================
-  // RENDERING
-  // ============================================================================
 
   renderItem(item) {
     if (!this.navMenu || !item.enabled) return;

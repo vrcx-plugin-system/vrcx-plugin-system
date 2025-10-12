@@ -78,10 +78,6 @@ window.customjs.pluginConfig = {
   loadTimeout: 10000,
 };
 
-// ============================================================================
-// PLUGIN MANAGER - Central plugin management and loading system
-// ============================================================================
-
 console.log(
   `%c[VRCX Custom] %cStarting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
   "font-weight: bold; color: #00ff00",
@@ -124,10 +120,6 @@ class PluginManager {
     // Register in global namespace
     window.customjs.pluginManager = this;
   }
-
-  // ============================================================================
-  // PLUGIN REGISTRATION
-  // ============================================================================
 
   registerPlugin(plugin) {
     if (!plugin || !plugin.metadata) {
@@ -191,10 +183,6 @@ class PluginManager {
     return window.customjs.plugins;
   }
 
-  // ============================================================================
-  // LIFECYCLE MANAGEMENT
-  // ============================================================================
-
   async startAllPlugins() {
     console.log(
       `%c[CJS|PluginManager] %cCalling start() on ${window.customjs.plugins.length} plugins...`,
@@ -243,10 +231,6 @@ class PluginManager {
       }
     }
   }
-
-  // ============================================================================
-  // LOGIN MONITORING
-  // ============================================================================
 
   onLogin(callback) {
     if (this.isLoggedIn && this.hasTriggeredLogin) {
@@ -310,10 +294,6 @@ class PluginManager {
 
     setTimeout(setupWatch, 100);
   }
-
-  // ============================================================================
-  // HOOK SYSTEM
-  // ============================================================================
 
   registerPreHook(functionPath, callback, plugin) {
     window.customjs.hooks.pre[functionPath] =
@@ -433,10 +413,6 @@ class PluginManager {
     console.log(`[CJS|[PluginManager] ✓ Wrapped function: ${functionPath}`);
     return true;
   }
-
-  // ============================================================================
-  // PLUGIN LOADING
-  // ============================================================================
 
   async loadAllPlugins() {
     const pluginUrls = window.customjs.pluginConfig.plugins;
@@ -602,10 +578,6 @@ class PluginManager {
     }
   }
 
-  // ============================================================================
-  // DYNAMIC PLUGIN MANAGEMENT
-  // ============================================================================
-
   async addPlugin(url) {
     if (this.loadedUrls.has(url)) {
       console.warn(`[CJS|[PluginManager] Already loaded: ${url}`);
@@ -714,14 +686,6 @@ class PluginManager {
     };
   }
 }
-
-// Note: All plugin management is now under customjs.pluginManager
-// Access plugins via: customjs.plugins (array of Plugin instances)
-// Manage plugins via: customjs.pluginManager.addPlugin(), removePlugin(), etc.
-
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
 
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", () => {

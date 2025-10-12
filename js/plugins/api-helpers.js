@@ -30,9 +30,6 @@ class ApiHelpersPlugin extends Plugin {
     // No login-specific logic needed for API helpers plugin
   }
 
-  // ============================================================================
-  // API WRAPPER FUNCTIONS
-  // ============================================================================
 
   API = {
     /**
@@ -100,9 +97,6 @@ class ApiHelpersPlugin extends Plugin {
     },
   };
 
-  // ============================================================================
-  // LOCATION & WORLD MANAGEMENT
-  // ============================================================================
 
   LocationManager = {
     /**

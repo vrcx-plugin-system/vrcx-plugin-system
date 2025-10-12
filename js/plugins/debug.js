@@ -1,15 +1,12 @@
-/**
- * Debug plugin for testing and development
- * Provides debug utilities and console commands
- */
 class DebugPlugin extends Plugin {
   constructor() {
     super({
       name: "Debug Plugin",
-      description: "Debug utilities and console commands for development",
+      description:
+        "Debug utilities, IPC logging, and console commands for development",
       author: "Bluscream",
-      version: "1.0.0",
-      build: "1728668400",
+      version: "2.0.0",
+      build: "1760386222",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
       ],
@@ -17,17 +14,93 @@ class DebugPlugin extends Plugin {
   }
 
   async load() {
+    // Expose all debug functions globally via window.customjs.debug
+    window.customjs.debug = {
+      // Plugin system debug functions
+      printDebugInfo: () => this.printDebugInfo(),
+      listPlugins: () => this.listPlugins(),
+      getPlugin: (id) => this.getPlugin(id),
+      listEvents: () => this.listEvents(),
+      listHooks: () => this.listHooks(),
+      testEvent: (eventName, data) => this.testEvent(eventName, data),
+
+      // VRCX state access functions
+      getCurrentUser: () => window.$pinia?.user?.currentUser,
+      getCurrentLocation: () => window.$app?.lastLocation,
+      getFriends: () => window.$pinia?.user?.currentUser?.friends,
+      getCustomTags: () => window.$pinia?.user?.customUserTags,
+      getStores: () => window.$pinia,
+
+      // Plugin helper functions
+      getUserTag: (userId) =>
+        window.customjs.pluginManager
+          .getPlugin("tag-manager")
+          ?.getUserTag(userId),
+      clearProcessedMenus: () =>
+        window.customjs.pluginManager
+          .getPlugin("context-menu-api")
+          ?.clearProcessedMenus(),
+      triggerRegistryEvent: (event) =>
+        window.customjs.pluginManager
+          .getPlugin("registry-overrides")
+          ?.triggerEvent(event),
+      refreshTags: () =>
+        window.customjs.pluginManager.getPlugin("tag-manager")?.refreshTags(),
+      getLoadedTagsCount: () =>
+        window.customjs.pluginManager
+          .getPlugin("tag-manager")
+          ?.getLoadedTagsCount(),
+      getActiveTagsCount: () =>
+        window.customjs.pluginManager
+          .getPlugin("tag-manager")
+          ?.getActiveTagsCount(),
+      getPluginManager: () => window.customjs?.pluginManager,
+      getPluginList: () => window.customjs?.pluginManager?.getPluginList(),
+
+      // Advanced inspection functions
+      inspectPlugin: (id) => this.inspectPlugin(id),
+
+      // Global scope search
+      searchVariable: (searchTerm, options) =>
+        this.searchVariable(searchTerm, options),
+    };
+
     this.logger.log("Debug utilities ready");
     this.loaded = true;
   }
 
   async start() {
+    // Setup IPC logging hook
+    this.setupIPCLogging();
+
     this.enabled = true;
     this.started = true;
-    this.logger.log("Debug plugin started");
+    this.logger.log("Debug plugin started (access via window.customjs.debug)");
 
     // Print debug info
     this.printDebugInfo();
+  }
+
+  setupIPCLogging() {
+    // Use PRE-HOOK to log IPC calls
+    this.registerPreHook("AppApi.SendIpc", (args) => {
+      console.log(`[IPC OUT]`, args); // eslint-disable-line no-console - Intentional debug output for IPC monitoring
+    });
+
+    this.logger.log(
+      "IPC logging hook registered (will activate when function available)"
+    );
+  }
+
+  async stop() {
+    this.logger.log("Stopping Debug plugin");
+
+    // Clean up global namespace
+    if (window.customjs?.debug) {
+      delete window.customjs.debug;
+    }
+
+    await super.stop();
   }
 
   printDebugInfo() {
@@ -79,29 +152,41 @@ class DebugPlugin extends Plugin {
   }
 
   /**
-   * List all events
+   * List all events (opens DevTools and logs to console)
    */
   listEvents() {
-    return Object.keys(window.customjs.events).map((eventName) => ({
-      event: eventName,
-      listeners: window.customjs.events[eventName].length,
-    }));
+    // Open devtools for debugging
+    if (window.AppApi?.ShowDevTools) {
+      window.AppApi.ShowDevTools();
+    }
+
+    const events = window.customjs?.events || {};
+    // Intentional console output for debug listing
+    console.group("Custom Events"); // eslint-disable-line no-console
+    Object.keys(events).forEach((eventName) => {
+      console.log(`${eventName}: ${events[eventName].length} listeners`); // eslint-disable-line no-console
+    });
+    console.groupEnd(); // eslint-disable-line no-console
+    return events;
   }
 
   /**
-   * List all hooks
+   * List all hooks (opens DevTools and logs to console)
    */
   listHooks() {
-    return {
-      pre: Object.keys(window.customjs.hooks.pre).map((fn) => ({
-        function: fn,
-        hooks: window.customjs.hooks.pre[fn].length,
-      })),
-      post: Object.keys(window.customjs.hooks.post).map((fn) => ({
-        function: fn,
-        hooks: window.customjs.hooks.post[fn].length,
-      })),
-    };
+    // Open devtools for debugging
+    if (window.AppApi?.ShowDevTools) {
+      window.AppApi.ShowDevTools();
+    }
+
+    // Intentional console output for debug listing
+    console.group("Registered Hooks"); // eslint-disable-line no-console
+    console.log("Pre-hooks:"); // eslint-disable-line no-console
+    console.dir(Object.keys(window.customjs?.hooks?.pre || {})); // eslint-disable-line no-console
+    console.log("Post-hooks:"); // eslint-disable-line no-console
+    console.dir(Object.keys(window.customjs?.hooks?.post || {})); // eslint-disable-line no-console
+    console.groupEnd(); // eslint-disable-line no-console
+    return window.customjs?.hooks;
   }
 
   /**
@@ -110,6 +195,145 @@ class DebugPlugin extends Plugin {
   testEvent(eventName, data) {
     this.emit(eventName, data);
     this.logger.log(`Emitted event: ${eventName}`, data);
+  }
+
+  /**
+   * Inspect a plugin in detail (opens DevTools and logs to console)
+   */
+  inspectPlugin(id) {
+    // Open devtools for debugging
+    if (window.AppApi?.ShowDevTools) {
+      window.AppApi.ShowDevTools();
+    }
+
+    const plugin = window.customjs?.plugins?.find((p) => p.metadata.id === id);
+    if (plugin) {
+      // Intentional console output for debug inspection
+      console.group(`Plugin: ${plugin.metadata.name}`); // eslint-disable-line no-console
+      console.log("Metadata:"); // eslint-disable-line no-console
+      console.dir(plugin.metadata); // eslint-disable-line no-console
+      console.table({
+        // eslint-disable-line no-console
+        enabled: plugin.enabled,
+        loaded: plugin.loaded,
+        started: plugin.started,
+      });
+      console.log("Resources:"); // eslint-disable-line no-console
+      console.dir(plugin.resources); // eslint-disable-line no-console
+      console.groupEnd(); // eslint-disable-line no-console
+    } else {
+      console.warn(`Plugin not found: ${id}`); // eslint-disable-line no-console
+    }
+    return plugin;
+  }
+
+  /**
+   * Search for properties/functions in the global scope by name
+   * @param {string} searchTerm - Term to search for (case-insensitive)
+   * @param {object} options - Search options
+   * @param {number} options.maxDepth - Maximum depth to search (default: 5)
+   * @param {boolean} options.caseSensitive - Case-sensitive search (default: false)
+   * @param {boolean} options.exactMatch - Exact match only (default: false)
+   * @param {object} options.root - Root object to search (default: window)
+   * @returns {Array} Array of results with path and value
+   */
+  searchVariable(searchTerm, options = {}) {
+    const {
+      maxDepth = 5,
+      caseSensitive = false,
+      exactMatch = false,
+      root = window,
+    } = options;
+
+    const results = [];
+    const visited = new WeakSet();
+    const searchPattern = caseSensitive ? searchTerm : searchTerm.toLowerCase();
+
+    const search = (obj, path, depth) => {
+      if (depth > maxDepth) return;
+      if (obj === null || obj === undefined) return;
+      if (typeof obj !== "object" && typeof obj !== "function") return;
+
+      // Prevent circular references
+      if (visited.has(obj)) return;
+      visited.add(obj);
+
+      try {
+        const keys = Object.getOwnPropertyNames(obj);
+
+        for (const key of keys) {
+          try {
+            const currentPath = path ? `${path}.${key}` : key;
+            const keyToCheck = caseSensitive ? key : key.toLowerCase();
+
+            // Check if key matches search term
+            const matches = exactMatch
+              ? keyToCheck === searchPattern
+              : keyToCheck.includes(searchPattern);
+
+            if (matches) {
+              let value;
+              let type;
+              try {
+                value = obj[key];
+                type = typeof value;
+              } catch (e) {
+                value = "[Error accessing property]";
+                type = "error";
+              }
+
+              results.push({
+                path: currentPath,
+                key: key,
+                type: type,
+                value: value,
+              });
+            }
+
+            // Recursively search nested objects
+            if (depth < maxDepth) {
+              try {
+                const nestedValue = obj[key];
+                if (
+                  nestedValue &&
+                  (typeof nestedValue === "object" ||
+                    typeof nestedValue === "function")
+                ) {
+                  search(nestedValue, currentPath, depth + 1);
+                }
+              } catch (e) {
+                // Skip properties that throw errors when accessed
+              }
+            }
+          } catch (e) {
+            // Skip problematic keys
+          }
+        }
+      } catch (e) {
+        // Skip objects that don't allow property enumeration
+      }
+    };
+
+    this.logger.log(
+      `Searching for "${searchTerm}" (max depth: ${maxDepth})...`
+    );
+    search(root, "", 0);
+
+    // Log results to console
+    if (window.AppApi?.ShowDevTools) {
+      window.AppApi.ShowDevTools();
+    }
+
+    console.group(
+      `Search results for "${searchTerm}" (${results.length} matches)`
+    ); // eslint-disable-line no-console
+    results.forEach((result) => {
+      console.log(`${result.path} [${result.type}]`, result.value); // eslint-disable-line no-console
+    });
+    console.groupEnd(); // eslint-disable-line no-console
+
+    this.logger.log(`Found ${results.length} matches for "${searchTerm}"`);
+    return results;
   }
 }
 

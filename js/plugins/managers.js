@@ -1,17 +1,11 @@
-/**
- * Managers Plugin
- * Collection of manager utilities: instance monitoring, notifications, debug tools
- * NOW USING PROPER HOOK SYSTEM - No direct function overrides!
- */
 class ManagersPlugin extends Plugin {
   constructor() {
     super({
       name: "Managers",
-      description:
-        "Management classes for instance monitoring, notifications, and debug tools",
+      description: "Instance monitoring and notification handling",
       author: "Bluscream",
-      version: "3.1.0",
-      build: "1744630000",
+      version: "3.2.0",
+      build: "1760386122",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
@@ -34,9 +28,6 @@ class ManagersPlugin extends Plugin {
     // Setup hooks for notification handling
     this.setupNotificationHandling();
 
-    // Setup debug tools
-    this.setupDebugTools();
-
     this.enabled = true;
     this.started = true;
     this.logger.log("Managers plugin started, all hooks registered");
@@ -50,10 +41,6 @@ class ManagersPlugin extends Plugin {
     this.logger.log("Stopping Managers plugin");
     await super.stop();
   }
-
-  // ============================================================================
-  // INSTANCE MONITORING (Using Hooks)
-  // ============================================================================
 
   setupInstanceMonitoring() {
     // Use POST-HOOK to process getInstance results
@@ -91,10 +78,6 @@ class ManagersPlugin extends Plugin {
       "Instance monitoring hook registered (will activate when function available)"
     );
   }
-
-  // ============================================================================
-  // NOTIFICATION HANDLING (Using Hooks)
-  // ============================================================================
 
   setupNotificationHandling() {
     // Use POST-HOOK to process notifications
@@ -185,136 +168,6 @@ class ManagersPlugin extends Plugin {
     } catch (error) {
       this.logger.error("Error handling tagged player join:", error);
     }
-  }
-
-  // ============================================================================
-  // DEBUG TOOLS (Using Hooks)
-  // ============================================================================
-
-  setupDebugTools() {
-    // Setup IPC logging hook
-    this.setupIPCLogging();
-
-    // Setup console debug functions
-    this.setupConsoleFunctions();
-
-    this.logger.log("Debug tools initialized");
-  }
-
-  setupIPCLogging() {
-    // Use PRE-HOOK to log IPC calls
-    // Hook system will automatically wait for the function to exist
-    this.registerPreHook("AppApi.SendIpc", (args) => {
-      console.log(`[IPC OUT]`, args); // eslint-disable-line no-console - Intentional debug output for IPC monitoring
-    });
-
-    this.logger.log(
-      "IPC logging hook registered (will activate when function available)"
-    );
-  }
-
-  setupConsoleFunctions() {
-    // Add useful console functions for debugging
-    const debugFunctions = {
-      getCurrentUser: () => window.$pinia?.user?.currentUser,
-      getCurrentLocation: () => window.$app?.lastLocation,
-      getFriends: () => window.$pinia?.user?.currentUser?.friends,
-      getCustomTags: () => window.$pinia?.user?.customUserTags,
-      getUserTag: (userId) =>
-        window.customjs.pluginManager
-          .getPlugin("tag-manager")
-          ?.getUserTag(userId),
-      clearProcessedMenus: () =>
-        window.customjs.pluginManager
-          .getPlugin("context-menu-api")
-          ?.clearProcessedMenus(),
-      triggerRegistryEvent: (event) =>
-        window.customjs.pluginManager
-          .getPlugin("registry-overrides")
-          ?.triggerEvent(event),
-      refreshTags: () =>
-        window.customjs.pluginManager.getPlugin("tag-manager")?.refreshTags(),
-      getLoadedTagsCount: () =>
-        window.customjs.pluginManager
-          .getPlugin("tag-manager")
-          ?.getLoadedTagsCount(),
-      getActiveTagsCount: () =>
-        window.customjs.pluginManager
-          .getPlugin("tag-manager")
-          ?.getActiveTagsCount(),
-      getStores: () => window.$pinia,
-      listPlugins: () => window.customjs?.plugins,
-      getPlugin: (id) =>
-        window.customjs?.plugins?.find((p) => p.metadata.id === id),
-      getPluginManager: () => window.customjs?.pluginManager,
-      getPluginList: () => window.customjs?.pluginManager?.getPluginList(),
-      // New helper functions for the refactored system
-      inspectPlugin: (id) => {
-        // Open devtools for debugging
-        if (window.AppApi?.ShowDevTools) {
-          window.AppApi.ShowDevTools();
-        }
-
-        const plugin = window.customjs?.plugins?.find(
-          (p) => p.metadata.id === id
-        );
-        if (plugin) {
-          // Intentional console output for debug inspection
-          console.group(`Plugin: ${plugin.metadata.name}`); // eslint-disable-line no-console
-          console.log("Metadata:"); // eslint-disable-line no-console
-          console.dir(plugin.metadata); // eslint-disable-line no-console
-          console.table({
-            // eslint-disable-line no-console
-            enabled: plugin.enabled,
-            loaded: plugin.loaded,
-            started: plugin.started,
-          });
-          console.log("Resources:"); // eslint-disable-line no-console
-          console.dir(plugin.resources); // eslint-disable-line no-console
-          console.groupEnd(); // eslint-disable-line no-console
-        } else {
-          console.warn(`Plugin not found: ${id}`); // eslint-disable-line no-console
-        }
-        return plugin;
-      },
-      listEvents: () => {
-        // Open devtools for debugging
-        if (window.AppApi?.ShowDevTools) {
-          window.AppApi.ShowDevTools();
-        }
-
-        const events = window.customjs?.events || {};
-        // Intentional console output for debug listing
-        console.group("Custom Events"); // eslint-disable-line no-console
-        Object.keys(events).forEach((eventName) => {
-          console.log(`${eventName}: ${events[eventName].length} listeners`); // eslint-disable-line no-console
-        });
-        console.groupEnd(); // eslint-disable-line no-console
-        return events;
-      },
-      listHooks: () => {
-        // Open devtools for debugging
-        if (window.AppApi?.ShowDevTools) {
-          window.AppApi.ShowDevTools();
-        }
-
-        // Intentional console output for debug listing
-        console.group("Registered Hooks"); // eslint-disable-line no-console
-        console.log("Pre-hooks:"); // eslint-disable-line no-console
-        console.dir(Object.keys(window.customjs?.hooks?.pre || {})); // eslint-disable-line no-console
-        console.log("Post-hooks:"); // eslint-disable-line no-console
-        console.dir(Object.keys(window.customjs?.hooks?.post || {})); // eslint-disable-line no-console
-        console.groupEnd(); // eslint-disable-line no-console
-        return window.customjs?.hooks;
-      },
-    };
-
-    // Expose debug functions globally
-    window.customjs.debugFunctions = debugFunctions;
-
-    this.logger.log(
-      "Console debug functions registered (will open DevTools when used)"
-    );
   }
 }
 

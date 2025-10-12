@@ -1,8 +1,3 @@
-/**
- * Logger class for VRCX custom plugins
- * Provides standardized logging with various output methods
- * Each plugin should have its own Logger instance
- */
 class Logger {
   /**
    * Create a new Logger instance
@@ -237,10 +232,6 @@ class Logger {
     }
   }
 
-  // ============================================================================
-  // CONVENIENCE METHODS - Console Only
-  // ============================================================================
-
   /**
    * Log info message to console only
    * @param {string} msg - Message to log
@@ -272,10 +263,6 @@ class Logger {
   logDebug(msg) {
     this.log(msg, { console: true }, "log", true);
   }
-
-  // ============================================================================
-  // CONVENIENCE METHODS - Noty (VRCX Notifications)
-  // ============================================================================
 
   /**
    * Show info notification in VRCX (using playNoty)
@@ -312,10 +299,6 @@ class Logger {
   showError(msg) {
     this.log(msg, { console: false, vrcx: { noty: true } }, "error", false);
   }
-
-  // ============================================================================
-  // CONVENIENCE METHODS - VR Notifications
-  // ============================================================================
 
   /**
    * Show desktop notification
@@ -392,10 +375,6 @@ class Logger {
   async notifyVR(msg) {
     await Promise.all([this.notifyXSOverlay(msg), this.notifyOVRToolkit(msg)]);
   }
-
-  // ============================================================================
-  // CONVENIENCE METHODS - Combined Logging
-  // ============================================================================
 
   /**
    * Log to console and show VRCX notification

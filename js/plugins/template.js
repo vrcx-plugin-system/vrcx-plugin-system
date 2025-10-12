@@ -1,12 +1,3 @@
-/**
- * This is a comprehensive template showing the complete plugin structure.
- * Copy this file to create your own plugin!
- *
- * IMPORTANT: Plugins should NOT auto-initialize themselves.
- * The PluginLoader handles instantiation, loading, and starting.
- *
- * Simply define your plugin class extending Plugin, and export it.
- */
 class TemplatePlugin extends Plugin {
   constructor() {
     // Call parent constructor with metadata
@@ -26,10 +17,6 @@ class TemplatePlugin extends Plugin {
       ],
     });
 
-    // ========================================================================
-    // PLUGIN-SPECIFIC PROPERTIES
-    // ========================================================================
-
     this.counter = 0;
     this.timerInterval = null;
     this.exampleData = {
@@ -41,10 +28,6 @@ class TemplatePlugin extends Plugin {
     this.logger.log("🔨 Constructor called - Plugin instance created");
   }
 
-  // ============================================================================
-  // LIFECYCLE METHODS
-  // ============================================================================
-
   /**
    * Called immediately when plugin loads from URL (Phase 2 of loading)
    * Use for: Setup, register hooks, expose methods to global scope
@@ -52,10 +35,6 @@ class TemplatePlugin extends Plugin {
    */
   async load() {
     this.logger.log("📦 load() called - Setting up plugin...");
-
-    // ========================================================================
-    // PLUGIN ACCESS
-    // ========================================================================
 
     // ⚠️ OLD WAY (Not Recommended): Expose plugin directly
     // window.customjs.template = this;
@@ -65,10 +44,6 @@ class TemplatePlugin extends Plugin {
 
     // You can still expose specific utility methods if really needed
     // window.customjs.templateMethod = () => this.doSomething();
-
-    // ========================================================================
-    // REGISTER HOOKS
-    // ========================================================================
 
     // Example: Register a pre-hook to run BEFORE a function
     // this.registerPreHook('AppApi.SendIpc', (args) => {
@@ -80,10 +55,6 @@ class TemplatePlugin extends Plugin {
     // this.registerPostHook('AppApi.SendIpc', (result, args) => {
     //   this.logger.log(`🪝 POST-HOOK: SendIpc returned:`, result);
     // });
-
-    // ========================================================================
-    // REGISTER EVENTS
-    // ========================================================================
 
     // Example: Listen to events from other plugins
     // this.on("other-plugin:event-name", (data) => {
@@ -118,15 +89,7 @@ class TemplatePlugin extends Plugin {
 
     this.exampleData.startTime = Date.now();
 
-    // ========================================================================
-    // SETUP UI
-    // ========================================================================
-
     this.setupUI();
-
-    // ========================================================================
-    // SETUP TIMERS (with automatic cleanup)
-    // ========================================================================
 
     // Example: Register a timer with auto-cleanup when plugin stops
     this.timerInterval = this.registerTimer(
@@ -142,10 +105,6 @@ class TemplatePlugin extends Plugin {
       }, 60000) // Every minute
     );
 
-    // ========================================================================
-    // SETUP OBSERVERS (with automatic cleanup)
-    // ========================================================================
-
     // Example: Setup mutation observer with auto-cleanup
     const observer = new MutationObserver((mutations) => {
       this.logger.log(`👁️ DOM mutation detected: ${mutations.length} changes`);
@@ -156,10 +115,6 @@ class TemplatePlugin extends Plugin {
       subtree: true,
       attributes: false, // Set to true to watch attribute changes
     });
-
-    // ========================================================================
-    // ACCESS OTHER PLUGINS
-    // ========================================================================
 
     // Example: Access other plugins via PluginManager
     if (this.utils) {
@@ -183,10 +138,6 @@ class TemplatePlugin extends Plugin {
 
     this.exampleData.loginTime = Date.now();
 
-    // ========================================================================
-    // ACCESS USER DATA
-    // ========================================================================
-
     const userId = currentUser?.id;
     const displayName = currentUser?.displayName;
     const trustLevel = currentUser?.$trustLevel;
@@ -196,10 +147,6 @@ class TemplatePlugin extends Plugin {
     this.logger.log(`👤 Display Name: ${displayName}`);
     this.logger.log(`👤 Trust Level: ${trustLevel}`);
     this.logger.log(`👤 Friends: ${friendCount}`);
-
-    // ========================================================================
-    // ACCESS PINIA STORES
-    // ========================================================================
 
     // Example: Access location data
     const location = window.$pinia?.location?.lastLocation?.location;
@@ -213,20 +160,12 @@ class TemplatePlugin extends Plugin {
       );
     }
 
-    // ========================================================================
-    // ACCESS CONFIG
-    // ========================================================================
-
     // Example: Get config values
     const steamId = this.getConfig("steam.id", "not-set");
     this.logger.log(`⚙️ Steam ID from config: ${steamId}`);
 
     // Example: Set config values
     this.setConfig("template.lastLogin", Date.now());
-
-    // ========================================================================
-    // MAKE API CALLS
-    // ========================================================================
 
     // Example: Make authenticated API calls
     // const response = await window.request.userRequest.getUser({ userId });
@@ -241,15 +180,7 @@ class TemplatePlugin extends Plugin {
   async stop() {
     this.logger.log("⏹️ stop() called - Cleaning up...");
 
-    // ========================================================================
-    // REMOVE UI ELEMENTS
-    // ========================================================================
-
     this.removeUI();
-
-    // ========================================================================
-    // CUSTOM CLEANUP
-    // ========================================================================
 
     // Add any custom cleanup here
     // (Timers, observers, listeners are auto-cleaned by parent class)
@@ -258,10 +189,6 @@ class TemplatePlugin extends Plugin {
       loginTime: null,
       eventsReceived: 0,
     };
-
-    // ========================================================================
-    // CALL PARENT CLEANUP
-    // ========================================================================
 
     // This will automatically clean up:
     // - All timers (setInterval/setTimeout)
@@ -273,16 +200,8 @@ class TemplatePlugin extends Plugin {
     this.logger.log("✅ stop() complete - Plugin stopped");
   }
 
-  // ============================================================================
-  // PLUGIN-SPECIFIC METHODS
-  // ============================================================================
-
   setupUI() {
     this.logger.log("🎨 Setting up UI...");
-
-    // ========================================================================
-    // CONTEXT MENU ITEMS
-    // ========================================================================
 
     // Example: Add a context menu item (requires context-menu-api plugin)
     if (this.contextMenuApi) {
@@ -294,10 +213,6 @@ class TemplatePlugin extends Plugin {
       this.logger.log("📝 Added context menu item");
     }
 
-    // ========================================================================
-    // NAVIGATION MENU ITEMS
-    // ========================================================================
-
     // Example: Add a navigation menu item (requires nav-menu-api plugin)
     if (this.navMenuApi) {
       this.navMenuApi.addItem("template", {
@@ -307,10 +222,6 @@ class TemplatePlugin extends Plugin {
       });
       this.logger.log("📝 Added navigation menu item");
     }
-
-    // ========================================================================
-    // EVENT LISTENERS (with automatic cleanup)
-    // ========================================================================
 
     // Example: Register event listener with auto-cleanup
     const button = document.querySelector(".some-button-selector");
@@ -323,10 +234,6 @@ class TemplatePlugin extends Plugin {
       );
       this.logger.log("🔘 Registered button click listener");
     }
-
-    // ========================================================================
-    // PINIA SUBSCRIPTIONS (with automatic cleanup)
-    // ========================================================================
 
     // Example: Subscribe to Pinia store with auto-cleanup
     if (window.$pinia?.user?.$subscribe) {
@@ -416,10 +323,6 @@ class TemplatePlugin extends Plugin {
     this.emit("user-clicked", userData);
   }
 
-  // ============================================================================
-  // HELPER METHODS
-  // ============================================================================
-
   /**
    * Example helper method showing how to do something
    * @param {string} param - Parameter description
@@ -453,10 +356,6 @@ class TemplatePlugin extends Plugin {
     };
   }
 }
-
-// ============================================================================
-// PLUGIN EXPORT
-// ============================================================================
 
 // Make plugin class available for PluginLoader to instantiate
 window.__LAST_PLUGIN_CLASS__ = TemplatePlugin;

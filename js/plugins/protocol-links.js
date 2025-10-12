@@ -1,8 +1,3 @@
-/**
- * Protocol Links Plugin
- * Adds context menu items to copy VRCX protocol links for users, avatars, worlds, and groups
- * Protocol format: vrcx://type/id or vrcx://import/type/id
- */
 class ProtocolLinksPlugin extends Plugin {
   constructor() {
     super({
@@ -57,10 +52,6 @@ class ProtocolLinksPlugin extends Plugin {
 
     await super.stop();
   }
-
-  // ============================================================================
-  // SETUP
-  // ============================================================================
 
   setupContextMenuItems() {
     if (!this.contextMenuApi) {
@@ -138,10 +129,6 @@ class ProtocolLinksPlugin extends Plugin {
     this.logger.log("All context menu items removed");
   }
 
-  // ============================================================================
-  // COPY FUNCTIONS
-  // ============================================================================
-
   copyUserLink(userData) {
     if (!userData || !userData.id) {
       this.showError("No user data available");
@@ -212,10 +199,6 @@ class ProtocolLinksPlugin extends Plugin {
     this.copyToClipboard(link, "Group link");
   }
 
-  // ============================================================================
-  // UTILITY FUNCTIONS
-  // ============================================================================
-
   async copyToClipboard(text, description) {
     if (!this.utils) {
       this.logger.error("Utils plugin not available");
@@ -229,10 +212,6 @@ class ProtocolLinksPlugin extends Plugin {
       this.logger.showError(`Failed to copy ${description.toLowerCase()}`);
     }
   }
-
-  // ============================================================================
-  // ADDITIONAL METHODS
-  // ============================================================================
 
   /**
    * Add a custom avatar database provider link

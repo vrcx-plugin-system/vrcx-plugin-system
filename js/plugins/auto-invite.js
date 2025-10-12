@@ -1,8 +1,3 @@
-/**
- * Auto Invite Plugin
- * Automatic user invitation system with location tracking
- * Monitors user location changes and sends invites to multiple users
- */
 class AutoInvitePlugin extends Plugin {
   constructor() {
     super({
@@ -77,10 +72,6 @@ class AutoInvitePlugin extends Plugin {
     // Parent cleanup (will stop timers automatically)
     await super.stop();
   }
-
-  // ============================================================================
-  // LOCATION TRACKING
-  // ============================================================================
 
   setupLocationTracking() {
     // Hook into location API
@@ -169,10 +160,6 @@ class AutoInvitePlugin extends Plugin {
     }
   }
 
-  // ============================================================================
-  // CONTEXT MENU INTEGRATION
-  // ============================================================================
-
   setupUserButton() {
     try {
       // Don't setup if already done
@@ -212,10 +199,6 @@ class AutoInvitePlugin extends Plugin {
       return false;
     }
   }
-
-  // ============================================================================
-  // AUTO INVITE LOGIC
-  // ============================================================================
 
   async onLocationDestinationDetected(destination) {
     if (!this.utils?.isEmpty) return;

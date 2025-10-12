@@ -1,8 +1,3 @@
-/**
- * Registry Overrides Plugin
- * VRChat registry settings management with event-based triggers
- * Allows setting registry keys based on specific events
- */
 class RegistryOverridesPlugin extends Plugin {
   constructor() {
     super({
@@ -59,10 +54,6 @@ class RegistryOverridesPlugin extends Plugin {
     await super.stop();
   }
 
-  // ============================================================================
-  // EVENT HANDLERS
-  // ============================================================================
-
   setupEventHandlers() {
     // Set up event handlers for different VRCX events
     this.eventHandlers.set("VRCX_START", () =>
@@ -94,10 +85,6 @@ class RegistryOverridesPlugin extends Plugin {
       this.logger.warn(`Unknown event: ${eventName}`);
     }
   }
-
-  // ============================================================================
-  // REGISTRY MANAGEMENT
-  // ============================================================================
 
   /**
    * Apply registry settings from configuration

@@ -1,8 +1,3 @@
-/**
- * Plugin Manager UI Plugin
- * Comprehensive visual UI for managing VRCX custom plugins
- * Adds a "Plugins" navigation menu item with full management interface
- */
 class PluginManagerUIPlugin extends Plugin {
   constructor() {
     super({
@@ -60,10 +55,6 @@ class PluginManagerUIPlugin extends Plugin {
     await super.stop();
   }
 
-  // ============================================================================
-  // SETUP
-  // ============================================================================
-
   setupNavMenuItem() {
     if (!this.navMenuApi) {
       this.logger.error("NavMenu plugin not found!");
@@ -98,10 +89,6 @@ class PluginManagerUIPlugin extends Plugin {
 
     setTimeout(setupWatch, 2000);
   }
-
-  // ============================================================================
-  // UI CREATION
-  // ============================================================================
 
   createPanelContent() {
     const container = document.createElement("div");
@@ -710,10 +697,6 @@ class PluginManagerUIPlugin extends Plugin {
     section.appendChild(info);
     return section;
   }
-
-  // ============================================================================
-  // EVENT HANDLERS
-  // ============================================================================
 
   async handleTogglePlugin(pluginId) {
     try {

@@ -31,9 +31,6 @@ class UtilsPlugin extends Plugin {
     // No login-specific logic needed for utils plugin
   }
 
-  // ============================================================================
-  // UTILITY METHODS
-  // ============================================================================
 
   /**
    * Check if value is empty (null, undefined, or empty string)

@@ -1,8 +1,3 @@
-/**
- * Tag Manager Plugin
- * Custom user tags management with URL-based loading
- * Supports loading tags from external JSON sources (e.g., FewTags)
- */
 class TagManagerPlugin extends Plugin {
   constructor() {
     super({
@@ -86,10 +81,6 @@ class TagManagerPlugin extends Plugin {
     // Parent cleanup (will clear the timer automatically)
     await super.stop();
   }
-
-  // ============================================================================
-  // TAG LOADING
-  // ============================================================================
 
   async loadAllTags() {
     const tagConfig = this.getConfig("tags");
@@ -287,10 +278,6 @@ class TagManagerPlugin extends Plugin {
 
     this.logger.log(`Periodic updates started (interval: ${updateInterval}ms)`);
   }
-
-  // ============================================================================
-  // PUBLIC API
-  // ============================================================================
 
   /**
    * Get tag for a specific user
