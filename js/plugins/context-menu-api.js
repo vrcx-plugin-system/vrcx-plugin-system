@@ -1,7 +1,7 @@
 // ============================================================================
 // CONTEXT MENU API PLUGIN
-// Version: 2.0.1
-// Build: 1760196000
+// Version: 2.0.2
+// Build: 1760196100
 // ============================================================================
 
 /**
@@ -15,8 +15,8 @@ class ContextMenuApiPlugin extends Plugin {
       name: "Context Menu API",
       description: "Custom context menu management for VRCX dialogs",
       author: "Bluscream",
-      version: "2.0.1",
-      build: "1760196000",
+      version: "2.0.2",
+      build: "1760196100",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
       ],
@@ -385,7 +385,10 @@ class ContextMenuApiPlugin extends Plugin {
       (d) => window.getComputedStyle(d).display !== "none"
     );
 
-    if (!visibleDialog) return null;
+    if (!visibleDialog) {
+      this.warn(`No visible dialog found for ${menuType}`);
+      return null;
+    }
 
     // Try to get data from Vue component
     try {
@@ -395,34 +398,72 @@ class ContextMenuApiPlugin extends Plugin {
         visibleDialog.__vue__ ||
         visibleDialog._vnode?.component;
 
+      // Debug: Log component structure
+      this.log(
+        `Searching for ${menuType} data in Vue component:`,
+        vueComponent
+      );
+
       if (vueComponent) {
         // Try props first
         if (vueComponent.props) {
+          this.log(`Found props:`, Object.keys(vueComponent.props));
           const data =
             vueComponent.props[menuType + "Ref"] || vueComponent.props.ref;
-          if (data) return data;
+          if (data) {
+            this.log(`✓ Found data in props`);
+            return data;
+          }
         }
 
-        // Try exposed/setupState
+        // Try exposed
         if (vueComponent.exposed) {
+          this.log(`Found exposed:`, Object.keys(vueComponent.exposed));
           const data = vueComponent.exposed[menuType + "Ref"];
-          if (data) return data;
+          if (data) {
+            this.log(`✓ Found data in exposed`);
+            return data;
+          }
         }
 
         // Try setupState
         if (vueComponent.setupState) {
+          this.log(`Found setupState:`, Object.keys(vueComponent.setupState));
           const data = vueComponent.setupState[menuType + "Ref"];
-          if (data) return data;
+          if (data) {
+            this.log(`✓ Found data in setupState`);
+            return data;
+          }
         }
 
         // Try ctx (context)
         if (vueComponent.ctx) {
+          this.log(`Found ctx:`, Object.keys(vueComponent.ctx));
           const data = vueComponent.ctx[menuType + "Ref"];
-          if (data) return data;
+          if (data) {
+            this.log(`✓ Found data in ctx`);
+            return data;
+          }
         }
+
+        // Try data property directly
+        if (vueComponent.data) {
+          this.log(`Found data:`, Object.keys(vueComponent.data));
+          const data = vueComponent.data[menuType + "Ref"];
+          if (data) {
+            this.log(`✓ Found data in data`);
+            return data;
+          }
+        }
+
+        this.warn(
+          `Could not find ${menuType}Ref in any Vue component property`
+        );
+      } else {
+        this.warn(`No Vue component found on dialog element`);
       }
     } catch (error) {
-      this.warn("Could not extract dialog data:", error);
+      this.error("Error extracting dialog data:", error);
     }
 
     return null;
