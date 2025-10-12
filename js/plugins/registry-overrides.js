@@ -5,8 +5,8 @@ class RegistryOverridesPlugin extends Plugin {
       description:
         "VRChat registry settings management with event-based triggers",
       author: "Bluscream",
-      version: "2.0.0",
-      build: "1728668400",
+      version: "2.2.0",
+      build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
@@ -18,6 +18,32 @@ class RegistryOverridesPlugin extends Plugin {
   }
 
   async load() {
+    // Register settings
+    this.registerSettingCategory(
+      "config",
+      "Configuration",
+      "Registry override configuration"
+    );
+
+    this.registerSetting(
+      "config",
+      "overrides",
+      "Registry Overrides",
+      "object",
+      {
+        VRC_ALLOW_UNTRUSTED_URL: {
+          value: 0,
+          events: [
+            "VRCX_START",
+            "GAME_START",
+            "INSTANCE_SWITCH_PUBLIC",
+            "INSTANCE_SWITCH_PRIVATE",
+          ],
+        },
+      },
+      "Dictionary of registry key overrides with their values and trigger events"
+    );
+
     // Setup event handlers
     this.setupEventHandlers();
 
@@ -92,10 +118,10 @@ class RegistryOverridesPlugin extends Plugin {
    */
   async applyRegistrySettings(triggerEvent = "PERIODIC") {
     try {
-      // Get config from global namespace
-      const config = this.getConfig("registry", {});
+      // Get config from ConfigManager
+      const config = this.config.config.overrides.value;
 
-      if (Object.keys(config).length === 0) {
+      if (!config || Object.keys(config).length === 0) {
         return; // No registry settings configured
       }
 

@@ -4,8 +4,8 @@ class TagManagerPlugin extends Plugin {
       name: "Tag Manager",
       description: "Custom user tags management with URL-based loading",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1744630000",
+      version: "2.2.0",
+      build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
@@ -19,6 +19,45 @@ class TagManagerPlugin extends Plugin {
   }
 
   async load() {
+    // Register settings
+    this.registerSettingCategory(
+      "sources",
+      "Tag Sources",
+      "URLs to load tags from"
+    );
+    this.registerSettingCategory(
+      "timing",
+      "Timing",
+      "Update timing configuration"
+    );
+
+    this.registerSetting(
+      "sources",
+      "urls",
+      "Tag URLs",
+      "array",
+      [
+        "https://github.com/Bluscream/FewTags/raw/refs/heads/main/usertags.json",
+      ],
+      "URLs to load user tags from"
+    );
+    this.registerSetting(
+      "timing",
+      "updateInterval",
+      "Update Interval (ms)",
+      "number",
+      3600000,
+      "How often to reload tags (default: 1 hour)"
+    );
+    this.registerSetting(
+      "timing",
+      "initialDelay",
+      "Initial Delay (ms)",
+      "number",
+      5000,
+      "Delay before first tag load after login (default: 5 seconds)"
+    );
+
     this.logger.log("Tag Manager plugin ready");
     this.loaded = true;
   }
@@ -40,13 +79,7 @@ class TagManagerPlugin extends Plugin {
   async onLogin(currentUser) {
     this.logger.log(`User logged in: ${currentUser?.displayName}`);
 
-    const tagConfig = this.getConfig("tags");
-    if (!tagConfig) {
-      this.logger.warn("Tags config not available, skipping tag loading");
-      return;
-    }
-
-    const initialDelay = tagConfig.initialDelay || 5000;
+    const initialDelay = this.config.timing.initialDelay.value;
 
     // Schedule initial tag load
     setTimeout(async () => {
@@ -83,16 +116,16 @@ class TagManagerPlugin extends Plugin {
   }
 
   async loadAllTags() {
-    const tagConfig = this.getConfig("tags");
+    const urls = this.config.sources.urls.value;
 
-    if (!tagConfig?.urls || tagConfig.urls.length === 0) {
+    if (!urls || urls.length === 0) {
       this.logger.warn("No tag URLs configured");
       return;
     }
 
-    this.logger.log(`Loading tags from ${tagConfig.urls.length} URLs...`);
+    this.logger.log(`Loading tags from ${urls.length} URLs...`);
 
-    for (const url of tagConfig.urls) {
+    for (const url of urls) {
       try {
         await this.loadTagsFromUrl(url);
       } catch (error) {
@@ -267,7 +300,7 @@ class TagManagerPlugin extends Plugin {
   }
 
   startPeriodicUpdates() {
-    const updateInterval = this.getConfig("tags.updateInterval", 3600000);
+    const updateInterval = this.config.timing.updateInterval.value;
 
     const intervalId = this.registerTimer(
       setInterval(async () => {

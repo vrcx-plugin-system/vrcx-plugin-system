@@ -1,0 +1,603 @@
+/**
+ * ConfigManager System
+ *
+ * A centralized configuration management system for VRCX custom plugins.
+ *
+ * Features:
+ * - Store plugin settings in VRChat's config.json under vrcx.customjs.plugins
+ * - Settings are stored in plugin instances (plugin.config.category.setting)
+ * - Proxied to global namespace (window.customjs.config.plugins.pluginId.category.setting)
+ * - Only non-default values are saved to disk
+ * - Automatic type validation
+ * - Category organization for settings
+ *
+ * Usage in plugins:
+ *
+ * // In plugin's load() method:
+ * this.registerSettingCategory("general", "General Settings", "Basic configuration");
+ * this.registerSetting("general", "enabled", "Enable Feature", "boolean", true, "Enable main feature");
+ *
+ * // Access settings:
+ * console.log(this.config.general.enabled.value);  // From plugin instance (PluginSetting object)
+ * console.log(this.config.general.enabled.defaultValue);  // Access metadata
+ * console.log(window.customjs.config.plugins.myplugin.general.enabled);  // Direct value from global
+ *
+ * // Modify settings:
+ * this.config.general.enabled.value = false;
+ *
+ * // Save to disk (only modified settings):
+ * await this.saveSettings();
+ *
+ * Global API:
+ * - window.customjs.configManager.save() - Save all settings to disk
+ * - window.customjs.configManager.load() - Load settings from disk
+ * - window.customjs.configManager.reset(pluginId?) - Reset to defaults
+ * - window.customjs.configManager.debug() - Get full config structure
+ */
+
+class PluginSetting {
+  /**
+   * Create a new plugin setting
+   * @param {string} pluginId - Plugin ID this setting belongs to
+   * @param {string} category - Category key
+   * @param {string} key - Setting key
+   * @param {string} name - Display name
+   * @param {string} type - Type (string, number, boolean, object, array)
+   * @param {any} defaultValue - Default value
+   * @param {string} description - Optional description
+   */
+  constructor(
+    pluginId,
+    category,
+    key,
+    name,
+    type,
+    defaultValue,
+    description = ""
+  ) {
+    this.pluginId = pluginId;
+    this.category = category;
+    this.key = key;
+    this.name = name;
+    this.type = type;
+    this.defaultValue = defaultValue;
+    this.description = description;
+    this._value = defaultValue;
+  }
+
+  get value() {
+    return this._value;
+  }
+
+  set value(newValue) {
+    // Type validation
+    const actualType = Array.isArray(newValue) ? "array" : typeof newValue;
+    if (
+      actualType !== this.type &&
+      newValue !== null &&
+      newValue !== undefined
+    ) {
+      console.warn(
+        `[CJS|ConfigManager] Type mismatch for ${this.pluginId}.${this.category}.${this.key}: expected ${this.type}, got ${actualType}`
+      );
+    }
+    this._value = newValue;
+
+    // Notify ConfigManager to update proxy
+    if (window.customjs?.configManager) {
+      window.customjs.configManager._updateProxy(this);
+    }
+  }
+
+  /**
+   * Check if value is different from default
+   * @returns {boolean}
+   */
+  isModified() {
+    return JSON.stringify(this._value) !== JSON.stringify(this.defaultValue);
+  }
+
+  /**
+   * Reset to default value
+   */
+  reset() {
+    this._value = this.defaultValue;
+  }
+
+  /**
+   * Get serializable object (only non-default values)
+   * @returns {any|null}
+   */
+  toJSON() {
+    return this.isModified() ? this._value : null;
+  }
+}
+
+class ConfigManager {
+  constructor() {
+    this.version = "1.1.0";
+    this.build = Math.floor(Date.now() / 1000).toString();
+
+    // Store setting definitions and categories
+    this.categories = new Map(); // pluginId -> Map(categoryKey -> {name, description})
+    this.settings = new Map(); // pluginId -> Map(categoryKey -> Map(settingKey -> PluginSetting))
+
+    // Saving state
+    this.isSaving = false;
+    this.saveQueued = false;
+
+    console.log(
+      `[CJS|ConfigManager] ConfigManager v${this.version} (${this.build}) initialized`
+    );
+  }
+
+  /**
+   * Initialize config manager - load from disk
+   * @returns {Promise<void>}
+   */
+  async init() {
+    try {
+      await this.load();
+      console.log("[CJS|ConfigManager] ✓ Initialized and loaded config");
+    } catch (error) {
+      console.error("[CJS|ConfigManager] Error initializing:", error);
+    }
+  }
+
+  /**
+   * Register a setting category for a plugin
+   * Must be called from plugin context (this = plugin instance)
+   * @param {string} key - Category key
+   * @param {string} name - Display name
+   * @param {string} description - Description
+   */
+  registerPluginSettingCategory(key, name, description = "") {
+    // Get plugin ID from context
+    const pluginId = this?.metadata?.id;
+    if (!pluginId) {
+      console.error(
+        "[CJS|ConfigManager] registerPluginSettingCategory must be called from plugin context"
+      );
+      return;
+    }
+
+    if (!this.categories.has(pluginId)) {
+      this.categories.set(pluginId, new Map());
+    }
+
+    this.categories.get(pluginId).set(key, { name, description });
+    console.log(
+      `[CJS|ConfigManager] Registered category: ${pluginId}.${key} (${name})`
+    );
+  }
+
+  /**
+   * Register a setting for a plugin
+   * Must be called from plugin context (this = plugin instance)
+   * @param {string} categoryKey - Category key
+   * @param {string} key - Setting key
+   * @param {string} name - Display name
+   * @param {string} type - Type (string, number, boolean, object, array)
+   * @param {any} defaultValue - Default value
+   * @param {string} description - Optional description
+   */
+  registerPluginSetting(
+    categoryKey,
+    key,
+    name,
+    type,
+    defaultValue,
+    description = ""
+  ) {
+    // Get plugin ID and instance from context
+    const pluginId = this?.metadata?.id;
+    const pluginInstance = this;
+
+    if (!pluginId) {
+      console.error(
+        "[CJS|ConfigManager] registerPluginSetting must be called from plugin context"
+      );
+      return;
+    }
+
+    // Ensure plugin has settings storage
+    if (!this.settings.has(pluginId)) {
+      this.settings.set(pluginId, new Map());
+    }
+    if (!this.settings.get(pluginId).has(categoryKey)) {
+      this.settings.get(pluginId).set(categoryKey, new Map());
+    }
+
+    // Create setting
+    const setting = new PluginSetting(
+      pluginId,
+      categoryKey,
+      key,
+      name,
+      type,
+      defaultValue,
+      description
+    );
+
+    this.settings.get(pluginId).get(categoryKey).set(key, setting);
+
+    // Initialize plugin.config if needed
+    if (!pluginInstance.config) {
+      pluginInstance.config = {};
+    }
+    if (!pluginInstance.config[categoryKey]) {
+      pluginInstance.config[categoryKey] = {};
+    }
+
+    // Store reference to the PluginSetting object (not just the value)
+    // This allows access to metadata like .defaultValue, .isModified(), etc.
+    pluginInstance.config[categoryKey][key] = setting;
+
+    console.log(
+      `[CJS|ConfigManager] Registered setting: ${pluginId}.${categoryKey}.${key} (${type})`
+    );
+  }
+
+  /**
+   * Update the proxy at window.customjs.config.plugins when a setting value changes
+   * @param {PluginSetting} setting - The setting that changed
+   * @private
+   */
+  _updateProxy(setting) {
+    const { pluginId, category, key, value } = setting;
+
+    // Ensure path exists
+    window.customjs.config = window.customjs.config || {};
+    window.customjs.config.plugins = window.customjs.config.plugins || {};
+    window.customjs.config.plugins[pluginId] =
+      window.customjs.config.plugins[pluginId] || {};
+    window.customjs.config.plugins[pluginId][category] =
+      window.customjs.config.plugins[pluginId][category] || {};
+
+    // Update value
+    window.customjs.config.plugins[pluginId][category][key] = value;
+  }
+
+  /**
+   * Setup proxy for all registered settings at window.customjs.config.plugins
+   * @private
+   */
+  _setupProxies() {
+    window.customjs.config = window.customjs.config || {};
+    window.customjs.config.plugins = window.customjs.config.plugins || {};
+
+    this.settings.forEach((categories, pluginId) => {
+      window.customjs.config.plugins[pluginId] =
+        window.customjs.config.plugins[pluginId] || {};
+
+      categories.forEach((settings, categoryKey) => {
+        window.customjs.config.plugins[pluginId][categoryKey] =
+          window.customjs.config.plugins[pluginId][categoryKey] || {};
+
+        settings.forEach((setting, settingKey) => {
+          // Create getter/setter proxy for direct value access
+          Object.defineProperty(
+            window.customjs.config.plugins[pluginId][categoryKey],
+            settingKey,
+            {
+              get: () => setting.value,
+              set: (newValue) => {
+                // Directly update the setting value
+                // The setter will handle updating this proxy via _updateProxy
+                setting.value = newValue;
+              },
+              enumerable: true,
+              configurable: true,
+            }
+          );
+        });
+      });
+    });
+
+    console.log("[CJS|ConfigManager] ✓ Setup proxies for all settings");
+  }
+
+  /**
+   * Get a setting value
+   * @param {string} pluginId
+   * @param {string} categoryKey
+   * @param {string} key
+   * @param {any} defaultValue - Fallback if setting not found
+   * @returns {any}
+   */
+  get(pluginId, categoryKey, key, defaultValue = null) {
+    const setting = this.settings.get(pluginId)?.get(categoryKey)?.get(key);
+    return setting ? setting : defaultValue;
+  }
+
+  /**
+   * Set a setting value
+   * @param {string} pluginId
+   * @param {string} categoryKey
+   * @param {string} key
+   * @param {any} value
+   * @returns {boolean} Success
+   */
+  set(pluginId, categoryKey, key, value) {
+    const setting = this.settings.get(pluginId)?.get(categoryKey)?.get(key);
+
+    if (!setting) {
+      console.warn(
+        `[CJS|ConfigManager] Setting not found: ${pluginId}.${categoryKey}.${key}`
+      );
+      return false;
+    }
+
+    // Setting the value will automatically update the proxy via the setter
+    setting.value = value;
+
+    return true;
+  }
+
+  /**
+   * Load config from VRChat's config.json
+   * @returns {Promise<void>}
+   */
+  async load() {
+    try {
+      if (!window.AppApi?.ReadConfigFileSafe) {
+        console.warn(
+          "[CJS|ConfigManager] AppApi.ReadConfigFileSafe not available"
+        );
+        return;
+      }
+
+      const configJson = await window.AppApi.ReadConfigFileSafe();
+      if (!configJson) {
+        console.log(
+          "[CJS|ConfigManager] No config file found or empty, using defaults"
+        );
+        return;
+      }
+
+      const config = JSON.parse(configJson);
+      const customjsConfig = config?.vrcx?.customjs?.plugins;
+
+      if (!customjsConfig) {
+        console.log("[CJS|ConfigManager] No customjs config found in file");
+        return;
+      }
+
+      // Apply loaded values to settings
+      let loadedCount = 0;
+      Object.keys(customjsConfig).forEach((pluginId) => {
+        const pluginConfig = customjsConfig[pluginId];
+        Object.keys(pluginConfig).forEach((categoryKey) => {
+          const categoryConfig = pluginConfig[categoryKey];
+          Object.keys(categoryConfig).forEach((settingKey) => {
+            const value = categoryConfig[settingKey];
+            const setting = this.settings
+              .get(pluginId)
+              ?.get(categoryKey)
+              ?.get(settingKey);
+
+            if (setting) {
+              setting.value = value;
+              loadedCount++;
+            }
+          });
+        });
+      });
+
+      console.log(
+        `[CJS|ConfigManager] ✓ Loaded ${loadedCount} settings from disk`
+      );
+    } catch (error) {
+      console.error("[CJS|ConfigManager] Error loading config:", error);
+    }
+  }
+
+  /**
+   * Save config to VRChat's config.json (only non-default values)
+   * @returns {Promise<void>}
+   */
+  async save() {
+    if (this.isSaving) {
+      this.saveQueued = true;
+      console.log("[CJS|ConfigManager] Save already in progress, queuing...");
+      return;
+    }
+
+    this.isSaving = true;
+
+    try {
+      if (
+        !window.AppApi?.ReadConfigFileSafe ||
+        !window.AppApi?.WriteConfigFile
+      ) {
+        console.error(
+          "[CJS|ConfigManager] AppApi methods not available for saving"
+        );
+        return;
+      }
+
+      // Read current config
+      const configJson = await window.AppApi.ReadConfigFileSafe();
+      const config = configJson ? JSON.parse(configJson) : {};
+
+      // Ensure structure exists
+      config.vrcx = config.vrcx || {};
+      config.vrcx.customjs = config.vrcx.customjs || {};
+      config.vrcx.customjs.plugins = config.vrcx.customjs.plugins || {};
+
+      // Build plugin settings (only non-default values)
+      let savedCount = 0;
+      this.settings.forEach((categories, pluginId) => {
+        config.vrcx.customjs.plugins[pluginId] =
+          config.vrcx.customjs.plugins[pluginId] || {};
+
+        categories.forEach((settings, categoryKey) => {
+          config.vrcx.customjs.plugins[pluginId][categoryKey] =
+            config.vrcx.customjs.plugins[pluginId][categoryKey] || {};
+
+          settings.forEach((setting, settingKey) => {
+            if (setting.isModified()) {
+              config.vrcx.customjs.plugins[pluginId][categoryKey][settingKey] =
+                setting.value;
+              savedCount++;
+            } else {
+              // Remove default values from config
+              delete config.vrcx.customjs.plugins[pluginId][categoryKey][
+                settingKey
+              ];
+            }
+          });
+
+          // Clean up empty categories
+          if (
+            Object.keys(config.vrcx.customjs.plugins[pluginId][categoryKey])
+              .length === 0
+          ) {
+            delete config.vrcx.customjs.plugins[pluginId][categoryKey];
+          }
+        });
+
+        // Clean up empty plugins
+        if (Object.keys(config.vrcx.customjs.plugins[pluginId]).length === 0) {
+          delete config.vrcx.customjs.plugins[pluginId];
+        }
+      });
+
+      // Write to disk
+      const configString = JSON.stringify(config, null, 2);
+      await window.AppApi.WriteConfigFile(configString);
+
+      console.log(
+        `[CJS|ConfigManager] ✓ Saved ${savedCount} modified settings to disk`
+      );
+    } catch (error) {
+      console.error("[CJS|ConfigManager] Error saving config:", error);
+    } finally {
+      this.isSaving = false;
+
+      // If save was queued while we were saving, save again
+      if (this.saveQueued) {
+        this.saveQueued = false;
+        setTimeout(() => this.save(), 100);
+      }
+    }
+  }
+
+  /**
+   * Reset all settings to defaults
+   * @param {string} pluginId - Optional, reset only this plugin's settings
+   */
+  reset(pluginId = null) {
+    if (pluginId) {
+      const categories = this.settings.get(pluginId);
+      if (categories) {
+        categories.forEach((settings) => {
+          settings.forEach((setting) => setting.reset());
+        });
+        console.log(`[CJS|ConfigManager] ✓ Reset settings for ${pluginId}`);
+      }
+    } else {
+      this.settings.forEach((categories) => {
+        categories.forEach((settings) => {
+          settings.forEach((setting) => setting.reset());
+        });
+      });
+      console.log("[CJS|ConfigManager] ✓ Reset all settings to defaults");
+    }
+  }
+
+  /**
+   * Get all settings for a plugin
+   * @param {string} pluginId
+   * @returns {object}
+   */
+  getPluginSettings(pluginId) {
+    const result = {};
+    const categories = this.settings.get(pluginId);
+
+    if (!categories) return result;
+
+    categories.forEach((settings, categoryKey) => {
+      result[categoryKey] = {};
+      settings.forEach((setting, settingKey) => {
+        result[categoryKey][settingKey] = {
+          name: setting.name,
+          type: setting.type,
+          value: setting.value,
+          defaultValue: setting.defaultValue,
+          description: setting.description,
+          isModified: setting.isModified(),
+        };
+      });
+    });
+
+    return result;
+  }
+
+  /**
+   * Get all categories for a plugin
+   * @param {string} pluginId
+   * @returns {object}
+   */
+  getPluginCategories(pluginId) {
+    const result = {};
+    const categories = this.categories.get(pluginId);
+
+    if (!categories) return result;
+
+    categories.forEach((category, key) => {
+      result[key] = category;
+    });
+
+    return result;
+  }
+
+  /**
+   * Get complete config structure for debugging
+   * @returns {object}
+   */
+  debug() {
+    const result = {
+      categories: {},
+      settings: {},
+      proxies: window.customjs.config.plugins,
+    };
+
+    this.categories.forEach((categories, pluginId) => {
+      result.categories[pluginId] = {};
+      categories.forEach((category, key) => {
+        result.categories[pluginId][key] = category;
+      });
+    });
+
+    this.settings.forEach((categories, pluginId) => {
+      result.settings[pluginId] = {};
+      categories.forEach((settings, categoryKey) => {
+        result.settings[pluginId][categoryKey] = {};
+        settings.forEach((setting, settingKey) => {
+          result.settings[pluginId][categoryKey][settingKey] = {
+            name: setting.name,
+            type: setting.type,
+            value: setting.value,
+            defaultValue: setting.defaultValue,
+            isModified: setting.isModified(),
+          };
+        });
+      });
+    });
+
+    return result;
+  }
+}
+
+// Export classes globally under customjs namespace
+if (typeof window !== "undefined") {
+  window.customjs = window.customjs || {};
+  window.customjs.ConfigManager = ConfigManager;
+  window.customjs.PluginSetting = PluginSetting;
+  window.customjs.configManager = new ConfigManager();
+
+  console.log(
+    "[CJS|ConfigManager] ConfigManager class loaded and instance created"
+  );
+}

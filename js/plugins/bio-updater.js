@@ -19,6 +19,57 @@ class BioUpdaterPlugin extends Plugin {
   }
 
   async load() {
+    // Register settings
+    this.registerSettingCategory(
+      "timing",
+      "Timing",
+      "Update timing configuration"
+    );
+    this.registerSettingCategory(
+      "content",
+      "Content",
+      "Bio content configuration"
+    );
+
+    this.registerSetting(
+      "timing",
+      "updateInterval",
+      "Update Interval (ms)",
+      "number",
+      7200000,
+      "How often to update bio (default: 2 hours)"
+    );
+    this.registerSetting(
+      "timing",
+      "initialDelay",
+      "Initial Delay (ms)",
+      "number",
+      20000,
+      "Delay before first update after login (default: 20 seconds)"
+    );
+    this.registerSetting(
+      "content",
+      "template",
+      "Bio Template",
+      "string",
+      `-
+Relationship: {partners} <3
+Auto Accept: {autojoin}
+Auto Invite: {autoinvite}
+
+Real Rank: {rank}
+Friends: {friends} | Blocked: {blocked} | Muted: {muted}
+Time played: {playtime}
+Date joined: {date_joined}
+Last updated: {now} (every 2h)
+Tags loaded: {tags_loaded}
+
+User ID: {userId}
+Steam ID: {steamId}
+Oculus ID: {oculusId}`,
+      "Bio template with placeholders"
+    );
+
     this.logger.log("Bio updater ready (waiting for login)");
     this.loaded = true;
   }
@@ -44,31 +95,27 @@ class BioUpdaterPlugin extends Plugin {
   async onLogin(currentUser) {
     this.logger.log(`User logged in: ${currentUser?.displayName}`);
 
-    const config = this.getConfig("bio");
-    if (!config) {
-      this.logger.warn("Bio config not available, skipping bio updates");
-      return;
-    }
+    // Use settings from ConfigManager
+    const updateInterval = this.config.timing.updateInterval.value;
+    const initialDelay = this.config.timing.initialDelay.value;
 
     // Register update timer with automatic cleanup
     this.updateTimerId = this.registerTimer(
       setInterval(async () => {
         await this.updateBio();
-      }, config.updateInterval)
+      }, updateInterval)
     );
 
     this.logger.log(
-      `Bio update timer registered (interval: ${config.updateInterval}ms)`
+      `Bio update timer registered (interval: ${updateInterval}ms)`
     );
 
     // Do initial update after delay
     setTimeout(async () => {
       await this.updateBio();
-    }, config.initialDelay);
+    }, initialDelay);
 
-    this.logger.log(
-      `Initial bio update scheduled (delay: ${config.initialDelay}ms)`
-    );
+    this.logger.log(`Initial bio update scheduled (delay: ${initialDelay}ms)`);
   }
 
   async stop() {
@@ -139,7 +186,7 @@ class BioUpdaterPlugin extends Plugin {
       );
 
       // Apply template with replacements
-      const bioTemplate = this.getConfig("bio.template");
+      const bioTemplate = this.config.content.template.value;
 
       const newBio = bioTemplate
         .replace(

@@ -36,6 +36,9 @@ class Plugin {
     // Create personal logger instance for this plugin
     this.logger = new window.customjs.Logger(this.metadata.id);
 
+    // Initialize config object (will be populated by ConfigManager)
+    this.config = {};
+
     // Resource tracking for automatic cleanup
     this.resources = {
       timers: new Set(),
@@ -362,7 +365,7 @@ class Plugin {
   }
 
   /**
-   * Get configuration value from customjs.config
+   * Get configuration value from customjs.config (global config, not plugin settings)
    * @param {string} path - Dot-notation path (e.g., "steam.id")
    * @param {any} defaultValue - Default value if not found
    */
@@ -379,7 +382,7 @@ class Plugin {
   }
 
   /**
-   * Set configuration value
+   * Set configuration value (global config, not plugin settings)
    * @param {string} path - Dot-notation path
    * @param {any} value - Value to set
    */
@@ -394,6 +397,68 @@ class Plugin {
     }
 
     target[lastKey] = value;
+  }
+
+  /**
+   * Register a setting category for this plugin
+   * @param {string} key - Category key
+   * @param {string} name - Display name
+   * @param {string} description - Description
+   */
+  registerSettingCategory(key, name, description = "") {
+    if (!window.customjs?.configManager) {
+      this.warn("ConfigManager not available");
+      return;
+    }
+    window.customjs.configManager.registerPluginSettingCategory.call(
+      this,
+      key,
+      name,
+      description
+    );
+  }
+
+  /**
+   * Register a setting for this plugin
+   * @param {string} categoryKey - Category key
+   * @param {string} key - Setting key
+   * @param {string} name - Display name
+   * @param {string} type - Type (string, number, boolean, object, array)
+   * @param {any} defaultValue - Default value
+   * @param {string} description - Optional description
+   */
+  registerSetting(
+    categoryKey,
+    key,
+    name,
+    type,
+    defaultValue,
+    description = ""
+  ) {
+    if (!window.customjs?.configManager) {
+      this.warn("ConfigManager not available");
+      return;
+    }
+    window.customjs.configManager.registerPluginSetting.call(
+      this,
+      categoryKey,
+      key,
+      name,
+      type,
+      defaultValue,
+      description
+    );
+  }
+
+  /**
+   * Save plugin settings to disk
+   */
+  async saveSettings() {
+    if (!window.customjs?.configManager) {
+      this.warn("ConfigManager not available");
+      return;
+    }
+    await window.customjs.configManager.save();
   }
 }
 

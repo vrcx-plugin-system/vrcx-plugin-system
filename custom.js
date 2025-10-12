@@ -1,51 +1,15 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "{VERSION}",
-  build: "{BUILD}",
+  version: "1.2.0",
+  build: Math.floor(Date.now() / 1000).toString(),
 };
 
+// Global configuration (not plugin-specific)
+// Plugin-specific settings are managed via ConfigManager in each plugin
 window.customjs.config = {
   steam: {
     id: "{env:STEAM_ID64}",
     key: "{env:STEAM_API_KEY}",
-  },
-  bio: {
-    updateInterval: 7200000, // 2 hours
-    initialDelay: 20000, // 20 seconds
-    template: `
--
-Relationship: {partners} <3
-Auto Accept: {autojoin}
-Auto Invite: {autoinvite}
-
-Real Rank: {rank}
-Friends: {friends} | Blocked: {blocked} | Muted: {muted}
-Time played: {playtime}
-Date joined: {date_joined}
-Last updated: {now} (every 2h)
-Tags loaded: {tags_loaded}
-
-User ID: {userId}
-Steam ID: {steamId}
-Oculus ID: {oculusId}`,
-  },
-  registry: {
-    VRC_ALLOW_UNTRUSTED_URL: {
-      value: 0,
-      events: [
-        "VRCX_START",
-        "GAME_START",
-        "INSTANCE_SWITCH_PUBLIC",
-        "INSTANCE_SWITCH_PRIVATE",
-      ],
-    },
-  },
-  tags: {
-    urls: [
-      "https://github.com/Bluscream/FewTags/raw/refs/heads/main/usertags.json",
-    ],
-    updateInterval: 3600000,
-    initialDelay: 5000,
   },
   webhook: "http://homeassistant.local:8123/api/webhook/vrcx",
 };
@@ -54,10 +18,11 @@ window.customjs.pluginConfig = {
   plugins: [
     // Logger must be loaded first (before Plugin base class)
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/logger.js",
-    // Base Plugin class must be loaded second
+    // ConfigManager must be loaded second (before Plugin base class)
+    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
+    // Base Plugin class must be loaded third
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
     // Core plugins
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
     // UI plugins
@@ -442,7 +407,24 @@ class PluginManager {
       "color: #888"
     );
 
-    // Phase 2: Call load() on all plugins
+    // Phase 2: Initialize ConfigManager
+    if (window.customjs?.configManager) {
+      console.log(
+        `%c[CJS|PluginManager] %cInitializing ConfigManager...`,
+        "font-weight: bold; color: #00aaff",
+        "color: #888"
+      );
+      try {
+        await window.customjs.configManager.init();
+      } catch (error) {
+        console.error(
+          "[CJS|PluginManager] ✗ Error initializing ConfigManager:",
+          error
+        );
+      }
+    }
+
+    // Phase 3: Call load() on all plugins
     console.log(
       `%c[CJS|PluginManager] %cCalling load() on ${window.customjs.plugins.length} plugins...`,
       "font-weight: bold; color: #00aaff",
@@ -459,10 +441,15 @@ class PluginManager {
       }
     }
 
-    // Phase 3: Call start() on all plugins
+    // Phase 4: Setup config proxies (after all plugins have registered settings)
+    if (window.customjs?.configManager) {
+      window.customjs.configManager._setupProxies();
+    }
+
+    // Phase 5: Call start() on all plugins
     await this.startAllPlugins();
 
-    // Phase 4: Start login monitoring
+    // Phase 6: Start login monitoring
     this.startLoginMonitoring();
 
     console.log(
@@ -494,10 +481,11 @@ class PluginManager {
       // Store the number of plugins before loading
       const pluginCountBefore = window.customjs.plugins.length;
 
-      // Check if this is the logger or base Plugin class (utility files, not plugins)
+      // Check if this is the logger, config manager, or base Plugin class (utility files, not plugins)
       const isLogger = pluginUrl.includes("/logger.js");
+      const isConfigManager = pluginUrl.includes("/config.js");
       const isBaseClass = pluginUrl.includes("/plugin.js");
-      const isUtilityFile = isLogger || isBaseClass;
+      const isUtilityFile = isLogger || isConfigManager || isBaseClass;
 
       // Wrap in IIFE to isolate scope, but don't auto-execute plugin initialization
       const wrappedCode = `(function() { 
@@ -556,9 +544,11 @@ class PluginManager {
               );
             }
           } else {
-            // Utility file loaded (logger or base class)
+            // Utility file loaded (logger, config manager, or base class)
             const utilityName = isLogger
               ? "Logger utility"
+              : isConfigManager
+              ? "ConfigManager utility"
               : "base Plugin class";
             console.log(`[CJS|[PluginManager] ✓ Loaded ${utilityName}`);
           }

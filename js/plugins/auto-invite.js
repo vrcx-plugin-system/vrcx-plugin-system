@@ -5,8 +5,8 @@ class AutoInvitePlugin extends Plugin {
       description:
         "Automatic user invitation system with location tracking and custom messages",
       author: "Bluscream",
-      version: "3.1.0",
-      build: "1728735600",
+      version: "3.2.0",
+      build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
@@ -32,16 +32,21 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async load() {
-    // Only set default if not already configured
-    if (!this.getConfig("autoinvite.customInviteMessage")) {
-      this.setConfig(
-        "autoinvite.customInviteMessage",
-        this.defaultConfig.customInviteMessage
-      );
-      this.logger.log(
-        "Initialized default config: autoinvite.customInviteMessage"
-      );
-    }
+    // Register settings
+    this.registerSettingCategory(
+      "messages",
+      "Messages",
+      "Invite message configuration"
+    );
+
+    this.registerSetting(
+      "messages",
+      "customInviteMessage",
+      "Custom Invite Message",
+      "string",
+      "Auto-invite from VRCX",
+      "Message to send when inviting users automatically"
+    );
 
     this.logger.log("Auto Invite plugin ready");
     this.loaded = true;
@@ -293,7 +298,7 @@ class AutoInvitePlugin extends Plugin {
         window.customjs?.pluginManager?.getPlugin("api-helpers");
 
       // Get custom message template from config
-      const messageTemplate = this.getConfig("autoinvite.customInviteMessage");
+      const messageTemplate = this.config.messages.customInviteMessage.value;
 
       // Send invites to all users in the list
       const invitePromises = Array.from(this.autoInviteUsers.values()).map(
@@ -311,9 +316,12 @@ class AutoInvitePlugin extends Plugin {
           }
 
           // Fallback to default config if null
-          if (!customMessage && this.defaultConfig.customInviteMessage) {
+          if (
+            !customMessage &&
+            this.config.messages.customInviteMessage.value
+          ) {
             customMessage = this.processInviteMessageTemplate(
-              this.defaultConfig.customInviteMessage,
+              this.config.messages.customInviteMessage.value,
               user,
               worldName,
               instanceId
@@ -495,11 +503,7 @@ class AutoInvitePlugin extends Plugin {
    * @returns {string|null} Current message template or null if disabled
    */
   getCustomInviteMessage() {
-    const configMessage = this.getConfig("autoinvite.customInviteMessage");
-    if (configMessage !== null && configMessage !== undefined) {
-      return configMessage;
-    }
-    return this.defaultConfig.customInviteMessage || null;
+    return this.config.messages.customInviteMessage.value;
   }
 
   /**
@@ -523,8 +527,9 @@ class AutoInvitePlugin extends Plugin {
    * Example: "Auto-invite from {myUserName} to {worldName} at {now}"
    * Set to null to omit custom messages (will use default config or no message)
    */
-  setCustomInviteMessage(message) {
-    this.setConfig("autoinvite.customInviteMessage", message);
+  async setCustomInviteMessage(message) {
+    this.config.messages.customInviteMessage.value = message;
+    await this.saveSettings();
     if (message === null) {
       this.logger.log("Custom invite message disabled");
     } else {
