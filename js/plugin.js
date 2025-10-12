@@ -47,7 +47,7 @@ class Plugin {
     this.started = false;
 
     // Create personal logger instance for this plugin
-    this.logger = new window.customjs.Logger(this.metadata.name);
+    this.logger = new window.customjs.Logger(this.metadata.id);
 
     // Resource tracking for automatic cleanup
     this.resources = {
