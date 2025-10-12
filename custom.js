@@ -501,10 +501,12 @@ class PluginManager {
       "color: #0f0"
     );
 
-    new Noty({
-      type: "success",
-      text: `Loaded <strong>${pluginUrls.length}</strong> plugins...`,
-    }).show();
+    if (window.$app?.playNoty) {
+      window.$app.playNoty({
+        text: `Loaded <strong>${pluginUrls.length}</strong> plugins...`,
+        type: "success",
+      });
+    }
   }
 
   async loadPluginCode(pluginUrl) {

@@ -246,15 +246,60 @@ class ContextMenuApiPlugin extends Plugin {
       return null;
     }
 
-    // Find triggering button via aria-controls
+    // Try to find trigger button
+    let triggerButton = null;
+
+    // Method 1: Try via aria-controls if dropdown has an ID
     const ariaId = highestDropdown.id;
-    const triggerButton = document.querySelector(`[aria-controls="${ariaId}"]`);
+    if (ariaId) {
+      triggerButton = document.querySelector(`[aria-controls="${ariaId}"]`);
+      if (triggerButton) {
+        this.log(`Found trigger button via aria-controls="${ariaId}"`);
+      }
+    }
+
+    // Method 2: If no ID or no button found, search for dialog buttons
     if (!triggerButton) {
-      this.log(`No trigger button found for aria-controls="${ariaId}"`);
+      this.log(
+        "Trying alternate detection method - searching for dialog buttons"
+      );
+      // Find all visible dialogs
+      const dialogs = [
+        ...document.querySelectorAll(".x-user-dialog"),
+        ...document.querySelectorAll(".x-avatar-dialog"),
+        ...document.querySelectorAll(".x-world-dialog"),
+        ...document.querySelectorAll(".x-group-dialog"),
+      ].filter((d) => window.getComputedStyle(d).display !== "none");
+
+      // Find dropdown trigger buttons in visible dialogs
+      for (const dialog of dialogs) {
+        const buttons = dialog.querySelectorAll(
+          "button[aria-controls], button.el-dropdown__caret-button"
+        );
+        for (const btn of buttons) {
+          // Check if this button's dropdown is the one we're looking at
+          const rect = btn.getBoundingClientRect();
+          const dropdownRect = highestDropdown.getBoundingClientRect();
+          // Check if dropdown is near the button (simple proximity check)
+          if (
+            Math.abs(rect.bottom - dropdownRect.top) < 100 &&
+            Math.abs(rect.left - dropdownRect.left) < 200
+          ) {
+            triggerButton = btn;
+            this.log("Found trigger button via proximity search");
+            break;
+          }
+        }
+        if (triggerButton) break;
+      }
+    }
+
+    if (!triggerButton) {
+      this.log(`No trigger button found (aria-id: "${ariaId}")`);
       return null;
     }
 
-    // Detect dialog type from aria-controls button
+    // Detect dialog type from trigger button's parent dialog
     const userDialog = triggerButton.closest(".x-user-dialog");
     const avatarDialog = triggerButton.closest(".x-avatar-dialog");
     const worldDialog = triggerButton.closest(".x-world-dialog");
