@@ -127,17 +127,30 @@ class ContextMenuApiPlugin extends Plugin {
         node.style.display !== "none" &&
         node.getAttribute("aria-hidden") !== "true";
 
+      this.log(
+        `Dropdown visibility changed: display=${
+          node.style.display
+        }, aria-hidden=${node.getAttribute(
+          "aria-hidden"
+        )}, visible=${isVisible}`
+      );
+
       if (isVisible) {
         const menuContainer = node.querySelector(".el-dropdown-menu");
-        if (menuContainer && menuContainer.id) {
-          const menuId = menuContainer.id;
+        if (menuContainer) {
+          const menuId = menuContainer.id || `menu-${Date.now()}`;
+          this.log(`Found menu container with id: ${menuId}`);
 
           if (!this.processedMenus.has(menuId)) {
             const menuType = this.detectMenuType(menuContainer);
             if (menuType && this.items.get(menuType).size > 0) {
               this.debouncedMenuDetection(menuId, menuType, menuContainer);
             }
+          } else {
+            this.log(`Menu ${menuId} already processed, skipping`);
           }
+        } else {
+          this.log("No .el-dropdown-menu found inside dropdown popper");
         }
       }
     }
@@ -155,18 +168,37 @@ class ContextMenuApiPlugin extends Plugin {
 
       if (node.classList.contains("el-dropdown-menu")) {
         menuContainer = node;
-        menuId = node.id;
+        menuId = node.id || `menu-${Date.now()}`;
+        this.log(`Dropdown menu added to DOM (id: ${menuId})`);
       } else {
         menuContainer = node.parentElement;
-        menuId = node.parentElement?.id;
+        menuId = node.parentElement?.id || `menu-${Date.now()}`;
+        this.log(`Dropdown menu item added to DOM (parent id: ${menuId})`);
       }
 
-      if (!menuContainer || !menuId) return;
-      if (this.processedMenus.has(menuId)) return;
+      if (!menuContainer) {
+        this.log("No menu container found");
+        return;
+      }
+
+      if (this.processedMenus.has(menuId)) {
+        this.log(`Menu ${menuId} already processed, skipping`);
+        return;
+      }
 
       const menuType = this.detectMenuType(menuContainer);
-      if (menuType && this.items.get(menuType).size > 0) {
-        this.debouncedMenuDetection(menuId, menuType, menuContainer);
+      if (menuType) {
+        const itemCount = this.items.get(menuType).size;
+        if (itemCount > 0) {
+          this.log(`Detected ${menuType} menu with ${itemCount} items to add`);
+          this.debouncedMenuDetection(menuId, menuType, menuContainer);
+        } else {
+          this.log(
+            `Detected ${menuType} menu but no items registered for this type`
+          );
+        }
+      } else {
+        this.log("Could not detect menu type");
       }
     }
   }
@@ -208,11 +240,27 @@ class ContextMenuApiPlugin extends Plugin {
       clearTimeout(this.debounceTimers.get(menuId));
     }
 
-    // Set new timer with 50ms debounce
+    // Set new timer with 100ms debounce to give dropdown time to become visible
     const timerId = setTimeout(() => {
-      this.processMenu(menuId, menuType, menuElement);
+      // Double-check visibility before processing
+      const dropdown = menuElement.closest(".el-dropdown__popper");
+      if (dropdown) {
+        const isStillVisible =
+          dropdown.style.display !== "none" &&
+          dropdown.getAttribute("aria-hidden") !== "true";
+
+        if (isStillVisible) {
+          this.log(`Menu ${menuId} is visible, processing...`);
+          this.processMenu(menuId, menuType, menuElement);
+        } else {
+          this.log(`Menu ${menuId} became hidden before processing, skipping`);
+        }
+      } else {
+        this.log(`Menu ${menuId} dropdown not found, processing anyway`);
+        this.processMenu(menuId, menuType, menuElement);
+      }
       this.debounceTimers.delete(menuId);
-    }, 50);
+    }, 100);
 
     this.debounceTimers.set(menuId, timerId);
   }
