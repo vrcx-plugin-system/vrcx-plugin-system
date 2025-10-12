@@ -100,10 +100,9 @@ class PluginSetting {
     }
     this._value = newValue;
 
-    // Notify ConfigManager to update proxy
-    if (window.customjs?.configManager) {
-      window.customjs.configManager._updateProxy(this);
-    }
+    // Note: No need to call _updateProxy here because the proxy getter
+    // already reads directly from setting.value, so they're automatically synced.
+    // Calling _updateProxy would cause infinite recursion.
   }
 
   /**
@@ -132,8 +131,8 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "1.5.0";
-    this.build = "1760411000";
+    this.version = "1.5.1";
+    this.build = "1760530800";
 
     // Store setting definitions and categories
     this.categories = new Map(); // pluginId -> Map(categoryKey -> {name, description})
@@ -326,6 +325,8 @@ class ConfigManager {
    * Update the proxy at window.customjs.config when a setting value changes
    * @param {PluginSetting} setting - The setting that changed
    * @private
+   * @deprecated Currently unused - proxy getters read directly from setting.value
+   * Kept for potential future use, but calling this causes infinite recursion
    */
   _updateProxy(setting) {
     const { pluginId, category, key, value } = setting;
@@ -376,7 +377,7 @@ class ConfigManager {
               get: () => setting.value,
               set: (newValue) => {
                 // Directly update the setting value
-                // The setter will handle updating this proxy via _updateProxy
+                // Proxy getter reads from setting.value, so they stay in sync
                 setting.value = newValue;
               },
               enumerable: true,
