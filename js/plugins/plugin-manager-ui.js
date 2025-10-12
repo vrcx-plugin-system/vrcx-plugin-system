@@ -4,8 +4,8 @@ class PluginManagerUIPlugin extends Plugin {
       name: "Plugin Manager UI",
       description: "Visual UI for managing VRCX custom plugins",
       author: "Bluscream",
-      version: "5.1.0",
-      build: "1760532000",
+      version: "5.1.1",
+      build: "1760532400",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -124,7 +124,8 @@ class PluginManagerUIPlugin extends Plugin {
       pluginList.id = "plugin-list-container";
       container.appendChild(pluginList);
 
-      this.refreshPluginList();
+      // Defer refreshPluginList to ensure container is in DOM
+      setTimeout(() => this.refreshPluginList(), 0);
     } catch (error) {
       this.logger.error("Error rendering plugin manager content:", error);
       container.innerHTML = `
