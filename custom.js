@@ -451,6 +451,13 @@ class PluginManager {
       "color: #888"
     );
 
+    if (window.$app?.playNoty) {
+      window.$app.playNoty({
+        message: `Loading ${pluginUrls.length} plugins...`,
+        type: "info",
+      });
+    }
+
     // Phase 1: Load all plugin code (instantiate plugins)
     for (const pluginUrl of pluginUrls) {
       await this.loadPluginCode(pluginUrl);
@@ -493,6 +500,13 @@ class PluginManager {
       "font-weight: bold; color: #00ff00",
       "color: #0f0"
     );
+
+    if (window.$app?.playNoty) {
+      window.$app.playNoty({
+        message: `Loaded ${pluginUrls.length} plugins...`,
+        type: "success",
+      });
+    }
   }
 
   async loadPluginCode(pluginUrl) {
