@@ -1,9 +1,3 @@
-// ============================================================================
-// PLUGIN BASE CLASS
-// Version: 2.2.0
-// Build: 1744630000
-// ============================================================================
-
 /**
  * Base class for all VRCX custom plugins
  * Provides lifecycle management, resource tracking, and standardized API

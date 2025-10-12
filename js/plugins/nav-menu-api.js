@@ -1,9 +1,3 @@
-// ============================================================================
-// NAVIGATION MENU API PLUGIN
-// Version: 2.0.0
-// Build: 1728668400
-// ============================================================================
-
 /**
  * Navigation Menu API Plugin
  * Provides API for adding custom navigation menu items to VRCX

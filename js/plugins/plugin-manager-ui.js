@@ -1,9 +1,3 @@
-// ============================================================================
-// PLUGIN MANAGER UI PLUGIN
-// Version: 3.1.0
-// Build: 1744632000
-// ============================================================================
-
 /**
  * Plugin Manager UI Plugin
  * Comprehensive visual UI for managing VRCX custom plugins

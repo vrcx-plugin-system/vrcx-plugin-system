@@ -1,11 +1,3 @@
-// ============================================================================
-// LOGGER TEST PLUGIN
-// Version: 1.0.0
-// Build: 1744630000
-// ============================================================================
-// This is a temporary test plugin to verify the new Logger system works
-// Should be removed after testing
-
 class LoggerTestPlugin extends Plugin {
   constructor() {
     super({

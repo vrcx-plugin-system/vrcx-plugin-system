@@ -1,9 +1,3 @@
-// ============================================================================
-// DEBUG PLUGIN
-// Version: 1.0.0
-// Build: 1728668400
-// ============================================================================
-
 /**
  * Debug plugin for testing and development
  * Provides debug utilities and console commands

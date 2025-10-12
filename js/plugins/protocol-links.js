@@ -1,9 +1,3 @@
-// ============================================================================
-// PROTOCOL LINKS PLUGIN
-// Version: 2.1.0
-// Build: 1744632000
-// ============================================================================
-
 /**
  * Protocol Links Plugin
  * Adds context menu items to copy VRCX protocol links for users, avatars, worlds, and groups

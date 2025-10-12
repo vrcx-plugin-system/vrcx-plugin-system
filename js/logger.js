@@ -1,9 +1,3 @@
-// ============================================================================
-// LOGGER CLASS - Centralized logging and notification system
-// Version: 1.0.0
-// Build: 1744630000
-// ============================================================================
-
 /**
  * Logger class for VRCX custom plugins
  * Provides standardized logging with various output methods
@@ -285,34 +279,38 @@ class Logger {
 
   /**
    * Show info notification in VRCX (using playNoty)
+   * Does not log to console by default
    * @param {string} msg - Message to display
    */
   showInfo(msg) {
-    this.log(msg, { vrcx: { noty: true } }, "info", false);
+    this.log(msg, { console: false, vrcx: { noty: true } }, "info", false);
   }
 
   /**
    * Show success notification in VRCX (using playNoty)
+   * Does not log to console by default
    * @param {string} msg - Message to display
    */
   showSuccess(msg) {
-    this.log(msg, { vrcx: { noty: true } }, "success", false);
+    this.log(msg, { console: false, vrcx: { noty: true } }, "success", false);
   }
 
   /**
    * Show warning notification in VRCX (using playNoty)
+   * Does not log to console by default
    * @param {string} msg - Message to display
    */
   showWarn(msg) {
-    this.log(msg, { vrcx: { noty: true } }, "warn", false);
+    this.log(msg, { console: false, vrcx: { noty: true } }, "warn", false);
   }
 
   /**
    * Show error notification in VRCX (using playNoty)
+   * Does not log to console by default
    * @param {string} msg - Message to display
    */
   showError(msg) {
-    this.log(msg, { vrcx: { noty: true } }, "error", false);
+    this.log(msg, { console: false, vrcx: { noty: true } }, "error", false);
   }
 
   // ============================================================================

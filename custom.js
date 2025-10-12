@@ -1,18 +1,8 @@
 window.AppApi.ShowDevTools();
-// ============================================================================
-// VRCX CUSTOM PLUGINS SYSTEM v2.2.1
-// Build: 1760196000
-// ============================================================================
-
-// DO NOT REPLACE THESE VALUES - THEY ARE REPLACED BY THE UPDATE SCRIPT
 window.customjs = {
   version: "{VERSION}",
   build: "{BUILD}",
 };
-
-// ============================================================================
-// USER CONFIGURATION
-// ============================================================================
 
 window.customjs.config = {
   steam: {
@@ -59,10 +49,6 @@ Oculus ID: {oculusId}`,
   },
   webhook: "http://homeassistant.local:8123/api/webhook/vrcx",
 };
-
-// ============================================================================
-// PLUGIN CONFIGURATION - List of plugins to load
-// ============================================================================
 
 window.customjs.pluginConfig = {
   plugins: [

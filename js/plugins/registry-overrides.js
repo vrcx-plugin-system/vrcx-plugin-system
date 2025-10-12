@@ -1,9 +1,3 @@
-// ============================================================================
-// REGISTRY OVERRIDES PLUGIN
-// Version: 2.0.0
-// Build: 1728668400
-// ============================================================================
-
 /**
  * Registry Overrides Plugin
  * VRChat registry settings management with event-based triggers

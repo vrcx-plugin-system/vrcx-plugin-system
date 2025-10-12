@@ -1,9 +1,3 @@
-// ============================================================================
-// MANAGERS PLUGIN
-// Version: 3.1.0
-// Build: 1744630000
-// ============================================================================
-
 /**
  * Managers Plugin
  * Collection of manager utilities: instance monitoring, notifications, debug tools

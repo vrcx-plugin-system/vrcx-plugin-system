@@ -1,9 +1,3 @@
-// ============================================================================
-// TEMPLATE PLUGIN - Example Plugin Structure
-// Version: 1.0.0
-// Build: 1728668400
-// ============================================================================
-
 /**
  * This is a comprehensive template showing the complete plugin structure.
  * Copy this file to create your own plugin!
