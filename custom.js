@@ -41,6 +41,10 @@ window.customjs.default_plugins = [
     enabled: true,
   },
   {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/yoinker-detector.js",
+    enabled: true,
+  },
+  {
     url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-invite.js",
     enabled: true,
   },
