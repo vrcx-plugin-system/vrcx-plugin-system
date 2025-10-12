@@ -115,8 +115,8 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "1.1.0";
-    this.build = Math.floor(Date.now() / 1000).toString();
+    this.version = "1.1.1";
+    this.build = "";
 
     // Store setting definitions and categories
     this.categories = new Map(); // pluginId -> Map(categoryKey -> {name, description})
@@ -146,17 +146,17 @@ class ConfigManager {
 
   /**
    * Register a setting category for a plugin
-   * Must be called from plugin context (this = plugin instance)
+   * @param {object} plugin - Plugin instance
    * @param {string} key - Category key
    * @param {string} name - Display name
    * @param {string} description - Description
    */
-  registerPluginSettingCategory(key, name, description = "") {
-    // Get plugin ID from context
-    const pluginId = this?.metadata?.id;
+  registerPluginSettingCategory(plugin, key, name, description = "") {
+    // Get plugin ID from plugin instance
+    const pluginId = plugin?.metadata?.id;
     if (!pluginId) {
       console.error(
-        "[CJS|ConfigManager] registerPluginSettingCategory must be called from plugin context"
+        "[CJS|ConfigManager] Invalid plugin instance passed to registerPluginSettingCategory"
       );
       return;
     }
@@ -173,7 +173,7 @@ class ConfigManager {
 
   /**
    * Register a setting for a plugin
-   * Must be called from plugin context (this = plugin instance)
+   * @param {object} plugin - Plugin instance
    * @param {string} categoryKey - Category key
    * @param {string} key - Setting key
    * @param {string} name - Display name
@@ -182,6 +182,7 @@ class ConfigManager {
    * @param {string} description - Optional description
    */
   registerPluginSetting(
+    plugin,
     categoryKey,
     key,
     name,
@@ -189,13 +190,13 @@ class ConfigManager {
     defaultValue,
     description = ""
   ) {
-    // Get plugin ID and instance from context
-    const pluginId = this?.metadata?.id;
-    const pluginInstance = this;
+    // Get plugin ID and instance
+    const pluginId = plugin?.metadata?.id;
+    const pluginInstance = plugin;
 
     if (!pluginId) {
       console.error(
-        "[CJS|ConfigManager] registerPluginSetting must be called from plugin context"
+        "[CJS|ConfigManager] Invalid plugin instance passed to registerPluginSetting"
       );
       return;
     }

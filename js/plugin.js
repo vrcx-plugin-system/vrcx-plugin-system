@@ -410,7 +410,7 @@ class Plugin {
       this.warn("ConfigManager not available");
       return;
     }
-    window.customjs.configManager.registerPluginSettingCategory.call(
+    window.customjs.configManager.registerPluginSettingCategory(
       this,
       key,
       name,
@@ -439,7 +439,7 @@ class Plugin {
       this.warn("ConfigManager not available");
       return;
     }
-    window.customjs.configManager.registerPluginSetting.call(
+    window.customjs.configManager.registerPluginSetting(
       this,
       categoryKey,
       key,
