@@ -584,7 +584,7 @@ class PluginManager {
             if (pluginCountAfter > pluginCountBefore) {
               const newPlugin = window.customjs.plugins[pluginCountAfter - 1];
               console.log(
-                `[CJS|PluginManager] ✓ Loaded ${newPlugin.metadata.name} v${newPlugin.metadata.version}`
+                `[CJS|PluginManager] ✓ Loaded ${newPlugin.metadata.name} v${newPlugin.metadata.version} (${newPlugin.metadata.build})`
               );
             } else {
               console.warn(
