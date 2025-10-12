@@ -15,7 +15,7 @@
  * - Store general settings (logger, etc.) in vrcx.customjs.*
  * - Settings are stored in plugin instances (plugin.config.category.setting)
  * - Proxied to global namespace (window.customjs.config.settings.pluginId.category.setting)
- * - Only non-default values are saved to disk
+ * - All settings are saved to disk (including defaults)
  * - Automatic type validation
  * - Category organization for settings
  *
@@ -33,7 +33,7 @@
  * // Modify settings:
  * this.config.general.enabled.value = false;
  *
- * // Save to disk (only modified settings):
+ * // Save to disk (all settings):
  * await this.saveSettings();
  *
  * Usage for general settings (not tied to a plugin):
@@ -132,8 +132,8 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "1.4.0";
-    this.build = "1760406000";
+    this.version = "1.5.0";
+    this.build = "1760411000";
 
     // Store setting definitions and categories
     this.categories = new Map(); // pluginId -> Map(categoryKey -> {name, description})
@@ -554,7 +554,7 @@ class ConfigManager {
   }
 
   /**
-   * Save config to VRChat's config.json (only non-default values)
+   * Save config to VRChat's config.json (all settings including defaults)
    * @returns {Promise<void>}
    */
   async save() {
@@ -594,7 +594,7 @@ class ConfigManager {
       // Initialize settings section
       config.vrcx.customjs.settings = config.vrcx.customjs.settings || {};
 
-      // Build plugin settings (only non-default values)
+      // Build plugin settings (save all settings, including defaults)
       let savedCount = 0;
       this.settings.forEach((categories, pluginId) => {
         config.vrcx.customjs.settings[pluginId] =
@@ -605,66 +605,31 @@ class ConfigManager {
             config.vrcx.customjs.settings[pluginId][categoryKey] || {};
 
           settings.forEach((setting, settingKey) => {
-            if (setting.isModified()) {
-              config.vrcx.customjs.settings[pluginId][categoryKey][settingKey] =
-                setting.value;
-              savedCount++;
-            } else {
-              // Remove default values from config
-              delete config.vrcx.customjs.settings[pluginId][categoryKey][
-                settingKey
-              ];
-            }
+            // Save all settings, including defaults
+            config.vrcx.customjs.settings[pluginId][categoryKey][settingKey] =
+              setting.value;
+            savedCount++;
           });
-
-          // Clean up empty categories
-          if (
-            Object.keys(config.vrcx.customjs.settings[pluginId][categoryKey])
-              .length === 0
-          ) {
-            delete config.vrcx.customjs.settings[pluginId][categoryKey];
-          }
         });
-
-        // Clean up empty plugins
-        if (Object.keys(config.vrcx.customjs.settings[pluginId]).length === 0) {
-          delete config.vrcx.customjs.settings[pluginId];
-        }
       });
 
-      // Save general settings (logger, loader, etc.)
+      // Save general settings (logger, loader, etc.) - save all settings, including defaults
       this.generalSettings.forEach((settings, categoryKey) => {
         config.vrcx.customjs[categoryKey] =
           config.vrcx.customjs[categoryKey] || {};
 
         settings.forEach((setting, settingKey) => {
-          if (setting.isModified()) {
-            config.vrcx.customjs[categoryKey][settingKey] = setting.value;
-            savedCount++;
-          } else {
-            // Remove default values from config
-            delete config.vrcx.customjs[categoryKey][settingKey];
-          }
+          // Save all settings, including defaults
+          config.vrcx.customjs[categoryKey][settingKey] = setting.value;
+          savedCount++;
         });
-
-        // Clean up empty categories (but keep loader for plugin config)
-        const hasSettings =
-          Object.keys(config.vrcx.customjs[categoryKey]).length > 0;
-        const isLoader = categoryKey === "loader";
-        const hasPluginConfig = isLoader && this.pluginConfig;
-
-        if (!hasSettings && !(isLoader && hasPluginConfig)) {
-          delete config.vrcx.customjs[categoryKey];
-        }
       });
 
       // Write to disk
       const configString = JSON.stringify(config, null, 2);
       await window.AppApi.WriteConfigFile(configString);
 
-      console.log(
-        `[CJS|ConfigManager] ✓ Saved ${savedCount} modified settings to disk`
-      );
+      console.log(`[CJS|ConfigManager] ✓ Saved ${savedCount} settings to disk`);
     } catch (error) {
       console.error("[CJS|ConfigManager] Error saving config:", error);
     } finally {
