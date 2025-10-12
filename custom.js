@@ -1,3 +1,4 @@
+window.AppApi.ShowDevTools();
 // ============================================================================
 // VRCX CUSTOM PLUGINS SYSTEM v2.2.1
 // Build: 1760196000
