@@ -130,5 +130,59 @@
     }
   };
 
+  // ============================================================================
+  // VRC API HELPERS (with added logic)
+  // ============================================================================
+
+  /**
+   * Save bio and bio links with smart defaults
+   * @param {string} bio - Bio text
+   * @param {array} bioLinks - Bio links array
+   * @returns {Promise} API response
+   */
+  window.customjs.utils.saveBio = function (bio, bioLinks) {
+    const currentUser = window.$pinia?.user?.currentUser;
+    return window.request.userRequest.saveCurrentUser({
+      bio: bio ?? currentUser?.bio,
+      bioLinks: bioLinks ?? currentUser?.bioLinks,
+    });
+  };
+
+  /**
+   * Get location object from string or object
+   * @param {string|object} loc - Location string or object
+   * @returns {Promise<object>} Location object
+   */
+  window.customjs.utils.getLocationObject = async function (loc) {
+    if (typeof loc === "string") {
+      if (loc.endsWith(")")) {
+        loc = window.$app.parseLocation(loc);
+      } else if (loc.startsWith("wrld")) {
+        loc = { worldId: loc, world: { id: loc } };
+      } else {
+        loc = { instanceId: loc, instance: { id: loc } };
+      }
+    } else if (!loc || loc === "traveling:traveling") {
+      return;
+    }
+
+    // Fallback to last location if empty
+    if (!loc && window.$app.lastLocation) {
+      return window.customjs.utils.getLocationObject(window.$app.lastLocation);
+    }
+    if (!loc && window.$app.lastLocationDestination) {
+      return window.customjs.utils.getLocationObject(
+        window.$app.lastLocationDestination
+      );
+    }
+
+    // Get world name
+    if (loc && window.$app?.getWorldName) {
+      loc.worldName = await window.$app.getWorldName(loc);
+    }
+
+    return loc;
+  };
+
   console.log("[CJS|Utils] ✓ VRCX Custom Utils initialized");
 })();

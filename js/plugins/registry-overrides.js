@@ -5,7 +5,7 @@ class RegistryOverridesPlugin extends Plugin {
       description:
         "VRChat registry settings management with event-based triggers",
       author: "Bluscream",
-      version: "2.2.1",
+      version: "2.3.0",
       build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
@@ -55,6 +55,9 @@ class RegistryOverridesPlugin extends Plugin {
     // Apply registry settings on startup
     await this.applyRegistrySettings("VRCX_START");
 
+    // Setup game state monitoring
+    this.setupGameStateMonitoring();
+
     // Periodic application for keys that need constant enforcement
     const intervalId = this.registerTimer(
       setInterval(async () => {
@@ -65,7 +68,7 @@ class RegistryOverridesPlugin extends Plugin {
     this.enabled = true;
     this.started = true;
     this.logger.log(
-      "Registry Overrides plugin started, periodic updates enabled"
+      "Registry Overrides plugin started, periodic updates and game monitoring enabled"
     );
   }
 
@@ -75,6 +78,13 @@ class RegistryOverridesPlugin extends Plugin {
 
   async stop() {
     this.logger.log("Stopping Registry Overrides plugin");
+
+    // Cleanup game store subscription
+    const unsubscribe = this.resources.get("gameStoreSubscription");
+    if (unsubscribe && typeof unsubscribe === "function") {
+      unsubscribe();
+      this.logger.log("Game store subscription cleaned up");
+    }
 
     // Parent cleanup will stop the timer automatically
     await super.stop();
@@ -96,6 +106,53 @@ class RegistryOverridesPlugin extends Plugin {
     );
 
     this.logger.log("Event handlers registered");
+  }
+
+  setupGameStateMonitoring() {
+    // Wait for game store to be available
+    const checkInterval = setInterval(() => {
+      const gameStore = window.$pinia?.game;
+
+      if (gameStore) {
+        clearInterval(checkInterval);
+
+        // Subscribe to game store state changes using Pinia's $subscribe
+        const unsubscribe = gameStore.$subscribe(
+          (mutation, state) => {
+            // Watch for isGameRunning changes
+            if (mutation.type === "direct") {
+              // Check if isGameRunning changed to true (game started)
+              if (state.isGameRunning && !this._lastGameRunning) {
+                this.logger.log("Game started detected via game store");
+                this.triggerEvent("GAME_START");
+              }
+
+              // Track previous state
+              this._lastGameRunning = state.isGameRunning;
+            }
+          },
+          { flush: "sync" } // Process immediately
+        );
+
+        // Initialize tracking with current state
+        this._lastGameRunning = gameStore.isGameRunning;
+
+        // Store unsubscribe function for cleanup
+        this.registerResource("gameStoreSubscription", unsubscribe);
+
+        this.logger.log(
+          "Game store subscription registered (using Pinia $subscribe)"
+        );
+      }
+    }, 100);
+
+    // Register the interval for cleanup
+    this.registerTimer(checkInterval);
+
+    // Clear interval after 10 seconds if store not found
+    setTimeout(() => {
+      clearInterval(checkInterval);
+    }, 10000);
   }
 
   /**

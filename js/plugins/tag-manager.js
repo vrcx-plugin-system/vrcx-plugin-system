@@ -4,8 +4,8 @@ class TagManagerPlugin extends Plugin {
       name: "Tag Manager",
       description: "Custom user tags management with URL-based loading",
       author: "Bluscream",
-      version: "3.0.1",
-      build: "1760391100",
+      version: "3.1.1",
+      build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
@@ -27,6 +27,11 @@ class TagManagerPlugin extends Plugin {
       "timing",
       "Timing",
       "Update timing configuration"
+    );
+    this.registerSettingCategory(
+      "notifications",
+      "Notifications",
+      "Notification settings"
     );
 
     this.registerSetting(
@@ -55,12 +60,22 @@ class TagManagerPlugin extends Plugin {
       5000,
       "Delay before first tag load after login (default: 5 seconds)"
     );
+    this.registerSetting(
+      "notifications",
+      "notifyOnPlayerJoin",
+      "Notify When Tagged Player Joins",
+      "boolean",
+      true,
+      "Show notification when a tagged player joins your instance"
+    );
 
     this.logger.log("Tag Manager plugin ready");
     this.loaded = true;
   }
 
   async start() {
+    // Setup player join monitoring
+    this.setupPlayerJoinMonitoring();
 
     this.enabled = true;
     this.started = true;
@@ -103,6 +118,13 @@ class TagManagerPlugin extends Plugin {
 
     // Clear loaded tags
     this.loadedTags.clear();
+
+    // Cleanup gameLog subscription
+    const unsubscribe = this.resources.get("gameLogSubscription");
+    if (unsubscribe && typeof unsubscribe === "function") {
+      unsubscribe();
+      this.logger.log("GameLog subscription cleaned up");
+    }
 
     // Parent cleanup (will clear the timer automatically)
     await super.stop();
@@ -303,6 +325,87 @@ class TagManagerPlugin extends Plugin {
     );
 
     this.logger.log(`Periodic updates started (interval: ${updateInterval}ms)`);
+  }
+
+  setupPlayerJoinMonitoring() {
+    // Wait for gameLog store to be available
+    const checkInterval = setInterval(() => {
+      const gameLogStore = window.$pinia?.gameLog;
+
+      if (gameLogStore) {
+        clearInterval(checkInterval);
+
+        // Subscribe to gameLog store state changes using Pinia's $subscribe
+        const unsubscribe = gameLogStore.$subscribe(
+          (mutation, state) => {
+            // Watch for new entries in gameLogSessionTable
+            if (
+              mutation.type === "direct" &&
+              state.gameLogSessionTable?.length > 0
+            ) {
+              // Get the latest entry
+              const latestEntry =
+                state.gameLogSessionTable[state.gameLogSessionTable.length - 1];
+
+              // Check if it's a player join event
+              if (latestEntry?.type === "OnPlayerJoined") {
+                this.handlePlayerJoin(latestEntry);
+              }
+            }
+          },
+          { flush: "sync" } // Process immediately
+        );
+
+        // Store unsubscribe function for cleanup
+        this.registerResource("gameLogSubscription", unsubscribe);
+
+        this.logger.log(
+          "Player join monitoring registered (using Pinia $subscribe)"
+        );
+      }
+    }, 100);
+
+    // Register the interval for cleanup
+    this.registerTimer(checkInterval);
+
+    // Clear interval after 10 seconds if store not found
+    setTimeout(() => {
+      clearInterval(checkInterval);
+    }, 10000);
+  }
+
+  handlePlayerJoin(entry) {
+    try {
+      // Check if notifications are enabled
+      if (!this.config.notifications.notifyOnPlayerJoin.value) {
+        return;
+      }
+
+      // Handle both raw gameLog format and database entry format
+      const playerId = entry.userId || entry.user_id;
+      const playerName =
+        entry.displayName || entry.display_name || "Unknown Player";
+
+      if (!playerId) {
+        return;
+      }
+
+      // Check if the player has a custom tag
+      const playerTag = this.getUserTag(playerId);
+
+      if (playerTag) {
+        const message = `${playerName} joined (${playerTag.tag})`;
+
+        // Log with desktop and VR notifications
+        this.logger.log(
+          message,
+          { console: true, desktop: true, xsoverlay: true, ovrtoolkit: true },
+          "info"
+        );
+      }
+    } catch (error) {
+      this.logger.error("Error handling player join:", error);
+    }
   }
 
   /**

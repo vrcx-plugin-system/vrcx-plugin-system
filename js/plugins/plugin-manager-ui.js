@@ -4,8 +4,8 @@ class PluginManagerUIPlugin extends Plugin {
       name: "Plugin Manager UI",
       description: "Visual UI for managing VRCX custom plugins",
       author: "Bluscream",
-      version: "3.1.1",
-      build: "1728746680",
+      version: "3.1.2",
+      build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
@@ -21,9 +21,8 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   async start() {
-    // Setup utils and API shortcuts
+    // Setup utils shortcut
     this.utils = window.customjs.utils;
-    this.api = window.customjs.api;
 
     // Wait for dependencies
     this.navMenuApi = await window.customjs.pluginManager.waitForPlugin(

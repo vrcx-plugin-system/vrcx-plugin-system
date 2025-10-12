@@ -5,8 +5,8 @@ class ProtocolLinksPlugin extends Plugin {
       description:
         "Adds context menu items to copy VRCX protocol links for users, avatars, worlds, groups, and instances",
       author: "Bluscream",
-      version: "2.1.2",
-      build: "1728746660",
+      version: "2.1.3",
+      build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
@@ -20,9 +20,8 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   async start() {
-    // Setup utils and API shortcuts
+    // Setup utils shortcut
     this.utils = window.customjs.utils;
-    this.api = window.customjs.api;
 
     // Wait for dependencies
     this.contextMenuApi = await window.customjs.pluginManager.waitForPlugin(

@@ -20,11 +20,9 @@ window.customjs.pluginConfig = {
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/logger.js",
     // ConfigManager must be loaded second (before Plugin base class)
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
-    // API must be loaded third (before Plugin base class and plugins that use it)
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api.js",
-    // Utils must be loaded fourth (before Plugin base class and plugins that use it)
+    // Utils must be loaded third (before Plugin base class and plugins that use it)
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
-    // Base Plugin class must be loaded fifth
+    // Base Plugin class must be loaded fourth
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
     // UI plugins
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
@@ -37,6 +35,8 @@ window.customjs.pluginConfig = {
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-invite.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-follow.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/plugin-manager-ui.js",
+    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/monitor-invisibleplayers.js",
+    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/selfinvite-onblockedplayer.js",
     // Optional/Debug plugins (uncomment to enable)
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js",
     // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/template.js",
@@ -404,17 +404,17 @@ class PluginManager {
       // Check for replace hooks - they replace the original function
       const replaceHooks = window.customjs.hooks.replace[functionPath] || [];
       let result;
-      
+
       if (replaceHooks.length > 0) {
         // Chain replace hooks - each one calls the next, ending with the original
         let chainedFunction = originalFunc.bind(this);
-        
+
         // Build chain from last to first, so first registered hook runs first
         for (let i = replaceHooks.length - 1; i >= 0; i--) {
           const { plugin, callback } = replaceHooks[i];
           const nextFunction = chainedFunction;
-          
-          chainedFunction = function(...hookArgs) {
+
+          chainedFunction = function (...hookArgs) {
             try {
               return callback.call(plugin, nextFunction, ...hookArgs);
             } catch (error) {
@@ -427,7 +427,7 @@ class PluginManager {
             }
           };
         }
-        
+
         result = chainedFunction(...args);
       } else {
         // Call original function
@@ -555,13 +555,13 @@ class PluginManager {
       // Store the number of plugins before loading
       const pluginCountBefore = window.customjs.plugins.length;
 
-      // Check if this is the logger, config manager, API, Utils, or base Plugin class (utility files, not plugins)
+      // Check if this is the logger, config manager, Utils, or base Plugin class (utility files, not plugins)
       const isLogger = pluginUrl.includes("/logger.js");
       const isConfigManager = pluginUrl.includes("/config.js");
-      const isApi = pluginUrl.includes("/api.js");
       const isUtils = pluginUrl.includes("/utils.js");
       const isBaseClass = pluginUrl.includes("/plugin.js");
-      const isUtilityFile = isLogger || isConfigManager || isApi || isUtils || isBaseClass;
+      const isUtilityFile =
+        isLogger || isConfigManager || isUtils || isBaseClass;
 
       // Wrap in IIFE to isolate scope, but don't auto-execute plugin initialization
       const wrappedCode = `(function() { 

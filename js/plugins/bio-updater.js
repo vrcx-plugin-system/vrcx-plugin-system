@@ -5,8 +5,8 @@ class BioUpdaterPlugin extends Plugin {
       description:
         "Automatic bio updating with user statistics and custom templates",
       author: "Bluscream",
-      version: "3.0.3",
-      build: "1728746640",
+      version: "3.0.6",
+      build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
@@ -98,9 +98,8 @@ Oculus ID: {oculusId}`,
   }
 
   async start() {
-    // Setup utils and API shortcuts
+    // Setup utils shortcut
     this.utils = window.customjs.utils;
-    this.api = window.customjs.api;
 
     // Wait for dependencies
     this.autoInvite = await window.customjs.pluginManager.waitForPlugin(
@@ -256,8 +255,8 @@ Oculus ID: {oculusId}`,
 
       this.logger.log(`Updating bio (${bio.length} chars)`);
 
-      // Save bio via API
-      await this.api.saveBio(bio);
+      // Save bio via utils helper
+      await this.utils.saveBio(bio);
 
       this.logger.log("✓ Bio updated successfully");
 

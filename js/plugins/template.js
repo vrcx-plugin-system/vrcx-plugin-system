@@ -7,7 +7,7 @@ class TemplatePlugin extends Plugin {
       description:
         "Example plugin demonstrating all available features and lifecycle events",
       author: "Bluscream",
-      version: "1.2.1",
+      version: "1.2.3",
       build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         // Always include plugin.js as first dependency
@@ -163,9 +163,8 @@ class TemplatePlugin extends Plugin {
   async start() {
     this.logger.log("▶️ start() called - Starting plugin operations...");
 
-    // Setup utils and API shortcuts
+    // Setup utils shortcut
     this.utils = window.customjs.utils;
-    this.api = window.customjs.api;
 
     // Wait for dependencies
     this.contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
@@ -210,9 +209,8 @@ class TemplatePlugin extends Plugin {
       attributes: false, // Set to true to watch attribute changes
     });
 
-    // Example: Access other plugins via PluginManager
+    // Example: Use utils functions
     if (this.utils) {
-      this.logger.log(`🔌 Found utils plugin v${this.utils.metadata.version}`);
       const timestamp = this.utils.getTimestamp();
       this.logger.log(`🕐 Current timestamp: ${timestamp}`);
     }

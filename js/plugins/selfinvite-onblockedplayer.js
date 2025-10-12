@@ -23,7 +23,7 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       description:
         "Automatically creates a self-invite to a new instance when a blocked player joins your current instance",
       author: "Bluscream",
-      version: "1.1.0",
+      version: "1.1.1",
       build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
@@ -99,9 +99,8 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
   }
 
   async start() {
-    // Setup utils and API shortcuts
+    // Setup utils shortcut
     this.utils = window.customjs.utils;
-    this.api = window.customjs.api;
 
     // Setup gameLog monitoring for blocked players
     this.setupGameLogMonitoring();
