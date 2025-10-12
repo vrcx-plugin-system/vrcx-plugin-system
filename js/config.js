@@ -15,7 +15,7 @@
  * - Store general settings (logger, etc.) in vrcx.customjs.*
  * - Settings are stored in plugin instances (plugin.config.category.setting)
  * - Proxied to global namespace (window.customjs.config.settings.pluginId.category.setting)
- * - All settings are saved to disk (including defaults)
+ * - Only non-default settings are saved to disk
  * - Automatic type validation
  * - Category organization for settings
  *
@@ -33,7 +33,7 @@
  * // Modify settings:
  * this.config.general.enabled.value = false;
  *
- * // Save to disk (all settings):
+ * // Save to disk (only modified settings):
  * await this.saveSettings();
  *
  * Usage for general settings (not tied to a plugin):
@@ -131,8 +131,8 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "1.5.1";
-    this.build = "1760530800";
+    this.version = "1.6.0";
+    this.build = "1728781200";
 
     // Store setting definitions and categories
     this.categories = new Map(); // pluginId -> Map(categoryKey -> {name, description})
@@ -555,7 +555,7 @@ class ConfigManager {
   }
 
   /**
-   * Save config to VRChat's config.json (all settings including defaults)
+   * Save config to VRChat's config.json (only non-default settings)
    * @returns {Promise<void>}
    */
   async save() {
@@ -595,34 +595,39 @@ class ConfigManager {
       // Initialize settings section
       config.vrcx.customjs.settings = config.vrcx.customjs.settings || {};
 
-      // Build plugin settings (save all settings, including defaults)
+      // Build plugin settings (save only non-default settings)
       let savedCount = 0;
       this.settings.forEach((categories, pluginId) => {
-        config.vrcx.customjs.settings[pluginId] =
-          config.vrcx.customjs.settings[pluginId] || {};
-
         categories.forEach((settings, categoryKey) => {
-          config.vrcx.customjs.settings[pluginId][categoryKey] =
-            config.vrcx.customjs.settings[pluginId][categoryKey] || {};
-
           settings.forEach((setting, settingKey) => {
-            // Save all settings, including defaults
-            config.vrcx.customjs.settings[pluginId][categoryKey][settingKey] =
-              setting.value;
-            savedCount++;
+            // Only save modified settings
+            if (setting.isModified()) {
+              // Ensure structure exists
+              config.vrcx.customjs.settings[pluginId] =
+                config.vrcx.customjs.settings[pluginId] || {};
+              config.vrcx.customjs.settings[pluginId][categoryKey] =
+                config.vrcx.customjs.settings[pluginId][categoryKey] || {};
+
+              config.vrcx.customjs.settings[pluginId][categoryKey][settingKey] =
+                setting.value;
+              savedCount++;
+            }
           });
         });
       });
 
-      // Save general settings (logger, loader, etc.) - save all settings, including defaults
+      // Save general settings (logger, loader, etc.) - save only non-default settings
       this.generalSettings.forEach((settings, categoryKey) => {
-        config.vrcx.customjs[categoryKey] =
-          config.vrcx.customjs[categoryKey] || {};
-
         settings.forEach((setting, settingKey) => {
-          // Save all settings, including defaults
-          config.vrcx.customjs[categoryKey][settingKey] = setting.value;
-          savedCount++;
+          // Only save modified settings
+          if (setting.isModified()) {
+            // Ensure structure exists
+            config.vrcx.customjs[categoryKey] =
+              config.vrcx.customjs[categoryKey] || {};
+
+            config.vrcx.customjs[categoryKey][settingKey] = setting.value;
+            savedCount++;
+          }
         });
       });
 
