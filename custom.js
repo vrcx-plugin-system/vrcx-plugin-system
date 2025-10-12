@@ -1,7 +1,7 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "1.6.0",
-  build: "1760406000",
+  version: "1.6.1",
+  build: "1760407000",
 };
 window.customjs.config = {};
 
@@ -476,6 +476,92 @@ class PluginManager {
   }
 
   /**
+   * Setup a fallback logger if the main Logger class failed to load
+   */
+  setupFallbackLogger() {
+    // Minimal Logger implementation for fallback
+    window.customjs.Logger = class FallbackLogger {
+      constructor(context = "CJS") {
+        this.context = context;
+      }
+
+      log(msg, options = {}, level = "info") {
+        const formattedMsg = `[CJS|${this.context}] ${msg}`;
+        if (typeof console[level] === "function") {
+          console[level](formattedMsg);
+        } else {
+          console.log(formattedMsg);
+        }
+      }
+
+      logInfo(msg) {
+        this.log(msg, {}, "info");
+      }
+      info(msg) {
+        this.logInfo(msg);
+      }
+
+      logWarn(msg) {
+        this.log(msg, {}, "warn");
+      }
+      warn(msg) {
+        this.logWarn(msg);
+      }
+
+      logError(msg) {
+        this.log(msg, {}, "error");
+      }
+      error(msg) {
+        this.logError(msg);
+      }
+
+      logDebug(msg) {
+        this.log(msg, {}, "log");
+      }
+      debug(msg) {
+        this.logDebug(msg);
+      }
+
+      showInfo(msg) {
+        console.log(`[CJS|${this.context}] ${msg}`);
+      }
+      showSuccess(msg) {
+        console.log(`[CJS|${this.context}] ✓ ${msg}`);
+      }
+      showWarn(msg) {
+        console.warn(`[CJS|${this.context}] ${msg}`);
+      }
+      showError(msg) {
+        console.error(`[CJS|${this.context}] ${msg}`);
+      }
+
+      async notifyDesktop(msg) {
+        console.log(`[CJS|${this.context}] [Desktop] ${msg}`);
+      }
+      async notifyXSOverlay(msg) {
+        console.log(`[CJS|${this.context}] [XSOverlay] ${msg}`);
+      }
+      async notifyOVRToolkit(msg) {
+        console.log(`[CJS|${this.context}] [OVRToolkit] ${msg}`);
+      }
+      async notifyVR(msg) {
+        console.log(`[CJS|${this.context}] [VR] ${msg}`);
+      }
+
+      logAndShow(msg, level = "info") {
+        this.log(msg, {}, level);
+      }
+      logAndNotifyAll(msg, level = "info") {
+        this.log(msg, {}, level);
+      }
+    };
+
+    console.log(
+      "[CJS|PluginManager] ✓ Fallback Logger class registered"
+    );
+  }
+
+  /**
    * Get plugin configuration (merge defaults with loaded config)
    * @returns {object} - { url: enabled } mapping
    */
@@ -518,6 +604,14 @@ class PluginManager {
 
     for (const moduleUrl of window.customjs.core_modules) {
       await this.loadPluginCode(moduleUrl);
+    }
+
+    // Ensure Logger exists (provide fallback if loading failed)
+    if (!window.customjs.Logger) {
+      console.warn(
+        "[CJS|PluginManager] Logger failed to load, using fallback console logger"
+      );
+      this.setupFallbackLogger();
     }
 
     console.log(
