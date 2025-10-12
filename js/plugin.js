@@ -111,7 +111,14 @@ class Plugin {
   async stop() {
     this.log("stop() called - Override this method in your plugin");
     this.started = false;
+
+    // Clean up local resources
     this.cleanupResources();
+
+    // Clean up global subscriptions via PluginManager
+    if (window.customjs?.pluginManager) {
+      window.customjs.pluginManager.unregisterSubscriptions(this.metadata.id);
+    }
   }
 
   /**
@@ -194,16 +201,38 @@ class Plugin {
   }
 
   /**
-   * Register a Pinia subscription for automatic cleanup
-   * @param {function} unsubscribe - Unsubscribe function returned by $subscribe
+   * Register a Pinia subscription or any unsubscribe function for automatic cleanup
+   * Uses centralized tracking via PluginManager and local tracking for cleanup
+   * @param {function} unsubscribe - Unsubscribe function returned by $subscribe or similar
+   * @returns {function} The unsubscribe function (for chaining)
    */
   registerSubscription(unsubscribe) {
+    // Track locally for cleanup
     this.resources.subscriptions.add(unsubscribe);
+
+    // Track globally in PluginManager
+    if (window.customjs?.pluginManager) {
+      window.customjs.pluginManager.registerSubscription(
+        this.metadata.id,
+        unsubscribe
+      );
+    }
+
     return unsubscribe;
   }
 
   /**
-   * Clean up all tracked resources (timers, observers, listeners, subscriptions)
+   * Alias for registerSubscription - commonly used in plugins
+   * @param {function} unsubscribe - Unsubscribe function
+   * @returns {function} The unsubscribe function (for chaining)
+   */
+  registerResource(unsubscribe) {
+    return this.registerSubscription(unsubscribe);
+  }
+
+  /**
+   * Clean up all tracked resources (timers, observers, listeners)
+   * NOTE: Subscriptions are cleaned up centrally via PluginManager.unregisterSubscriptions()
    * Called automatically by stop()
    * @private
    */
@@ -234,13 +263,7 @@ class Plugin {
     });
     this.resources.listeners.clear();
 
-    // Unsubscribe from Pinia subscriptions
-    this.resources.subscriptions.forEach((unsubscribe) => {
-      if (typeof unsubscribe === "function") {
-        unsubscribe();
-        cleanupCount++;
-      }
-    });
+    // Clear local subscription tracking (actual unsubscribe is done by PluginManager)
     this.resources.subscriptions.clear();
 
     // Note: Hooks are not automatically removed as they may be used by other plugins
@@ -248,7 +271,7 @@ class Plugin {
     this.resources.hooks.clear();
 
     if (cleanupCount > 0) {
-      this.log(`✓ Cleaned up ${cleanupCount} resources`);
+      this.log(`✓ Cleaned up ${cleanupCount} local resources`);
     }
   }
 

@@ -1,7 +1,7 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "1.6.1",
-  build: "1760407000",
+  version: "1.7.0",
+  build: "1760409000",
 };
 window.customjs.config = {};
 
@@ -91,6 +91,9 @@ class PluginManager {
     if (!window.customjs.plugins) {
       window.customjs.plugins = [];
     }
+    if (!window.customjs.subscriptions) {
+      window.customjs.subscriptions = new Map(); // pluginId -> Set of unsubscribe functions
+    }
     if (!window.customjs.hooks) {
       window.customjs.hooks = {
         pre: {},
@@ -128,10 +131,60 @@ class PluginManager {
     }
 
     window.customjs.plugins.push(plugin);
+    
+    // Initialize subscription tracking for this plugin
+    if (!window.customjs.subscriptions.has(plugin.metadata.id)) {
+      window.customjs.subscriptions.set(plugin.metadata.id, new Set());
+    }
+    
     console.log(
       `[CJS|PluginManager] Registered plugin: ${plugin.metadata.name} v${plugin.metadata.version}`
     );
     return true;
+  }
+
+  /**
+   * Register a subscription for a plugin (centralized tracking)
+   * @param {string} pluginId - Plugin ID
+   * @param {function} unsubscribe - Unsubscribe function
+   * @returns {function} The unsubscribe function (for chaining)
+   */
+  registerSubscription(pluginId, unsubscribe) {
+    if (!window.customjs.subscriptions.has(pluginId)) {
+      window.customjs.subscriptions.set(pluginId, new Set());
+    }
+    
+    window.customjs.subscriptions.get(pluginId).add(unsubscribe);
+    return unsubscribe;
+  }
+
+  /**
+   * Unregister all subscriptions for a plugin
+   * @param {string} pluginId - Plugin ID
+   */
+  unregisterSubscriptions(pluginId) {
+    const subscriptions = window.customjs.subscriptions.get(pluginId);
+    if (!subscriptions) return;
+
+    let count = 0;
+    subscriptions.forEach((unsubscribe) => {
+      if (typeof unsubscribe === "function") {
+        try {
+          unsubscribe();
+          count++;
+        } catch (error) {
+          console.error(
+            `[CJS|PluginManager] Error unsubscribing for ${pluginId}:`,
+            error
+          );
+        }
+      }
+    });
+
+    subscriptions.clear();
+    console.log(
+      `[CJS|PluginManager] Unregistered ${count} subscriptions for ${pluginId}`
+    );
   }
 
   unregisterPlugin(pluginId) {
@@ -139,6 +192,9 @@ class PluginManager {
       (p) => p.metadata.id === pluginId
     );
     if (index === -1) return false;
+
+    // Clean up subscriptions first
+    this.unregisterSubscriptions(pluginId);
 
     window.customjs.plugins.splice(index, 1);
     return true;
@@ -803,6 +859,8 @@ class PluginManager {
             const pluginCountAfter = window.customjs.plugins.length;
             if (pluginCountAfter > pluginCountBefore) {
               const newPlugin = window.customjs.plugins[pluginCountAfter - 1];
+              this.loadedUrls.add(pluginUrl);
+              resolve();
               console.log(
                 `[CJS|PluginManager] ✓ Loaded ${newPlugin.metadata.name} v${newPlugin.metadata.version} (${newPlugin.metadata.build})`
               );
@@ -810,6 +868,8 @@ class PluginManager {
               console.warn(
                 `[CJS|PluginManager] ⚠ No plugin registered from ${pluginUrl}`
               );
+              this.loadedUrls.add(pluginUrl);
+              resolve();
             }
           } else {
             // Core module loaded
@@ -820,10 +880,9 @@ class PluginManager {
             console.log(
               `[CJS|PluginManager] ✓ Loaded core module: ${displayName}`
             );
+            this.loadedUrls.add(pluginUrl);
+            resolve();
           }
-
-          this.loadedUrls.add(pluginUrl);
-          resolve();
         }, 100);
       });
 
