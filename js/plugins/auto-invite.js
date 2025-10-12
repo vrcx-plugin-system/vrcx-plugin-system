@@ -5,12 +5,11 @@ class AutoInvitePlugin extends Plugin {
       description:
         "Automatic user invitation system with location tracking and custom messages",
       author: "Bluscream",
-      version: "4.0.0",
-      build: "1760390000",
+      version: "5.0.2",
+      build: "1728746600",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
       ],
     });
@@ -52,11 +51,14 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async start() {
+    // Setup utils and API shortcuts
+    this.utils = window.customjs.utils;
+    this.api = window.customjs.api;
+
     // Wait for dependencies
     this.contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
       "context-menu-api"
     );
-    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
 
     // Setup location tracking
     this.setupLocationTracking();
@@ -223,8 +225,6 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async onLocationDestinationDetected(destination) {
-    if (!this.utils?.isEmpty) return;
-
     if (this.autoInviteUsers.size > 0 && !this.utils.isEmpty(destination)) {
       // Only invite if we haven't already invited to this location
       if (this.lastInvitedTo !== destination) {
@@ -234,8 +234,6 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async onCurrentUserLocationChanged(location, travelingToLocation) {
-    if (!this.utils?.isEmpty) return;
-
     this.logger.log(
       `Location change: ${location} (traveling to: ${travelingToLocation})`
     );
@@ -244,7 +242,7 @@ class AutoInvitePlugin extends Plugin {
     if (location === "traveling") {
       if (
         this.autoInviteUsers.size > 0 &&
-        !utils.isEmpty(travelingToLocation)
+        !this.utils.isEmpty(travelingToLocation)
       ) {
         if (this.lastInvitedTo !== travelingToLocation) {
           await this.sendInvitesToUsers(travelingToLocation);
@@ -336,7 +334,7 @@ class AutoInvitePlugin extends Plugin {
             inviteParams.message = customMessage;
           }
 
-          return window.customjs.functions.API.sendInvite(inviteParams, user.id);
+          return this.api.sendInvite(inviteParams, user.id);
         }
       );
 
@@ -379,7 +377,7 @@ class AutoInvitePlugin extends Plugin {
   }
 
   toggleAutoInvite(user) {
-    if (!this.utils || !this.contextMenuApi) return;
+    if (!this.contextMenuApi) return;
 
     if (this.utils.isEmpty(user)) {
       this.logger.showError("Invalid user");

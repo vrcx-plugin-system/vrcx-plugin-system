@@ -1,7 +1,7 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "1.2.0",
-  build: Math.floor(Date.now() / 1000).toString(),
+  version: "1.3.0",
+  build: "1760395965",
 };
 
 // Global configuration (not plugin-specific)
@@ -22,10 +22,10 @@ window.customjs.pluginConfig = {
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
     // API must be loaded third (before Plugin base class and plugins that use it)
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/api.js",
-    // Base Plugin class must be loaded fourth
+    // Utils must be loaded fourth (before Plugin base class and plugins that use it)
+    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
+    // Base Plugin class must be loaded fifth
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-    // Core plugins
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
     // UI plugins
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
@@ -74,6 +74,8 @@ class PluginManager {
       window.customjs.hooks = {
         pre: {},
         post: {},
+        void: {},
+        replace: {},
       };
     }
     if (!window.customjs.functions) {
@@ -287,6 +289,32 @@ class PluginManager {
     );
   }
 
+  registerVoidHook(functionPath, callback, plugin) {
+    window.customjs.hooks.void[functionPath] =
+      window.customjs.hooks.void[functionPath] || [];
+    window.customjs.hooks.void[functionPath].push({ plugin, callback });
+
+    // Try to wrap the function, or wait for it to exist
+    this.wrapFunctionWhenReady(functionPath);
+
+    console.log(
+      `[CJS|PluginManager] Registered void-hook for ${functionPath} from ${plugin.metadata.name}`
+    );
+  }
+
+  registerReplaceHook(functionPath, callback, plugin) {
+    window.customjs.hooks.replace[functionPath] =
+      window.customjs.hooks.replace[functionPath] || [];
+    window.customjs.hooks.replace[functionPath].push({ plugin, callback });
+
+    // Try to wrap the function, or wait for it to exist
+    this.wrapFunctionWhenReady(functionPath);
+
+    console.log(
+      `[CJS|PluginManager] Registered replace-hook for ${functionPath} from ${plugin.metadata.name}`
+    );
+  }
+
   wrapFunctionWhenReady(functionPath, retries = 0, maxRetries = 10) {
     // Try to wrap immediately
     if (this.wrapFunction(functionPath)) {
@@ -344,6 +372,22 @@ class PluginManager {
 
     // Create wrapped version
     obj[funcName] = function (...args) {
+      // Check for void hooks first - they completely prevent function execution
+      const voidHooks = window.customjs.hooks.void[functionPath] || [];
+      if (voidHooks.length > 0) {
+        for (const { plugin, callback } of voidHooks) {
+          try {
+            callback.call(plugin, args);
+          } catch (error) {
+            console.error(
+              `[CJS|PluginManager] Error in void-hook for ${functionPath}:`,
+              error
+            );
+          }
+        }
+        return; // Void the function - don't call original or any other hooks
+      }
+
       // Call pre-hooks
       const preHooks = window.customjs.hooks.pre[functionPath] || [];
       for (const { plugin, callback } of preHooks) {
@@ -357,8 +401,38 @@ class PluginManager {
         }
       }
 
-      // Call original function
-      const result = originalFunc.apply(this, args);
+      // Check for replace hooks - they replace the original function
+      const replaceHooks = window.customjs.hooks.replace[functionPath] || [];
+      let result;
+      
+      if (replaceHooks.length > 0) {
+        // Chain replace hooks - each one calls the next, ending with the original
+        let chainedFunction = originalFunc.bind(this);
+        
+        // Build chain from last to first, so first registered hook runs first
+        for (let i = replaceHooks.length - 1; i >= 0; i--) {
+          const { plugin, callback } = replaceHooks[i];
+          const nextFunction = chainedFunction;
+          
+          chainedFunction = function(...hookArgs) {
+            try {
+              return callback.call(plugin, nextFunction, ...hookArgs);
+            } catch (error) {
+              console.error(
+                `[CJS|PluginManager] Error in replace-hook for ${functionPath}:`,
+                error
+              );
+              // On error, call the next function in chain
+              return nextFunction.apply(this, hookArgs);
+            }
+          };
+        }
+        
+        result = chainedFunction(...args);
+      } else {
+        // Call original function
+        result = originalFunc.apply(this, args);
+      }
 
       // Call post-hooks
       const postHooks = window.customjs.hooks.post[functionPath] || [];
@@ -481,12 +555,13 @@ class PluginManager {
       // Store the number of plugins before loading
       const pluginCountBefore = window.customjs.plugins.length;
 
-      // Check if this is the logger, config manager, API, or base Plugin class (utility files, not plugins)
+      // Check if this is the logger, config manager, API, Utils, or base Plugin class (utility files, not plugins)
       const isLogger = pluginUrl.includes("/logger.js");
       const isConfigManager = pluginUrl.includes("/config.js");
       const isApi = pluginUrl.includes("/api.js");
+      const isUtils = pluginUrl.includes("/utils.js");
       const isBaseClass = pluginUrl.includes("/plugin.js");
-      const isUtilityFile = isLogger || isConfigManager || isApi || isBaseClass;
+      const isUtilityFile = isLogger || isConfigManager || isApi || isUtils || isBaseClass;
 
       // Wrap in IIFE to isolate scope, but don't auto-execute plugin initialization
       const wrappedCode = `(function() { 
@@ -545,13 +620,15 @@ class PluginManager {
               );
             }
           } else {
-            // Utility file loaded (logger, config manager, API, or base class)
+            // Utility file loaded (logger, config manager, API, Utils, or base class)
             const utilityName = isLogger
               ? "Logger utility"
               : isConfigManager
               ? "ConfigManager utility"
               : isApi
               ? "API utility"
+              : isUtils
+              ? "Utils utility"
               : "base Plugin class";
             console.log(`[CJS|[PluginManager] ✓ Loaded ${utilityName}`);
           }

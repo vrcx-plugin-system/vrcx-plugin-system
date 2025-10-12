@@ -7,7 +7,7 @@ class TemplatePlugin extends Plugin {
       description:
         "Example plugin demonstrating all available features and lifecycle events",
       author: "Bluscream",
-      version: "1.2.0",
+      version: "1.2.1",
       build: Math.floor(Date.now() / 1000).toString(),
       dependencies: [
         // Always include plugin.js as first dependency
@@ -127,6 +127,20 @@ class TemplatePlugin extends Plugin {
     //   this.logger.log(`🪝 POST-HOOK: SendIpc returned:`, result);
     // });
 
+    // Example: Register a void-hook to completely prevent function execution
+    // this.registerVoidHook('AppApi.SendIpc', (args) => {
+    //   this.logger.log(`🪝 VOID-HOOK: SendIpc was voided:`, args);
+    //   // Original function will NOT be called
+    // });
+
+    // Example: Register a replace-hook to replace a function (chainable with other plugins)
+    // this.registerReplaceHook('AppApi.SendIpc', function(originalFunc, ...args) {
+    //   this.logger.log(`🪝 REPLACE-HOOK: Replacing SendIpc`);
+    //   // You can call the original or return your own result
+    //   const result = originalFunc(...args); // Optional
+    //   return result; // Or return your own value
+    // });
+
     // Example: Listen to events from other plugins
     // this.on("other-plugin:event-name", (data) => {
     //   this.logger.log("📨 Received event from other-plugin:", data);
@@ -149,8 +163,11 @@ class TemplatePlugin extends Plugin {
   async start() {
     this.logger.log("▶️ start() called - Starting plugin operations...");
 
+    // Setup utils and API shortcuts
+    this.utils = window.customjs.utils;
+    this.api = window.customjs.api;
+
     // Wait for dependencies
-    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
     this.contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
       "context-menu-api"
     );

@@ -327,6 +327,54 @@ class Plugin {
     this.resources.hooks.add({ type: "post", functionPath, callback });
   }
 
+  /**
+   * Register a void-hook to completely prevent a function from executing
+   * @param {string} functionPath - Dot-notation path to function (e.g., "AppApi.SendIpc")
+   * @param {function} callback - Callback(args) called instead of the function (receives args for inspection)
+   * @returns {void}
+   */
+  registerVoidHook(functionPath, callback) {
+    if (!window.customjs?.pluginManager) {
+      this.error("Plugin manager not available for hooks");
+      return;
+    }
+    window.customjs.pluginManager.registerVoidHook(
+      functionPath,
+      callback,
+      this
+    );
+    this.resources.hooks.add({ type: "void", functionPath, callback });
+  }
+
+  /**
+   * Register a replace-hook to replace a function with your own implementation
+   * Multiple plugins can register replace hooks - they will be chained together
+   * @param {string} functionPath - Dot-notation path to function (e.g., "AppApi.SendIpc")
+   * @param {function} callback - Callback(originalFunc, ...args) that should call originalFunc or return your own result
+   * @returns {void}
+   * @example
+   * // Replace a function while optionally calling the original
+   * this.registerReplaceHook("SomeObject.someMethod", function(originalFunc, arg1, arg2) {
+   *   // You can modify args, skip the original call, or wrap it
+   *   console.log("Before original");
+   *   const result = originalFunc(arg1, arg2); // Call original if needed
+   *   console.log("After original");
+   *   return result; // Or return your own result
+   * });
+   */
+  registerReplaceHook(functionPath, callback) {
+    if (!window.customjs?.pluginManager) {
+      this.error("Plugin manager not available for hooks");
+      return;
+    }
+    window.customjs.pluginManager.registerReplaceHook(
+      functionPath,
+      callback,
+      this
+    );
+    this.resources.hooks.add({ type: "replace", functionPath, callback });
+  }
+
 
   /**
    * Log info message (uses personal logger instance)

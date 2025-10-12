@@ -36,12 +36,11 @@ class AutoFollowPlugin extends Plugin {
       description:
         "Automatic location tracking system that follows selected users",
       author: "Bluscream",
-      version: "2.0.0",
-      build: "1760390100",
+      version: "3.0.2",
+      build: "1728746620",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
       ],
     });
@@ -79,11 +78,14 @@ class AutoFollowPlugin extends Plugin {
   }
 
   async start() {
+    // Setup utils and API shortcuts
+    this.utils = window.customjs.utils;
+    this.api = window.customjs.api;
+
     // Wait for dependencies
     this.contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
       "context-menu-api"
     );
-    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
 
     // Setup context menu buttons
     this.setupUserButtons();
@@ -195,7 +197,7 @@ class AutoFollowPlugin extends Plugin {
   async checkUserLocation(userId, data) {
     try {
       // Fetch user data from API
-      const userResponse = await window.customjs.functions.API.getUser(userId);
+      const userResponse = await this.api.getUser(userId);
       if (!userResponse || !userResponse.json) return;
 
       const user = userResponse.json;
@@ -293,7 +295,7 @@ class AutoFollowPlugin extends Plugin {
       }
 
       // Send invite request
-      await window.customjs.functions.API.sendInviteRequest(inviteParams, user.id);
+      await this.api.sendInviteRequest(inviteParams, user.id);
 
       this.lastRequestedFrom.set(user.id, location);
       this.logger.log(`✓ Successfully requested invite from ${userName}`);
@@ -338,7 +340,7 @@ class AutoFollowPlugin extends Plugin {
   // ============================================================================
 
   toggleAutoFollow(user) {
-    if (!this.utils || !this.contextMenuApi) return;
+    if (!this.contextMenuApi) return;
 
     if (this.utils.isEmpty(user)) {
       this.logger.showError("Invalid user");

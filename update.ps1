@@ -104,6 +104,82 @@ function Get-UnixTime {
     return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds)
 }
 
+# Function to check JavaScript syntax
+function Test-JavaScriptSyntax {
+    param(
+        [string]$Directory
+    )
+    
+    Write-Host "=== JavaScript Syntax Check ===" -ForegroundColor Cyan
+    
+    # Check if Node.js is available
+    $nodeAvailable = $false
+    try {
+        $null = node --version 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $nodeAvailable = $true
+            Write-Host "Node.js detected - performing syntax validation" -ForegroundColor Green
+        }
+    }
+    catch {
+        # Node.js not available
+    }
+    
+    if (-not $nodeAvailable) {
+        Write-Host "Node.js not found - skipping syntax validation" -ForegroundColor Yellow
+        Write-Host "Install Node.js to enable JavaScript syntax checking" -ForegroundColor Gray
+        return $true
+    }
+    
+    # Find all .js files
+    $jsFiles = Get-ChildItem -Path $Directory -Filter "*.js" -Recurse | Where-Object { $_.FullName -notmatch '[\\/]node_modules[\\/]' }
+    
+    if ($jsFiles.Count -eq 0) {
+        Write-Host "No JavaScript files found" -ForegroundColor Yellow
+        return $true
+    }
+    
+    Write-Host "Checking $($jsFiles.Count) JavaScript file(s)..." -ForegroundColor Yellow
+    
+    $hasErrors = $false
+    $errorCount = 0
+    
+    foreach ($file in $jsFiles) {
+        $relativePath = $file.FullName.Replace("$Directory\", "")
+        
+        # Convert path to use forward slashes for Node.js
+        $nodePath = $file.FullName -replace '\\', '/'
+        
+        # Use Node.js to check syntax
+        $syntaxCheck = "try { const vm = require('vm'); const code = require('fs').readFileSync('$nodePath', 'utf8'); new vm.Script(code); console.log('OK'); } catch(e) { console.error('ERROR: ' + e.message); process.exit(1); }"
+        
+        $output = node -e $syntaxCheck 2>&1
+        
+        if ($LASTEXITCODE -ne 0) {
+            $hasErrors = $true
+            $errorCount++
+            Write-Host "  ✗ $relativePath" -ForegroundColor Red
+            Write-Host "    $output" -ForegroundColor Red
+        }
+        else {
+            Write-Host "  ✓ $relativePath" -ForegroundColor Green
+        }
+    }
+    
+    if ($hasErrors) {
+        Write-Host ""
+        Write-Host "⚠ Found $errorCount JavaScript syntax error(s)" -ForegroundColor Red
+        Write-Host "Please fix the errors before continuing" -ForegroundColor Yellow
+        return $false
+    }
+    else {
+        Write-Host "✓ All JavaScript files passed syntax check" -ForegroundColor Green
+    }
+    
+    Write-Host ""
+    return $true
+}
+
 Write-Host "=== VRCX Custom Update Script ===" -ForegroundColor Cyan
 Write-Host "Unix Time: $(Get-UnixTime)" -ForegroundColor Gray
 Write-Host "Source Directory: $SourceDir" -ForegroundColor Gray
@@ -113,6 +189,12 @@ Write-Host "Target Directory: $TargetDir" -ForegroundColor Gray
 Write-Host "Changing to source directory..." -ForegroundColor Yellow
 Set-Location $SourceDir
 
+# Check JavaScript syntax before proceeding
+$syntaxOk = Test-JavaScriptSyntax -Directory $SourceDir
+if (-not $syntaxOk) {
+    Write-Host "Aborting due to JavaScript syntax errors" -ForegroundColor Red
+    exit 1
+}
 
 # Git operations
 Write-Host "=== Git Operations ===" -ForegroundColor Cyan

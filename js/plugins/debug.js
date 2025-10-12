@@ -185,6 +185,10 @@ class DebugPlugin extends Plugin {
     console.dir(Object.keys(window.customjs?.hooks?.pre || {})); // eslint-disable-line no-console
     console.log("Post-hooks:"); // eslint-disable-line no-console
     console.dir(Object.keys(window.customjs?.hooks?.post || {})); // eslint-disable-line no-console
+    console.log("Void-hooks:"); // eslint-disable-line no-console
+    console.dir(Object.keys(window.customjs?.hooks?.void || {})); // eslint-disable-line no-console
+    console.log("Replace-hooks:"); // eslint-disable-line no-console
+    console.dir(Object.keys(window.customjs?.hooks?.replace || {})); // eslint-disable-line no-console
     console.groupEnd(); // eslint-disable-line no-console
     return window.customjs?.hooks;
   }

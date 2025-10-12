@@ -5,11 +5,10 @@ class ProtocolLinksPlugin extends Plugin {
       description:
         "Adds context menu items to copy VRCX protocol links for users, avatars, worlds, groups, and instances",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1744632000",
+      version: "2.1.2",
+      build: "1728746660",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
       ],
     });
@@ -21,11 +20,14 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   async start() {
+    // Setup utils and API shortcuts
+    this.utils = window.customjs.utils;
+    this.api = window.customjs.api;
+
     // Wait for dependencies
     this.contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
       "context-menu-api"
     );
-    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
 
     if (!this.contextMenuApi) {
       this.logger.error("Context Menu API plugin not found after waiting");
@@ -131,86 +133,67 @@ class ProtocolLinksPlugin extends Plugin {
 
   copyUserLink(userData) {
     if (!userData || !userData.id) {
-      this.showError("No user data available");
+      this.logger.showError("No user data available");
       return;
     }
-
-    const link = `vrcx://user/${userData.id}`;
-    this.copyToClipboard(link, "User link");
+    this.utils.copyToClipboard(`vrcx://user/${userData.id}`, "User link");
   }
 
   copyUserImportLink(userData) {
     if (!userData || !userData.id) {
-      this.showError("No user data available");
+      this.logger.showError("No user data available");
       return;
     }
-
-    const link = `vrcx://import/friend/${userData.id}`;
-    this.copyToClipboard(link, "User import link");
+    this.utils.copyToClipboard(
+      `vrcx://import/friend/${userData.id}`,
+      "User import link"
+    );
   }
 
   copyAvatarLink(avatarData) {
     if (!avatarData || !avatarData.id) {
-      this.showError("No avatar data available");
+      this.logger.showError("No avatar data available");
       return;
     }
-
-    const link = `vrcx://avatar/${avatarData.id}`;
-    this.copyToClipboard(link, "Avatar link");
+    this.utils.copyToClipboard(`vrcx://avatar/${avatarData.id}`, "Avatar link");
   }
 
   copyAvatarImportLink(avatarData) {
     if (!avatarData || !avatarData.id) {
-      this.showError("No avatar data available");
+      this.logger.showError("No avatar data available");
       return;
     }
-
-    const link = `vrcx://import/avatar/${avatarData.id}`;
-    this.copyToClipboard(link, "Avatar import link");
+    this.utils.copyToClipboard(
+      `vrcx://import/avatar/${avatarData.id}`,
+      "Avatar import link"
+    );
   }
 
   copyWorldLink(worldData) {
     if (!worldData || !worldData.id) {
-      this.showError("No world data available");
+      this.logger.showError("No world data available");
       return;
     }
-
-    const link = `vrcx://world/${worldData.id}`;
-    this.copyToClipboard(link, "World link");
+    this.utils.copyToClipboard(`vrcx://world/${worldData.id}`, "World link");
   }
 
   copyWorldImportLink(worldData) {
     if (!worldData || !worldData.id) {
-      this.showError("No world data available");
+      this.logger.showError("No world data available");
       return;
     }
-
-    const link = `vrcx://import/world/${worldData.id}`;
-    this.copyToClipboard(link, "World import link");
+    this.utils.copyToClipboard(
+      `vrcx://import/world/${worldData.id}`,
+      "World import link"
+    );
   }
 
   copyGroupLink(groupData) {
     if (!groupData || !groupData.id) {
-      this.showError("No group data available");
+      this.logger.showError("No group data available");
       return;
     }
-
-    const link = `vrcx://group/${groupData.id}`;
-    this.copyToClipboard(link, "Group link");
-  }
-
-  async copyToClipboard(text, description) {
-    if (!this.utils) {
-      this.logger.error("Utils plugin not available");
-      return;
-    }
-
-    const success = await this.utils.copyToClipboard(text, description);
-    if (success) {
-      this.logger.showSuccess(`${description} copied to clipboard: ${text}`);
-    } else {
-      this.logger.showError(`Failed to copy ${description.toLowerCase()}`);
-    }
+    this.utils.copyToClipboard(`vrcx://group/${groupData.id}`, "Group link");
   }
 
   /**
@@ -218,8 +201,10 @@ class ProtocolLinksPlugin extends Plugin {
    * @param {string} url - URL of the avatar database provider
    */
   addAvatarDatabaseProvider(url) {
-    const link = `vrcx://addavatardb/${url}`;
-    this.copyToClipboard(link, "Avatar database provider link");
+    this.utils.copyToClipboard(
+      `vrcx://addavatardb/${url}`,
+      "Avatar database provider link"
+    );
   }
 
   /**
@@ -229,20 +214,23 @@ class ProtocolLinksPlugin extends Plugin {
    */
   createMultiImportLink(type, ids) {
     if (!Array.isArray(ids) || ids.length === 0) {
-      this.showError("No IDs provided for import");
+      this.logger.showError("No IDs provided for import");
       return;
     }
 
     const validTypes = ["avatar", "world", "friend"];
     if (!validTypes.includes(type)) {
-      this.showError(
+      this.logger.showError(
         `Invalid import type. Must be one of: ${validTypes.join(", ")}`
       );
       return;
     }
 
     const link = `vrcx://import/${type}/${ids.join(",")}`;
-    this.copyToClipboard(link, `${type} import link (${ids.length} items)`);
+    this.utils.copyToClipboard(
+      link,
+      `${type} import link (${ids.length} items)`
+    );
   }
 }
 

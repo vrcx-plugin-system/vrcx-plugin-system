@@ -199,6 +199,20 @@ this.registerPreHook("AppApi.SendIpc", (args) => {
 this.registerPostHook("AppApi.SendIpc", (result, args) => {
   console.log("SendIpc returned:", result);
 });
+
+// Completely void/cancel a function (prevents execution)
+this.registerVoidHook("AppApi.SendIpc", (args) => {
+  console.log("SendIpc was called but voided:", args);
+  // Original function will NOT be called
+});
+
+// Replace function with custom implementation (chainable)
+this.registerReplaceHook("AppApi.SendIpc", function(originalFunc, ...args) {
+  console.log("Replacing SendIpc");
+  // You can call the original function or skip it entirely
+  const result = originalFunc(...args); // Optional
+  return result; // Or return your own result
+});
 ```
 
 #### **State Management**
