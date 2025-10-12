@@ -1,48 +1,69 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "1.3.0",
-  build: "1760395965",
+  version: "1.4.2",
+  build: "1760404000",
 };
+window.customjs.config = {};
 
-// Global configuration (not plugin-specific)
-// Plugin-specific settings are managed via ConfigManager in each plugin
-window.customjs.config = {
-  steam: {
-    id: "{env:STEAM_ID64}",
-    key: "{env:STEAM_API_KEY}",
+// Core modules that are not actual plugins
+window.customjs.core_modules = [
+  "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/logger.js",
+  "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
+  "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
+  "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
+];
+
+window.customjs.default_plugins = [
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
+    enabled: true,
   },
-  webhook: "http://homeassistant.local:8123/api/webhook/vrcx",
-};
-
-window.customjs.pluginConfig = {
-  plugins: [
-    // Logger must be loaded first (before Plugin base class)
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/logger.js",
-    // ConfigManager must be loaded second (before Plugin base class)
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
-    // Utils must be loaded third (before Plugin base class and plugins that use it)
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
-    // Base Plugin class must be loaded fourth
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-    // UI plugins
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
-    // Feature plugins
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/protocol-links.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/registry-overrides.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/tag-manager.js",
-    // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/bio-updater.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-invite.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-follow.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/plugin-manager-ui.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/monitor-invisibleplayers.js",
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/selfinvite-onblockedplayer.js",
-    // Optional/Debug plugins (uncomment to enable)
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js",
-    // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/template.js",
-  ],
-  loadTimeout: 10000,
-};
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
+    enabled: true,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/protocol-links.js",
+    enabled: true,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/registry-overrides.js",
+    enabled: true,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/tag-manager.js",
+    enabled: true,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-invite.js",
+    enabled: true,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-follow.js",
+    enabled: true,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/plugin-manager-ui.js",
+    enabled: false,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/monitor-invisibleplayers.js",
+    enabled: false,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/selfinvite-onblockedplayer.js",
+    enabled: false,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/debug.js",
+    enabled: false,
+  },
+  {
+    url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/template.js",
+    enabled: false,
+  },
+];
+window.customjs.loadTimeout = 10000;
 
 console.log(
   `%c[VRCX Custom] %cStarting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
@@ -454,29 +475,53 @@ class PluginManager {
     return true;
   }
 
-  async loadAllPlugins() {
-    const pluginUrls = window.customjs.pluginConfig.plugins;
+  /**
+   * Get plugin configuration (merge defaults with loaded config)
+   * @returns {object} - { url: enabled } mapping
+   */
+  getPluginConfig() {
+    // Start with defaults
+    const config = {};
+    window.customjs.default_plugins.forEach((plugin) => {
+      config[plugin.url] = plugin.enabled;
+    });
 
+    // Load from ConfigManager if available
+    if (window.customjs?.configManager) {
+      const loadedConfig = window.customjs.configManager.getPluginConfig();
+      if (loadedConfig && typeof loadedConfig === "object") {
+        // Merge loaded config (overrides defaults)
+        Object.assign(config, loadedConfig);
+      }
+    }
+
+    return config;
+  }
+
+  /**
+   * Save plugin configuration to config system
+   * @param {object} config - { url: enabled } mapping
+   */
+  savePluginConfig(config) {
+    if (window.customjs?.configManager) {
+      window.customjs.configManager.setPluginConfig(config);
+    }
+  }
+
+  async loadAllPlugins() {
+    // Phase 1: Load core modules first (always)
     console.log(
-      `%c[CJS|PluginManager] %cLoading ${pluginUrls.length} plugins from URLs...`,
+      `%c[CJS|PluginManager] %cLoading ${window.customjs.core_modules.length} core modules...`,
       "font-weight: bold; color: #00aaff",
       "color: #888"
     );
 
-    if (window.$app?.playNoty) {
-      window.$app.playNoty({
-        message: `Loading ${pluginUrls.length} plugins...`,
-        type: "info",
-      });
-    }
-
-    // Phase 1: Load all plugin code (instantiate plugins)
-    for (const pluginUrl of pluginUrls) {
-      await this.loadPluginCode(pluginUrl);
+    for (const moduleUrl of window.customjs.core_modules) {
+      await this.loadPluginCode(moduleUrl);
     }
 
     console.log(
-      `%c[CJS|PluginManager] %cPlugin code loading complete. Loaded: ${this.loadedUrls.size}, Failed: ${this.failedUrls.size}`,
+      `%c[CJS|PluginManager] %cCore modules loaded`,
       "font-weight: bold; color: #00aaff",
       "color: #888"
     );
@@ -498,7 +543,37 @@ class PluginManager {
       }
     }
 
-    // Phase 3: Call load() on all plugins
+    // Phase 3: Get plugin list from config (merge with defaults)
+    const pluginConfig = this.getPluginConfig();
+    const enabledPlugins = Object.entries(pluginConfig)
+      .filter(([url, enabled]) => enabled)
+      .map(([url]) => url);
+
+    console.log(
+      `%c[CJS|PluginManager] %cLoading ${enabledPlugins.length} plugins from config...`,
+      "font-weight: bold; color: #00aaff",
+      "color: #888"
+    );
+
+    if (window.$app?.playNoty) {
+      window.$app.playNoty({
+        message: `Loading ${enabledPlugins.length} plugins...`,
+        type: "info",
+      });
+    }
+
+    // Phase 4: Load enabled plugins
+    for (const pluginUrl of enabledPlugins) {
+      await this.loadPluginCode(pluginUrl);
+    }
+
+    console.log(
+      `%c[CJS|PluginManager] %cPlugin code loading complete. Loaded: ${this.loadedUrls.size}, Failed: ${this.failedUrls.size}`,
+      "font-weight: bold; color: #00aaff",
+      "color: #888"
+    );
+
+    // Phase 5: Call load() on all plugins
     console.log(
       `%c[CJS|PluginManager] %cCalling load() on ${window.customjs.plugins.length} plugins...`,
       "font-weight: bold; color: #00aaff",
@@ -515,16 +590,22 @@ class PluginManager {
       }
     }
 
-    // Phase 4: Setup config proxies (after all plugins have registered settings)
+    // Phase 6: Setup config proxies (after all plugins have registered settings)
     if (window.customjs?.configManager) {
       window.customjs.configManager._setupProxies();
     }
 
-    // Phase 5: Call start() on all plugins
+    // Phase 7: Call start() on all plugins
     await this.startAllPlugins();
 
-    // Phase 6: Start login monitoring
+    // Phase 8: Start login monitoring
     this.startLoginMonitoring();
+
+    // Phase 9: Save plugin config to disk
+    this.savePluginConfig(pluginConfig);
+    if (window.customjs?.configManager) {
+      await window.customjs.configManager.save();
+    }
 
     console.log(
       `%c[CJS|PluginManager] %c✓ Plugin system ready!`,
@@ -555,13 +636,10 @@ class PluginManager {
       // Store the number of plugins before loading
       const pluginCountBefore = window.customjs.plugins.length;
 
-      // Check if this is the logger, config manager, Utils, or base Plugin class (utility files, not plugins)
-      const isLogger = pluginUrl.includes("/logger.js");
-      const isConfigManager = pluginUrl.includes("/config.js");
-      const isUtils = pluginUrl.includes("/utils.js");
-      const isBaseClass = pluginUrl.includes("/plugin.js");
-      const isUtilityFile =
-        isLogger || isConfigManager || isUtils || isBaseClass;
+      // Check if this is a core module (utility files, not plugins)
+      const isUtilityFile = window.customjs.core_modules.some(
+        (moduleUrl) => pluginUrl === moduleUrl
+      );
 
       // Wrap in IIFE to isolate scope, but don't auto-execute plugin initialization
       const wrappedCode = `(function() { 
@@ -595,7 +673,7 @@ class PluginManager {
       const loadPromise = new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error(`Plugin load timeout: ${pluginUrl}`));
-        }, window.customjs.pluginConfig.loadTimeout);
+        }, window.customjs.loadTimeout);
 
         script.onerror = () => {
           clearTimeout(timeout);
@@ -620,17 +698,14 @@ class PluginManager {
               );
             }
           } else {
-            // Utility file loaded (logger, config manager, API, Utils, or base class)
-            const utilityName = isLogger
-              ? "Logger utility"
-              : isConfigManager
-              ? "ConfigManager utility"
-              : isApi
-              ? "API utility"
-              : isUtils
-              ? "Utils utility"
-              : "base Plugin class";
-            console.log(`[CJS|[PluginManager] ✓ Loaded ${utilityName}`);
+            // Core module loaded
+            const moduleName = pluginUrl.split("/").pop();
+            const displayName = moduleName
+              ? moduleName.replace(".js", "")
+              : "unknown";
+            console.log(
+              `[CJS|PluginManager] ✓ Loaded core module: ${displayName}`
+            );
           }
 
           this.loadedUrls.add(pluginUrl);
@@ -676,6 +751,14 @@ class PluginManager {
         );
       }
 
+      // Add to plugin config and save
+      const config = this.getPluginConfig();
+      config[url] = true;
+      this.savePluginConfig(config);
+      if (window.customjs?.configManager) {
+        await window.customjs.configManager.save();
+      }
+
       return { success: true, message: "Loaded successfully" };
     } catch (error) {
       console.error(`[CJS|[PluginManager] ✗ Failed to load: ${url}`, error);
@@ -693,6 +776,14 @@ class PluginManager {
     await plugin.stop();
     this.unregisterPlugin(plugin.metadata.id);
     this.loadedUrls.delete(url);
+
+    // Remove from plugin config and save
+    const config = this.getPluginConfig();
+    delete config[url];
+    this.savePluginConfig(config);
+    if (window.customjs?.configManager) {
+      await window.customjs.configManager.save();
+    }
 
     console.log(`[CJS|[PluginManager] ✓ Removed: ${plugin.metadata.name}`);
     console.warn(

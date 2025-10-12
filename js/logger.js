@@ -208,7 +208,7 @@ class Logger {
     if (opts.webhook) {
       setTimeout(async () => {
         try {
-          const webhookUrl = window.customjs?.config?.webhook;
+          const webhookUrl = window.customjs?.config?.logger?.webhook;
           if (webhookUrl) {
             const payload = {
               message: formattedMsg,
@@ -442,5 +442,30 @@ class Logger {
 if (typeof window !== "undefined") {
   window.customjs = window.customjs || {};
   window.customjs.Logger = Logger;
-  console.log("[CJS|Logger] Logger class loaded and ready (v1.1.0)");
+
+  // Register logger settings with ConfigManager (if available)
+  if (window.customjs?.configManager) {
+    const configManager = window.customjs.configManager;
+    
+    // Register logger category
+    configManager.registerGeneralCategory(
+      "logger",
+      "Logger Settings",
+      "Configuration for the logging system"
+    );
+
+    // Register logger settings
+    configManager.registerGeneralSetting(
+      "logger",
+      "webhook",
+      "Webhook URL",
+      "string",
+      "http://homeassistant.local:8123/api/webhook/vrcx",
+      "Webhook URL for remote logging"
+    );
+
+    console.log("[CJS|Logger] Logger settings registered with ConfigManager");
+  }
+
+  console.log("[CJS|Logger] Logger class loaded and ready (v1.1.1)");
 }

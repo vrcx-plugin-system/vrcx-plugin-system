@@ -294,7 +294,10 @@ class AutoFollowPlugin extends Plugin {
       }
 
       // Send invite request
-      await window.request.notificationRequest.sendRequestInvite(inviteParams, user.id);
+      await window.request.notificationRequest.sendRequestInvite(
+        inviteParams,
+        user.id
+      );
 
       this.lastRequestedFrom.set(user.id, location);
       this.logger.log(`✓ Successfully requested invite from ${userName}`);

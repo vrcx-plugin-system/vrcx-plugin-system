@@ -58,7 +58,6 @@ class Plugin {
     }
   }
 
-
   /**
    * Called immediately when plugin code is executed (before loading)
    * Use for: Nothing - this is handled internally
@@ -115,7 +114,6 @@ class Plugin {
     this.cleanupResources();
   }
 
-
   /**
    * Enable the plugin
    * @returns {boolean} True if enabled, false if already enabled
@@ -158,7 +156,6 @@ class Plugin {
   async toggle() {
     return this.enabled ? await this.disable() : await this.enable();
   }
-
 
   /**
    * Register a timer (setInterval/setTimeout) for automatic cleanup
@@ -255,7 +252,6 @@ class Plugin {
     }
   }
 
-
   /**
    * Emit an event that other plugins can listen to
    * @param {string} eventName - Event name
@@ -291,7 +287,6 @@ class Plugin {
       window.customjs.events[fullEventName] || [];
     window.customjs.events[fullEventName].push(callback);
   }
-
 
   /**
    * Register a pre-hook to run before a function
@@ -374,7 +369,6 @@ class Plugin {
     );
     this.resources.hooks.add({ type: "replace", functionPath, callback });
   }
-
 
   /**
    * Log info message (uses personal logger instance)

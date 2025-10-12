@@ -333,7 +333,10 @@ class AutoInvitePlugin extends Plugin {
             inviteParams.message = customMessage;
           }
 
-          return window.request.notificationRequest.sendInvite(inviteParams, user.id);
+          return window.request.notificationRequest.sendInvite(
+            inviteParams,
+            user.id
+          );
         }
       );
 

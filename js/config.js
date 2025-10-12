@@ -3,10 +3,18 @@
  *
  * A centralized configuration management system for VRCX custom plugins.
  *
+ * Config Structure:
+ * vrcx.customjs:
+ *   - plugins: [] - Array of loaded plugin URLs (not core modules)
+ *   - settings: {} - Plugin settings (pluginId -> category -> setting)
+ *   - logger: {} - Logger settings (webhook, etc.)
+ *   - [other general categories]: {} - Non-plugin settings
+ *
  * Features:
- * - Store plugin settings in VRChat's config.json under vrcx.customjs.plugins
+ * - Store plugin settings in VRChat's config.json under vrcx.customjs.settings
+ * - Store general settings (logger, etc.) in vrcx.customjs.*
  * - Settings are stored in plugin instances (plugin.config.category.setting)
- * - Proxied to global namespace (window.customjs.config.plugins.pluginId.category.setting)
+ * - Proxied to global namespace (window.customjs.config.settings.pluginId.category.setting)
  * - Only non-default values are saved to disk
  * - Automatic type validation
  * - Category organization for settings
@@ -20,13 +28,22 @@
  * // Access settings:
  * console.log(this.config.general.enabled.value);  // From plugin instance (PluginSetting object)
  * console.log(this.config.general.enabled.defaultValue);  // Access metadata
- * console.log(window.customjs.config.plugins.myplugin.general.enabled);  // Direct value from global
+ * console.log(window.customjs.config.settings.myplugin.general.enabled);  // Direct value from global
  *
  * // Modify settings:
  * this.config.general.enabled.value = false;
  *
  * // Save to disk (only modified settings):
  * await this.saveSettings();
+ *
+ * Usage for general settings (not tied to a plugin):
+ *
+ * // Register general category and setting:
+ * window.customjs.configManager.registerGeneralCategory("logger", "Logger Settings", "Configuration for logging");
+ * window.customjs.configManager.registerGeneralSetting("logger", "webhook", "Webhook URL", "string", "http://...", "Webhook URL");
+ *
+ * // Access general settings:
+ * console.log(window.customjs.config.logger.webhook);
  *
  * Global API:
  * - window.customjs.configManager.save() - Save all settings to disk
@@ -115,12 +132,19 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "1.1.1";
-    this.build = "";
+    this.version = "1.3.0";
+    this.build = "1760404000";
 
     // Store setting definitions and categories
     this.categories = new Map(); // pluginId -> Map(categoryKey -> {name, description})
     this.settings = new Map(); // pluginId -> Map(categoryKey -> Map(settingKey -> PluginSetting))
+
+    // Store general (non-plugin) settings
+    this.generalCategories = new Map(); // categoryKey -> {name, description}
+    this.generalSettings = new Map(); // categoryKey -> Map(settingKey -> PluginSetting)
+
+    // Store plugin configuration (url -> enabled)
+    this.pluginConfig = null;
 
     // Saving state
     this.isSaving = false;
@@ -142,6 +166,65 @@ class ConfigManager {
     } catch (error) {
       console.error("[CJS|ConfigManager] Error initializing:", error);
     }
+  }
+
+  /**
+   * Register a general (non-plugin) setting category
+   * @param {string} key - Category key (e.g., "logger")
+   * @param {string} name - Display name
+   * @param {string} description - Description
+   */
+  registerGeneralCategory(key, name, description = "") {
+    this.generalCategories.set(key, { name, description });
+    console.log(
+      `[CJS|ConfigManager] Registered general category: ${key} (${name})`
+    );
+  }
+
+  /**
+   * Register a general (non-plugin) setting
+   * @param {string} categoryKey - Category key
+   * @param {string} key - Setting key
+   * @param {string} name - Display name
+   * @param {string} type - Type (string, number, boolean, object, array)
+   * @param {any} defaultValue - Default value
+   * @param {string} description - Optional description
+   */
+  registerGeneralSetting(
+    categoryKey,
+    key,
+    name,
+    type,
+    defaultValue,
+    description = ""
+  ) {
+    // Ensure category exists
+    if (!this.generalSettings.has(categoryKey)) {
+      this.generalSettings.set(categoryKey, new Map());
+    }
+
+    // Create setting (use null as pluginId for general settings)
+    const setting = new PluginSetting(
+      null,
+      categoryKey,
+      key,
+      name,
+      type,
+      defaultValue,
+      description
+    );
+
+    this.generalSettings.get(categoryKey).set(key, setting);
+
+    // Initialize in global config
+    if (!window.customjs.config[categoryKey]) {
+      window.customjs.config[categoryKey] = {};
+    }
+    window.customjs.config[categoryKey][key] = setting;
+
+    console.log(
+      `[CJS|ConfigManager] Registered general setting: ${categoryKey}.${key} (${type})`
+    );
   }
 
   /**
@@ -240,45 +323,54 @@ class ConfigManager {
   }
 
   /**
-   * Update the proxy at window.customjs.config.plugins when a setting value changes
+   * Update the proxy at window.customjs.config when a setting value changes
    * @param {PluginSetting} setting - The setting that changed
    * @private
    */
   _updateProxy(setting) {
     const { pluginId, category, key, value } = setting;
 
-    // Ensure path exists
     window.customjs.config = window.customjs.config || {};
-    window.customjs.config.plugins = window.customjs.config.plugins || {};
-    window.customjs.config.plugins[pluginId] =
-      window.customjs.config.plugins[pluginId] || {};
-    window.customjs.config.plugins[pluginId][category] =
-      window.customjs.config.plugins[pluginId][category] || {};
+
+    // General settings (no pluginId)
+    if (!pluginId) {
+      window.customjs.config[category] = window.customjs.config[category] || {};
+      window.customjs.config[category][key] = value;
+      return;
+    }
+
+    // Plugin settings
+    window.customjs.config.settings = window.customjs.config.settings || {};
+    window.customjs.config.settings[pluginId] =
+      window.customjs.config.settings[pluginId] || {};
+    window.customjs.config.settings[pluginId][category] =
+      window.customjs.config.settings[pluginId][category] || {};
 
     // Update value
-    window.customjs.config.plugins[pluginId][category][key] = value;
+    window.customjs.config.settings[pluginId][category][key] = value;
   }
 
   /**
-   * Setup proxy for all registered settings at window.customjs.config.plugins
+   * Setup proxy for all registered settings at window.customjs.config
    * @private
    */
   _setupProxies() {
     window.customjs.config = window.customjs.config || {};
-    window.customjs.config.plugins = window.customjs.config.plugins || {};
+    window.customjs.config.settings = window.customjs.config.settings || {};
 
+    // Setup proxies for plugin settings
     this.settings.forEach((categories, pluginId) => {
-      window.customjs.config.plugins[pluginId] =
-        window.customjs.config.plugins[pluginId] || {};
+      window.customjs.config.settings[pluginId] =
+        window.customjs.config.settings[pluginId] || {};
 
       categories.forEach((settings, categoryKey) => {
-        window.customjs.config.plugins[pluginId][categoryKey] =
-          window.customjs.config.plugins[pluginId][categoryKey] || {};
+        window.customjs.config.settings[pluginId][categoryKey] =
+          window.customjs.config.settings[pluginId][categoryKey] || {};
 
         settings.forEach((setting, settingKey) => {
           // Create getter/setter proxy for direct value access
           Object.defineProperty(
-            window.customjs.config.plugins[pluginId][categoryKey],
+            window.customjs.config.settings[pluginId][categoryKey],
             settingKey,
             {
               get: () => setting.value,
@@ -291,6 +383,23 @@ class ConfigManager {
               configurable: true,
             }
           );
+        });
+      });
+    });
+
+    // Setup proxies for general settings
+    this.generalSettings.forEach((settings, categoryKey) => {
+      window.customjs.config[categoryKey] =
+        window.customjs.config[categoryKey] || {};
+
+      settings.forEach((setting, settingKey) => {
+        Object.defineProperty(window.customjs.config[categoryKey], settingKey, {
+          get: () => setting.value,
+          set: (newValue) => {
+            setting.value = newValue;
+          },
+          enumerable: true,
+          configurable: true,
         });
       });
     });
@@ -336,6 +445,22 @@ class ConfigManager {
   }
 
   /**
+   * Get plugin configuration from memory
+   * @returns {object|null} - { url: enabled } mapping
+   */
+  getPluginConfig() {
+    return this.pluginConfig || null;
+  }
+
+  /**
+   * Set plugin configuration in memory
+   * @param {object} config - { url: enabled } mapping
+   */
+  setPluginConfig(config) {
+    this.pluginConfig = config;
+  }
+
+  /**
    * Load config from VRChat's config.json
    * @returns {Promise<void>}
    */
@@ -357,33 +482,65 @@ class ConfigManager {
       }
 
       const config = JSON.parse(configJson);
-      const customjsConfig = config?.vrcx?.customjs?.plugins;
+      const customjsRoot = config?.vrcx?.customjs;
 
-      if (!customjsConfig) {
+      if (!customjsRoot) {
         console.log("[CJS|ConfigManager] No customjs config found in file");
         return;
       }
 
-      // Apply loaded values to settings
       let loadedCount = 0;
-      Object.keys(customjsConfig).forEach((pluginId) => {
-        const pluginConfig = customjsConfig[pluginId];
-        Object.keys(pluginConfig).forEach((categoryKey) => {
-          const categoryConfig = pluginConfig[categoryKey];
-          Object.keys(categoryConfig).forEach((settingKey) => {
-            const value = categoryConfig[settingKey];
-            const setting = this.settings
-              .get(pluginId)
-              ?.get(categoryKey)
-              ?.get(settingKey);
 
-            if (setting) {
-              setting.value = value;
-              loadedCount++;
-            }
+      // Load plugin settings from vrcx.customjs.settings (new structure)
+      const pluginSettings = customjsRoot.settings;
+      if (pluginSettings) {
+        Object.keys(pluginSettings).forEach((pluginId) => {
+          const pluginConfig = pluginSettings[pluginId];
+          Object.keys(pluginConfig).forEach((categoryKey) => {
+            const categoryConfig = pluginConfig[categoryKey];
+            Object.keys(categoryConfig).forEach((settingKey) => {
+              const value = categoryConfig[settingKey];
+              const setting = this.settings
+                .get(pluginId)
+                ?.get(categoryKey)
+                ?.get(settingKey);
+
+              if (setting) {
+                setting.value = value;
+                loadedCount++;
+              }
+            });
           });
         });
+      }
+
+      // Load general settings (logger, etc.) from vrcx.customjs.*
+      this.generalCategories.forEach((categoryInfo, categoryKey) => {
+        const categoryConfig = customjsRoot[categoryKey];
+        if (categoryConfig && typeof categoryConfig === "object") {
+          const categorySettings = this.generalSettings.get(categoryKey);
+          if (categorySettings) {
+            Object.keys(categoryConfig).forEach((settingKey) => {
+              const value = categoryConfig[settingKey];
+              const setting = categorySettings.get(settingKey);
+              if (setting) {
+                setting.value = value;
+                loadedCount++;
+              }
+            });
+          }
+        }
       });
+
+      // Load plugin config from vrcx.customjs.plugins (object with url: enabled)
+      if (customjsRoot.plugins && typeof customjsRoot.plugins === "object") {
+        this.pluginConfig = customjsRoot.plugins;
+        console.log(
+          `[CJS|ConfigManager] ✓ Loaded plugin configuration with ${
+            Object.keys(customjsRoot.plugins).length
+          } entries`
+        );
+      }
 
       console.log(
         `[CJS|ConfigManager] ✓ Loaded ${loadedCount} settings from disk`
@@ -424,26 +581,33 @@ class ConfigManager {
       // Ensure structure exists
       config.vrcx = config.vrcx || {};
       config.vrcx.customjs = config.vrcx.customjs || {};
-      config.vrcx.customjs.plugins = config.vrcx.customjs.plugins || {};
+
+      // Save plugin configuration (url -> enabled mapping)
+      if (this.pluginConfig) {
+        config.vrcx.customjs.plugins = this.pluginConfig;
+      }
+
+      // Initialize settings section
+      config.vrcx.customjs.settings = config.vrcx.customjs.settings || {};
 
       // Build plugin settings (only non-default values)
       let savedCount = 0;
       this.settings.forEach((categories, pluginId) => {
-        config.vrcx.customjs.plugins[pluginId] =
-          config.vrcx.customjs.plugins[pluginId] || {};
+        config.vrcx.customjs.settings[pluginId] =
+          config.vrcx.customjs.settings[pluginId] || {};
 
         categories.forEach((settings, categoryKey) => {
-          config.vrcx.customjs.plugins[pluginId][categoryKey] =
-            config.vrcx.customjs.plugins[pluginId][categoryKey] || {};
+          config.vrcx.customjs.settings[pluginId][categoryKey] =
+            config.vrcx.customjs.settings[pluginId][categoryKey] || {};
 
           settings.forEach((setting, settingKey) => {
             if (setting.isModified()) {
-              config.vrcx.customjs.plugins[pluginId][categoryKey][settingKey] =
+              config.vrcx.customjs.settings[pluginId][categoryKey][settingKey] =
                 setting.value;
               savedCount++;
             } else {
               // Remove default values from config
-              delete config.vrcx.customjs.plugins[pluginId][categoryKey][
+              delete config.vrcx.customjs.settings[pluginId][categoryKey][
                 settingKey
               ];
             }
@@ -451,16 +615,37 @@ class ConfigManager {
 
           // Clean up empty categories
           if (
-            Object.keys(config.vrcx.customjs.plugins[pluginId][categoryKey])
+            Object.keys(config.vrcx.customjs.settings[pluginId][categoryKey])
               .length === 0
           ) {
-            delete config.vrcx.customjs.plugins[pluginId][categoryKey];
+            delete config.vrcx.customjs.settings[pluginId][categoryKey];
           }
         });
 
         // Clean up empty plugins
-        if (Object.keys(config.vrcx.customjs.plugins[pluginId]).length === 0) {
-          delete config.vrcx.customjs.plugins[pluginId];
+        if (Object.keys(config.vrcx.customjs.settings[pluginId]).length === 0) {
+          delete config.vrcx.customjs.settings[pluginId];
+        }
+      });
+
+      // Save general settings (logger, etc.)
+      this.generalSettings.forEach((settings, categoryKey) => {
+        config.vrcx.customjs[categoryKey] =
+          config.vrcx.customjs[categoryKey] || {};
+
+        settings.forEach((setting, settingKey) => {
+          if (setting.isModified()) {
+            config.vrcx.customjs[categoryKey][settingKey] = setting.value;
+            savedCount++;
+          } else {
+            // Remove default values from config
+            delete config.vrcx.customjs[categoryKey][settingKey];
+          }
+        });
+
+        // Clean up empty categories
+        if (Object.keys(config.vrcx.customjs[categoryKey]).length === 0) {
+          delete config.vrcx.customjs[categoryKey];
         }
       });
 
@@ -559,24 +744,31 @@ class ConfigManager {
    */
   debug() {
     const result = {
-      categories: {},
-      settings: {},
-      proxies: window.customjs.config.plugins,
+      pluginUrls: window.customjs.loadedPluginUrls || [],
+      pluginCategories: {},
+      pluginSettings: {},
+      generalCategories: {},
+      generalSettings: {},
+      proxies: {
+        settings: window.customjs.config.settings,
+        general: {},
+      },
     };
 
+    // Plugin categories and settings
     this.categories.forEach((categories, pluginId) => {
-      result.categories[pluginId] = {};
+      result.pluginCategories[pluginId] = {};
       categories.forEach((category, key) => {
-        result.categories[pluginId][key] = category;
+        result.pluginCategories[pluginId][key] = category;
       });
     });
 
     this.settings.forEach((categories, pluginId) => {
-      result.settings[pluginId] = {};
+      result.pluginSettings[pluginId] = {};
       categories.forEach((settings, categoryKey) => {
-        result.settings[pluginId][categoryKey] = {};
+        result.pluginSettings[pluginId][categoryKey] = {};
         settings.forEach((setting, settingKey) => {
-          result.settings[pluginId][categoryKey][settingKey] = {
+          result.pluginSettings[pluginId][categoryKey][settingKey] = {
             name: setting.name,
             type: setting.type,
             value: setting.value,
@@ -584,6 +776,26 @@ class ConfigManager {
             isModified: setting.isModified(),
           };
         });
+      });
+    });
+
+    // General categories and settings
+    this.generalCategories.forEach((category, key) => {
+      result.generalCategories[key] = category;
+    });
+
+    this.generalSettings.forEach((settings, categoryKey) => {
+      result.generalSettings[categoryKey] = {};
+      result.proxies.general[categoryKey] = window.customjs.config[categoryKey];
+
+      settings.forEach((setting, settingKey) => {
+        result.generalSettings[categoryKey][settingKey] = {
+          name: setting.name,
+          type: setting.type,
+          value: setting.value,
+          defaultValue: setting.defaultValue,
+          isModified: setting.isModified(),
+        };
       });
     });
 
