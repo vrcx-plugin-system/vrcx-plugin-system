@@ -4,8 +4,8 @@ class PluginManagerUIPlugin extends Plugin {
       name: "Plugin Manager UI",
       description: "Visual UI for managing VRCX custom plugins",
       author: "Bluscream",
-      version: "3.1.2",
-      build: Math.floor(Date.now() / 1000).toString(),
+      version: "4.0.0",
+      build: "1760411000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
@@ -143,12 +143,13 @@ class PluginManagerUIPlugin extends Plugin {
       plugins: [],
     };
 
-    const loadedCount = pluginInfo.plugins?.length || 0;
-    const activeCount =
-      pluginInfo.plugins?.filter((p) => p.enabled).length || 0;
-    const startedCount =
-      pluginInfo.plugins?.filter((p) => p.started).length || 0;
+    const coreModules = window.customjs.core_modules || [];
+    const allPlugins = pluginInfo.plugins || [];
+    const pluginCount = allPlugins.length;
+    const activeCount = allPlugins.filter((p) => p.enabled).length;
+    const startedCount = allPlugins.filter((p) => p.started).length;
     const failedCount = pluginInfo.failed?.length || 0;
+    const subscriptionCount = window.customjs.subscriptions?.size || 0;
 
     header.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
@@ -157,13 +158,17 @@ class PluginManagerUIPlugin extends Plugin {
             🔌 Plugin Manager v${window.customjs.version}
           </h2>
           <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;">
-            Manage VRCX Custom JS Plugins - Everything under <code>customjs</code>
+            Core Modules: ${coreModules.length} • Plugins: ${pluginCount} • Subscriptions: ${subscriptionCount}
           </p>
         </div>
         <div style="display: flex; gap: 10px;">
+          <div style="text-align: center; padding: 10px 20px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(23,162,184,0.3);">
+            <div style="font-size: 24px; font-weight: bold;">${coreModules.length}</div>
+            <div style="font-size: 12px; opacity: 0.9;">Core</div>
+          </div>
           <div style="text-align: center; padding: 10px 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(40,167,69,0.3);">
-            <div style="font-size: 24px; font-weight: bold;">${loadedCount}</div>
-            <div style="font-size: 12px; opacity: 0.9;">Loaded</div>
+            <div style="font-size: 24px; font-weight: bold;">${pluginCount}</div>
+            <div style="font-size: 12px; opacity: 0.9;">Plugins</div>
           </div>
           <div style="text-align: center; padding: 10px 20px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(0,123,255,0.3);">
             <div style="font-size: 24px; font-weight: bold;">${activeCount}</div>
@@ -196,7 +201,7 @@ class PluginManagerUIPlugin extends Plugin {
 
     section.innerHTML = `
       <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; display: flex; align-items: center;">
-        <i class="ri-download-cloud-line" style="margin-right: 8px; font-size: 20px;"></i>
+        <i class="ri-download-cloud-line" style="color: #007bff; margin-right: 8px; font-size: 20px;"></i>
         Load Plugin from URL
       </h3>
       <div style="display: flex; gap: 10px; margin-bottom: 10px;">
@@ -218,9 +223,12 @@ class PluginManagerUIPlugin extends Plugin {
       <div style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 6px; border: 1px solid #dee2e6;">
         <div style="font-size: 12px; color: #666; line-height: 1.6;">
           <strong>Quick Access:</strong><br>
-          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.plugins</code> - All plugin instances<br>
+          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.core_modules</code> - Core module URLs<br>
+          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.plugins</code> - Plugin instances<br>
+          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.subscriptions</code> - Pinia subscriptions<br>
+          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.config</code> - Configuration<br>
           <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.pluginManager</code> - Plugin manager<br>
-          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.config</code> - User configuration
+          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.configManager</code> - Config manager
         </div>
       </div>
     `;
@@ -290,14 +298,23 @@ class PluginManagerUIPlugin extends Plugin {
 
       container.innerHTML = "";
 
-      // Get plugin info from customjs
+      // Get core modules and plugins
+      const coreModules = window.customjs?.core_modules || [];
       const allPlugins = window.customjs?.plugins || [];
       const failedUrls =
         window.customjs?.pluginManager?.failedUrls || new Set();
 
+      // Core modules section
+      if (coreModules.length > 0) {
+        const coreSection = this.createCoreModulesSection(coreModules);
+        container.appendChild(coreSection);
+      }
+
       // Loaded plugins section
-      const loadedSection = this.createPluginCardsSection(allPlugins);
-      container.appendChild(loadedSection);
+      if (allPlugins.length > 0) {
+        const loadedSection = this.createPluginCardsSection(allPlugins);
+        container.appendChild(loadedSection);
+      }
 
       // Failed plugins section
       if (failedUrls.size > 0) {
@@ -311,6 +328,59 @@ class PluginManagerUIPlugin extends Plugin {
     } catch (error) {
       this.logger.error("Error refreshing plugin list:", error);
     }
+  }
+
+  createCoreModulesSection(coreModules) {
+    const section = document.createElement("div");
+    section.style.cssText = "margin-bottom: 30px;";
+
+    const header = document.createElement("h3");
+    header.style.cssText = `
+      margin: 0 0 15px 0;
+      font-size: 20px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      color: #17a2b8;
+    `;
+    header.innerHTML = `<i class="ri-cpu-line" style="margin-right: 8px;"></i>Core Modules (${coreModules.length})`;
+
+    section.appendChild(header);
+
+    const list = document.createElement("div");
+    list.style.cssText = "display: flex; flex-direction: column; gap: 10px;";
+
+    coreModules.forEach((moduleUrl) => {
+      const moduleName = moduleUrl.split("/").pop().replace(".js", "");
+      const item = document.createElement("div");
+      item.style.cssText = `
+        background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+        border: 2px solid #17a2b8;
+        border-radius: 8px;
+        padding: 12px 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-family: 'Consolas', monospace;
+        font-size: 13px;
+        color: #0c5460;
+      `;
+
+      item.innerHTML = `
+        <div>
+          <strong style="font-size: 14px;">${moduleName}</strong>
+          <div style="font-size: 11px; margin-top: 3px; opacity: 0.8;">${moduleUrl}</div>
+        </div>
+        <span style="background: #17a2b8; color: white; padding: 4px 12px; border-radius: 12px; font-size: 11px;">
+          ⚙️ System
+        </span>
+      `;
+
+      list.appendChild(item);
+    });
+
+    section.appendChild(list);
+    return section;
   }
 
   createPluginCardsSection(plugins) {
@@ -400,14 +470,19 @@ class PluginManagerUIPlugin extends Plugin {
       observers: new Set(),
       listeners: new Map(),
       hooks: new Set(),
-      subscriptions: new Set(),
     };
 
     const timerCount = resources.timers?.size || 0;
     const observerCount = resources.observers?.size || 0;
     const listenerCount = resources.listeners?.size || 0;
     const hookCount = resources.hooks?.size || 0;
-    const subscriptionCount = resources.subscriptions?.size || 0;
+
+    // Get subscription count from global tracking
+    const globalSubscriptions = window.customjs.subscriptions?.get(
+      plugin.metadata.id
+    );
+    const subscriptionCount = globalSubscriptions?.size || 0;
+
     const totalResources =
       timerCount +
       observerCount +
@@ -644,12 +719,30 @@ class PluginManagerUIPlugin extends Plugin {
     const eventCount = Object.keys(window.customjs.events || {}).length;
     const preHookCount = Object.keys(window.customjs.hooks?.pre || {}).length;
     const postHookCount = Object.keys(window.customjs.hooks?.post || {}).length;
+    const voidHookCount = Object.keys(window.customjs.hooks?.void || {}).length;
+    const replaceHookCount = Object.keys(
+      window.customjs.hooks?.replace || {}
+    ).length;
     const backedUpFunctions = Object.keys(
       window.customjs.functions || {}
     ).length;
+    const totalSubscriptions = window.customjs.subscriptions?.size || 0;
+
+    // Get loader config
+    const loaderConfig = window.customjs.configManager?.getPluginConfig() || {};
+    const enabledInConfig = Object.values(loaderConfig).filter(
+      (v) => v === true
+    ).length;
+    const disabledInConfig = Object.values(loaderConfig).filter(
+      (v) => v === false
+    ).length;
+    const loadTimeout =
+      window.customjs.config?.loader?.loadTimeout?.value ??
+      window.customjs.config?.loader?.loadTimeout ??
+      10000;
 
     info.innerHTML = `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 15px;">
         <div>
           <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">System Version</div>
           <div style="font-size: 20px; font-weight: 600;">${
@@ -663,34 +756,56 @@ class PluginManagerUIPlugin extends Plugin {
           }</div>
         </div>
         <div>
+          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Load Timeout</div>
+          <div style="font-size: 20px; font-weight: 600;">${loadTimeout}ms</div>
+        </div>
+        <div>
+          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Total Subscriptions</div>
+          <div style="font-size: 20px; font-weight: 600;">${totalSubscriptions}</div>
+        </div>
+        <div>
           <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Events Registered</div>
           <div style="font-size: 20px; font-weight: 600;">${eventCount}</div>
         </div>
         <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Pre-Hooks</div>
-          <div style="font-size: 20px; font-weight: 600;">${preHookCount}</div>
-        </div>
-        <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Post-Hooks</div>
-          <div style="font-size: 20px; font-weight: 600;">${postHookCount}</div>
+          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Function Hooks</div>
+          <div style="font-size: 20px; font-weight: 600;">${
+            preHookCount + postHookCount + voidHookCount + replaceHookCount
+          }</div>
         </div>
         <div>
           <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Backed Up Functions</div>
           <div style="font-size: 20px; font-weight: 600;">${backedUpFunctions}</div>
         </div>
+        <div>
+          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Enabled in Config</div>
+          <div style="font-size: 20px; font-weight: 600;">${enabledInConfig}</div>
+        </div>
       </div>
       <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
         <div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px;">Namespace Structure</div>
         <div style="font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.8;">
+          <code style="color: #fff;">customjs.core_modules</code> = [${
+            window.customjs.core_modules?.length || 0
+          } modules]<br>
           <code style="color: #fff;">customjs.plugins</code> = [${
             window.customjs.plugins.length
-          } Plugin instances]<br>
-          <code style="color: #fff;">customjs.pluginManager</code> = PluginManager instance<br>
-          <code style="color: #fff;">customjs.config</code> = User configuration<br>
-          <code style="color: #fff;">customjs.events</code> = Event registry (${eventCount} events)<br>
-          <code style="color: #fff;">customjs.hooks</code> = Function hooks (${
-            preHookCount + postHookCount
-          } total)
+          } instances]<br>
+          <code style="color: #fff;">customjs.subscriptions</code> = Map (${totalSubscriptions} plugins)<br>
+          <code style="color: #fff;">customjs.pluginManager</code> = PluginManager<br>
+          <code style="color: #fff;">customjs.configManager</code> = ConfigManager<br>
+          <code style="color: #fff;">customjs.config</code> = Configuration<br>
+          <code style="color: #fff;">customjs.events</code> = Events (${eventCount})<br>
+          <code style="color: #fff;">customjs.hooks</code> = Hooks (pre: ${preHookCount}, post: ${postHookCount}, void: ${voidHookCount}, replace: ${replaceHookCount})
+        </div>
+      </div>
+      <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+        <div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px;">Config Location</div>
+        <div style="font-family: 'Consolas', monospace; font-size: 11px; line-height: 1.6;">
+          <code style="color: #fff;">vrcx.customjs.loader.plugins</code> - Plugin enable/disable states<br>
+          <code style="color: #fff;">vrcx.customjs.loader.loadTimeout</code> - ${loadTimeout}ms<br>
+          <code style="color: #fff;">vrcx.customjs.settings</code> - Plugin settings<br>
+          <code style="color: #fff;">vrcx.customjs.logger</code> - Logger settings
         </div>
       </div>
     `;
@@ -712,6 +827,17 @@ class PluginManagerUIPlugin extends Plugin {
       this.logger.log(
         `Toggled plugin ${pluginId}: ${plugin.enabled ? "enabled" : "disabled"}`
       );
+
+      // Update plugin config and save
+      if (plugin.metadata.url && window.customjs.pluginManager) {
+        const config = window.customjs.pluginManager.getPluginConfig();
+        config[plugin.metadata.url] = plugin.enabled;
+        window.customjs.pluginManager.savePluginConfig(config);
+
+        if (window.customjs?.configManager) {
+          await window.customjs.configManager.save();
+        }
+      }
 
       setTimeout(() => this.refreshPluginList(), 100);
 
