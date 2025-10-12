@@ -1,7 +1,7 @@
 // ============================================================================
 // PLUGIN MANAGER UI PLUGIN
-// Version: 3.0.0
-// Build: 1728668400
+// Version: 3.1.0
+// Build: 1744632000
 // ============================================================================
 
 /**
@@ -15,8 +15,8 @@ class PluginManagerUIPlugin extends Plugin {
       name: "Plugin Manager UI",
       description: "Visual UI for managing VRCX custom plugins",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1728668400",
+      version: "3.1.0",
+      build: "1744632000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
@@ -726,9 +726,7 @@ class PluginManagerUIPlugin extends Plugin {
       const plugin = window.customjs.pluginManager.getPlugin(pluginId);
       if (!plugin) {
         this.error(`Plugin not found: ${pluginId}`);
-        if (this.utils) {
-          this.utils.showError(`Plugin not found: ${pluginId}`);
-        }
+        this.logger.showError(`Plugin not found: ${pluginId}`);
         return;
       }
 
@@ -740,31 +738,23 @@ class PluginManagerUIPlugin extends Plugin {
       setTimeout(() => this.refreshPluginList(), 100);
 
       const statusMsg = plugin.enabled ? "enabled" : "disabled";
-      if (this.utils) {
-        this.utils.showSuccess(`${plugin.metadata.name} ${statusMsg}`);
-      }
+      this.logger.showSuccess(`${plugin.metadata.name} ${statusMsg}`);
     } catch (error) {
       this.error(`Error toggling plugin ${pluginId}:`, error);
-      if (this.utils) {
-        this.utils.showError(`Error: ${error.message}`);
-      }
+      this.logger.showError(`Error: ${error.message}`);
     }
   }
 
   async handleReloadPlugin(pluginUrl) {
     if (!pluginUrl) {
       this.warn("No URL available for reload");
-      if (this.utils) {
-        this.utils.showWarning("Plugin URL not available");
-      }
+      this.logger.showWarn("Plugin URL not available");
       return;
     }
 
     try {
       this.log(`Reloading plugin from ${pluginUrl}`);
-      if (this.utils) {
-        this.utils.showInfo("Reloading plugin...");
-      }
+      this.logger.showInfo("Reloading plugin...");
 
       const result = await window.customjs.pluginManager.reloadPlugin(
         pluginUrl
@@ -772,46 +762,31 @@ class PluginManagerUIPlugin extends Plugin {
 
       if (result.success) {
         this.log("Plugin reloaded successfully");
-        if (this.utils) {
-          this.utils.showSuccess("Plugin reloaded successfully");
-        }
+        this.logger.showSuccess("Plugin reloaded successfully");
         setTimeout(() => this.refreshPluginList(), 500);
       } else {
         this.error(`Reload failed: ${result.message}`);
-        if (this.utils) {
-          this.utils.showError(`Reload failed: ${result.message}`);
-        }
+        this.logger.showError(`Reload failed: ${result.message}`);
       }
     } catch (error) {
       this.error("Error reloading plugin:", error);
-      if (this.utils) {
-        this.utils.showError(`Error: ${error.message}`);
-      }
+      this.logger.showError(`Error: ${error.message}`);
     }
   }
 
   handleShowDetails(plugin) {
+    // Dump full plugin object to console
+    console.log(plugin); // eslint-disable-line no-console
     // Open devtools for debugging
     if (window.AppApi?.ShowDevTools) {
       window.AppApi.ShowDevTools();
-    }
-
-    // Dump full plugin object to console
-    console.log(plugin); // eslint-disable-line no-console
-
-    if (this.utils) {
-      this.utils.showInfo(
-        `${plugin.metadata.name} details logged to console (DevTools opened)`
-      );
     }
   }
 
   async handleRemovePlugin(pluginUrl) {
     if (!pluginUrl) {
       this.warn("No URL available for removal");
-      if (this.utils) {
-        this.utils.showWarning("Plugin URL not available");
-      }
+      this.logger.showWarn("Plugin URL not available");
       return;
     }
 
@@ -832,32 +807,24 @@ class PluginManagerUIPlugin extends Plugin {
 
       if (result.success) {
         this.log("Plugin removed successfully");
-        if (this.utils) {
-          this.utils.showSuccess(
-            "Plugin removed (restart VRCX to fully unload)"
-          );
-        }
+        this.logger.showSuccess(
+          "Plugin removed (restart VRCX to fully unload)"
+        );
         setTimeout(() => this.refreshPluginList(), 500);
       } else {
         this.error(`Removal failed: ${result.message}`);
-        if (this.utils) {
-          this.utils.showError(`Removal failed: ${result.message}`);
-        }
+        this.logger.showError(`Removal failed: ${result.message}`);
       }
     } catch (error) {
       this.error("Error removing plugin:", error);
-      if (this.utils) {
-        this.utils.showError(`Error: ${error.message}`);
-      }
+      this.logger.showError(`Error: ${error.message}`);
     }
   }
 
   async handleRetryFailedPlugin(url) {
     try {
       this.log(`Retrying failed plugin: ${url}`);
-      if (this.utils) {
-        this.utils.showInfo("Retrying plugin load...");
-      }
+      this.logger.showInfo("Retrying plugin load...");
 
       // Remove from failed set
       window.customjs.pluginManager.failedUrls.delete(url);
@@ -866,20 +833,14 @@ class PluginManagerUIPlugin extends Plugin {
       const result = await window.customjs.pluginManager.addPlugin(url);
 
       if (result.success) {
-        if (this.utils) {
-          this.utils.showSuccess("Plugin loaded successfully!");
-        }
+        this.logger.showSuccess("Plugin loaded successfully!");
         setTimeout(() => this.refreshPluginList(), 500);
       } else {
-        if (this.utils) {
-          this.utils.showError(`Failed again: ${result.message}`);
-        }
+        this.logger.showError(`Failed again: ${result.message}`);
       }
     } catch (error) {
       this.error("Error retrying plugin:", error);
-      if (this.utils) {
-        this.utils.showError(`Error: ${error.message}`);
-      }
+      this.logger.showError(`Error: ${error.message}`);
     }
   }
 }

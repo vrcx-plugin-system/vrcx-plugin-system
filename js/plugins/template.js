@@ -387,7 +387,7 @@ class TemplatePlugin extends Plugin {
           this.emit("button-clicked", { timestamp: Date.now() });
 
           if (this.utils) {
-            this.utils.showSuccess("Template plugin test button clicked!");
+            this.logger.showSuccess("Template plugin test button clicked!");
           }
         });
       }
@@ -411,7 +411,7 @@ class TemplatePlugin extends Plugin {
     this.log("👤 User context menu clicked:", userData);
 
     if (this.utils) {
-      this.utils.showInfo(`Template action for: ${userData.displayName}`);
+      this.logger.showInfo(`Template action for: ${userData.displayName}`);
     }
 
     // Example: Emit event for other plugins

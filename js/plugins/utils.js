@@ -1,7 +1,7 @@
 // ============================================================================
 // UTILS PLUGIN
-// Version: 2.0.0
-// Build: 1728668400
+// Version: 2.1.0
+// Build: 1744632000
 // ============================================================================
 
 class UtilsPlugin extends Plugin {
@@ -11,8 +11,8 @@ class UtilsPlugin extends Plugin {
       description:
         "Utility functions for time, clipboard, notifications, and Steam API",
       author: "Bluscream",
-      version: "2.0.0",
-      build: "1728668400",
+      version: "2.1.0",
+      build: "1744632000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
       ],
@@ -199,45 +199,6 @@ class UtilsPlugin extends Plugin {
         );
         return false;
       }
-    }
-  }
-
-  /**
-   * Show success notification
-   * @param {string} message - Message to display
-   */
-  showSuccess(message) {
-    if (window.$app?.playNoty) {
-      window.$app.playNoty({ message, type: "success" });
-    } else {
-      // Fallback when VRCX notification system not available
-      console.log(`✓ ${message}`); // eslint-disable-line no-console
-    }
-  }
-
-  /**
-   * Show error notification
-   * @param {string} message - Message to display
-   */
-  showError(message) {
-    if (window.$app?.playNoty) {
-      window.$app.playNoty({ message, type: "error" });
-    } else {
-      // Fallback when VRCX notification system not available
-      console.error(`✗ ${message}`); // eslint-disable-line no-console
-    }
-  }
-
-  /**
-   * Show info notification
-   * @param {string} message - Message to display
-   */
-  showInfo(message) {
-    if (window.$app?.playNoty) {
-      window.$app.playNoty({ message, type: "info" });
-    } else {
-      // Fallback when VRCX notification system not available
-      console.log(`ℹ ${message}`); // eslint-disable-line no-console
     }
   }
 

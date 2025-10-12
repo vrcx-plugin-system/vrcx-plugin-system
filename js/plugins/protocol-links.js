@@ -1,7 +1,7 @@
 // ============================================================================
 // PROTOCOL LINKS PLUGIN
-// Version: 2.0.0
-// Build: 1728668400
+// Version: 2.1.0
+// Build: 1744632000
 // ============================================================================
 
 /**
@@ -16,8 +16,8 @@ class ProtocolLinksPlugin extends Plugin {
       description:
         "Adds context menu items to copy VRCX protocol links for users, avatars, worlds, groups, and instances",
       author: "Bluscream",
-      version: "2.0.0",
-      build: "1728668400",
+      version: "2.1.0",
+      build: "1744632000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
@@ -230,21 +230,9 @@ class ProtocolLinksPlugin extends Plugin {
 
     const success = await this.utils.copyToClipboard(text, description);
     if (success) {
-      this.utils.showSuccess(`${description} copied to clipboard: ${text}`);
+      this.logger.showSuccess(`${description} copied to clipboard: ${text}`);
     } else {
-      this.utils.showError(`Failed to copy ${description.toLowerCase()}`);
-    }
-  }
-
-  showSuccess(message) {
-    if (this.utils) {
-      this.utils.showSuccess(message);
-    }
-  }
-
-  showError(message) {
-    if (this.utils) {
-      this.utils.showError(message);
+      this.logger.showError(`Failed to copy ${description.toLowerCase()}`);
     }
   }
 

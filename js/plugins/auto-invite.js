@@ -1,7 +1,7 @@
 // ============================================================================
 // AUTO INVITE PLUGIN
-// Version: 2.0.0
-// Build: 1728668400
+// Version: 2.1.0
+// Build: 1744632000
 // ============================================================================
 
 /**
@@ -15,8 +15,8 @@ class AutoInvitePlugin extends Plugin {
       name: "Auto Invite Manager",
       description: "Automatic user invitation system with location tracking",
       author: "Bluscream",
-      version: "2.0.0",
-      build: "1728668400",
+      version: "2.1.0",
+      build: "1744632000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
@@ -316,7 +316,7 @@ class AutoInvitePlugin extends Plugin {
         icon: "el-icon-message",
       });
 
-      this.utils.showInfo("Auto Invite disabled");
+      this.logger.showInfo("Auto Invite disabled");
     } else {
       // Enable
       this.autoInviteUser = user;
@@ -327,7 +327,7 @@ class AutoInvitePlugin extends Plugin {
         icon: "el-icon-message",
       });
 
-      this.utils.showSuccess(`Auto Invite enabled for ${user.displayName}`);
+      this.logger.showSuccess(`Auto Invite enabled for ${user.displayName}`);
     }
   }
 
