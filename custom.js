@@ -5,8 +5,8 @@
 
 // Initialize global customjs namespace - ALL custom JS code goes under this object
 window.customjs = {
-  version: "2.2.0",
-  build: "1744630000",
+  version: "{VERSION}",
+  build: "{BUILD}",
   config: {}, // User configuration (replaces old USER_CONFIG)
   plugins: [], // Array of Plugin instances
   pluginManager: null, // PluginManager instance (handles both management & loading)

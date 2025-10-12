@@ -1,7 +1,7 @@
 // ============================================================================
 // CONTEXT MENU API PLUGIN
-// Version: 2.0.0
-// Build: 1728668400
+// Version: 2.0.1
+// Build: 1760196000
 // ============================================================================
 
 /**
@@ -15,8 +15,8 @@ class ContextMenuApiPlugin extends Plugin {
       name: "Context Menu API",
       description: "Custom context menu management for VRCX dialogs",
       author: "Bluscream",
-      version: "2.0.0",
-      build: "1728668400",
+      version: "2.0.1",
+      build: "1760196000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
       ],
@@ -389,9 +389,37 @@ class ContextMenuApiPlugin extends Plugin {
 
     // Try to get data from Vue component
     try {
-      const vueComponent = visibleDialog.__vueParentComponent;
-      if (vueComponent?.props) {
-        return vueComponent.props[menuType + "Ref"] || vueComponent.props.ref;
+      // Try multiple Vue 3 access methods
+      let vueComponent =
+        visibleDialog.__vueParentComponent ||
+        visibleDialog.__vue__ ||
+        visibleDialog._vnode?.component;
+
+      if (vueComponent) {
+        // Try props first
+        if (vueComponent.props) {
+          const data =
+            vueComponent.props[menuType + "Ref"] || vueComponent.props.ref;
+          if (data) return data;
+        }
+
+        // Try exposed/setupState
+        if (vueComponent.exposed) {
+          const data = vueComponent.exposed[menuType + "Ref"];
+          if (data) return data;
+        }
+
+        // Try setupState
+        if (vueComponent.setupState) {
+          const data = vueComponent.setupState[menuType + "Ref"];
+          if (data) return data;
+        }
+
+        // Try ctx (context)
+        if (vueComponent.ctx) {
+          const data = vueComponent.ctx[menuType + "Ref"];
+          if (data) return data;
+        }
       }
     } catch (error) {
       this.warn("Could not extract dialog data:", error);

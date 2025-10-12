@@ -1,7 +1,7 @@
 // ============================================================================
 // AUTO INVITE PLUGIN
-// Version: 2.1.0
-// Build: 1744632000
+// Version: 2.1.1
+// Build: 1760196000
 // ============================================================================
 
 /**
@@ -15,8 +15,8 @@ class AutoInvitePlugin extends Plugin {
       name: "Auto Invite Manager",
       description: "Automatic user invitation system with location tracking",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1744632000",
+      version: "2.1.1",
+      build: "1760196000",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
@@ -302,13 +302,21 @@ class AutoInvitePlugin extends Plugin {
   toggleAutoInvite(user) {
     if (!this.utils || !this.contextMenuApi) return;
 
+    // Log what we received for debugging
+    this.log(
+      `toggleAutoInvite called with user: ${JSON.stringify(
+        user || "undefined"
+      )}`
+    );
+
     if (
       this.utils.isEmpty(user) ||
       (!this.utils.isEmpty(this.autoInviteUser) &&
         user.id === this.autoInviteUser?.id)
     ) {
-      // Disable
-      this.log(`Disabled Auto Invite for ${this.autoInviteUser?.displayName}`);
+      // Disable - Store displayName before clearing
+      const previousUserName = this.autoInviteUser?.displayName || "unknown";
+      this.log(`Disabled Auto Invite for ${previousUserName}`);
       this.autoInviteUser = null;
 
       this.contextMenuApi.updateUserItem("autoInvite", {
