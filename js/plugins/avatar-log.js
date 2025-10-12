@@ -5,8 +5,8 @@ class AvatarLogPlugin extends Plugin {
       description:
         "Logs and submits avatar IDs to various avatar database providers (avtrDB, NSVR, PAW, VRCDB, VRCWB)",
       author: "Bluscream",
-      version: "1.0.2",
-      build: "1728758600",
+      version: "1.0.3",
+      build: "1728758700",
       dependencies: [],
     });
 
@@ -723,5 +723,5 @@ class AvatarLogPlugin extends Plugin {
   }
 }
 
-// Register the plugin
-window.customjs.pluginManager.registerPlugin(AvatarLogPlugin);
+// Make plugin class available for PluginLoader to instantiate
+window.__LAST_PLUGIN_CLASS__ = AvatarLogPlugin;
