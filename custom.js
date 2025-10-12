@@ -131,12 +131,12 @@ class PluginManager {
     }
 
     window.customjs.plugins.push(plugin);
-    
+
     // Initialize subscription tracking for this plugin
     if (!window.customjs.subscriptions.has(plugin.metadata.id)) {
       window.customjs.subscriptions.set(plugin.metadata.id, new Set());
     }
-    
+
     console.log(
       `[CJS|PluginManager] Registered plugin: ${plugin.metadata.name} v${plugin.metadata.version}`
     );
@@ -153,7 +153,7 @@ class PluginManager {
     if (!window.customjs.subscriptions.has(pluginId)) {
       window.customjs.subscriptions.set(pluginId, new Set());
     }
-    
+
     window.customjs.subscriptions.get(pluginId).add(unsubscribe);
     return unsubscribe;
   }
@@ -612,9 +612,7 @@ class PluginManager {
       }
     };
 
-    console.log(
-      "[CJS|PluginManager] ✓ Fallback Logger class registered"
-    );
+    console.log("[CJS|PluginManager] ✓ Fallback Logger class registered");
   }
 
   /**
@@ -839,8 +837,12 @@ class PluginManager {
 
       const loadPromise = new Promise((resolve, reject) => {
         // Get loadTimeout from config or use default
-        const loadTimeout = window.customjs?.config?.loader?.loadTimeout || 10000;
-        
+        const loadTimeout =
+          window.customjs?.config?.loader?.loadTimeout || 10000;
+        console.log(
+          `[CJS|PluginManager] Loading plugin: ${pluginUrl} with timeout: ${loadTimeout}`
+        );
+
         const timeout = setTimeout(() => {
           reject(new Error(`Plugin load timeout: ${pluginUrl}`));
         }, loadTimeout);
