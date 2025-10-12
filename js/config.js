@@ -5,7 +5,7 @@
  *
  * Config Structure:
  * vrcx.customjs:
- *   - plugins: [] - Array of loaded plugin URLs (not core modules)
+ *   - loader: {} - Loader configuration (plugins { url: enabled }, loadTimeout)
  *   - settings: {} - Plugin settings (pluginId -> category -> setting)
  *   - logger: {} - Logger settings (webhook, etc.)
  *   - [other general categories]: {} - Non-plugin settings
@@ -132,8 +132,8 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "1.3.0";
-    this.build = "1760404000";
+    this.version = "1.4.0";
+    this.build = "1760406000";
 
     // Store setting definitions and categories
     this.categories = new Map(); // pluginId -> Map(categoryKey -> {name, description})
@@ -532,12 +532,15 @@ class ConfigManager {
         }
       });
 
-      // Load plugin config from vrcx.customjs.plugins (object with url: enabled)
-      if (customjsRoot.plugins && typeof customjsRoot.plugins === "object") {
-        this.pluginConfig = customjsRoot.plugins;
+      // Load plugin config from vrcx.customjs.loader.plugins (object with url: enabled)
+      if (
+        customjsRoot.loader?.plugins &&
+        typeof customjsRoot.loader.plugins === "object"
+      ) {
+        this.pluginConfig = customjsRoot.loader.plugins;
         console.log(
           `[CJS|ConfigManager] ✓ Loaded plugin configuration with ${
-            Object.keys(customjsRoot.plugins).length
+            Object.keys(customjsRoot.loader.plugins).length
           } entries`
         );
       }
@@ -581,10 +584,11 @@ class ConfigManager {
       // Ensure structure exists
       config.vrcx = config.vrcx || {};
       config.vrcx.customjs = config.vrcx.customjs || {};
+      config.vrcx.customjs.loader = config.vrcx.customjs.loader || {};
 
       // Save plugin configuration (url -> enabled mapping)
       if (this.pluginConfig) {
-        config.vrcx.customjs.plugins = this.pluginConfig;
+        config.vrcx.customjs.loader.plugins = this.pluginConfig;
       }
 
       // Initialize settings section
@@ -628,7 +632,7 @@ class ConfigManager {
         }
       });
 
-      // Save general settings (logger, etc.)
+      // Save general settings (logger, loader, etc.)
       this.generalSettings.forEach((settings, categoryKey) => {
         config.vrcx.customjs[categoryKey] =
           config.vrcx.customjs[categoryKey] || {};
@@ -643,8 +647,13 @@ class ConfigManager {
           }
         });
 
-        // Clean up empty categories
-        if (Object.keys(config.vrcx.customjs[categoryKey]).length === 0) {
+        // Clean up empty categories (but keep loader for plugin config)
+        const hasSettings =
+          Object.keys(config.vrcx.customjs[categoryKey]).length > 0;
+        const isLoader = categoryKey === "loader";
+        const hasPluginConfig = isLoader && this.pluginConfig;
+
+        if (!hasSettings && !(isLoader && hasPluginConfig)) {
           delete config.vrcx.customjs[categoryKey];
         }
       });
@@ -744,7 +753,7 @@ class ConfigManager {
    */
   debug() {
     const result = {
-      pluginUrls: window.customjs.loadedPluginUrls || [],
+      pluginConfig: this.pluginConfig || {},
       pluginCategories: {},
       pluginSettings: {},
       generalCategories: {},

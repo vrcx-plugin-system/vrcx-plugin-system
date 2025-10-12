@@ -1,7 +1,7 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "1.4.2",
-  build: "1760404000",
+  version: "1.6.0",
+  build: "1760406000",
 };
 window.customjs.config = {};
 
@@ -13,6 +13,7 @@ window.customjs.core_modules = [
   "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
 ];
 
+// Default plugin configuration
 window.customjs.default_plugins = [
   {
     url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
@@ -63,7 +64,6 @@ window.customjs.default_plugins = [
     enabled: false,
   },
 ];
-window.customjs.loadTimeout = 10000;
 
 console.log(
   `%c[VRCX Custom] %cStarting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
@@ -535,6 +535,23 @@ class PluginManager {
       );
       try {
         await window.customjs.configManager.init();
+
+        // Register loader settings (after init, before loading plugins)
+        window.customjs.configManager.registerGeneralCategory(
+          "loader",
+          "Loader Settings",
+          "Configuration for the plugin loader"
+        );
+        window.customjs.configManager.registerGeneralSetting(
+          "loader",
+          "loadTimeout",
+          "Load Timeout",
+          "number",
+          10000,
+          "Plugin load timeout in milliseconds"
+        );
+
+        console.log("[CJS|PluginManager] ✓ Loader settings registered");
       } catch (error) {
         console.error(
           "[CJS|PluginManager] ✗ Error initializing ConfigManager:",
@@ -671,9 +688,12 @@ class PluginManager {
       script.dataset.pluginUrl = pluginUrl;
 
       const loadPromise = new Promise((resolve, reject) => {
+        // Get loadTimeout from config or use default
+        const loadTimeout = window.customjs?.config?.loader?.loadTimeout || 10000;
+        
         const timeout = setTimeout(() => {
           reject(new Error(`Plugin load timeout: ${pluginUrl}`));
-        }, window.customjs.loadTimeout);
+        }, loadTimeout);
 
         script.onerror = () => {
           clearTimeout(timeout);
