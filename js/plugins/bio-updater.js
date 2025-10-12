@@ -169,7 +169,7 @@ class BioUpdaterPlugin extends Plugin {
         .replace("{partners}", partners.map((f) => f.name).join(", "))
         .replace(
           "{autoinvite}",
-          this.autoInvite?.getAutoInviteUser()?.displayName ?? ""
+          this.autoInvite?.getAutoInviteUsersList()?.map(u => u.displayName).join(", ") ?? ""
         )
         .replace("{tags_loaded}", this.tagManager?.getLoadedTagsCount() ?? 0)
         .replace("{userId}", currentUser.id)

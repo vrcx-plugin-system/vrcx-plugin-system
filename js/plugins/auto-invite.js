@@ -1,13 +1,13 @@
 // ============================================================================
 // AUTO INVITE PLUGIN
-// Version: 2.1.1
-// Build: 1760196000
+// Version: 3.0.0
+// Build: 1728735600
 // ============================================================================
 
 /**
  * Auto Invite Plugin
  * Automatic user invitation system with location tracking
- * Monitors user location changes and sends invites to a selected user
+ * Monitors user location changes and sends invites to multiple users
  */
 class AutoInvitePlugin extends Plugin {
   constructor() {
@@ -15,8 +15,8 @@ class AutoInvitePlugin extends Plugin {
       name: "Auto Invite Manager",
       description: "Automatic user invitation system with location tracking",
       author: "Bluscream",
-      version: "2.1.1",
-      build: "1760196000",
+      version: "3.0.0",
+      build: "1728735600",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
@@ -26,7 +26,7 @@ class AutoInvitePlugin extends Plugin {
     });
 
     // Auto-invite state
-    this.autoInviteUser = null;
+    this.autoInviteUsers = new Map(); // Map<userId, userObject>
     this.lastInvitedTo = null;
     this.lastJoined = null;
     this.lastDestinationCheck = null;
@@ -73,10 +73,11 @@ class AutoInvitePlugin extends Plugin {
       window.customjs?.pluginManager?.getPlugin("context-menu-api");
     if (contextMenu) {
       contextMenu.removeUserItem("autoInvite");
+      contextMenu.removeUserItem("clearAutoInvite");
     }
 
-    // Clear auto-invite user
-    this.autoInviteUser = null;
+    // Clear auto-invite users
+    this.autoInviteUsers.clear();
     this.lastInvitedTo = null;
 
     // Parent cleanup (will stop timers automatically)
@@ -179,7 +180,7 @@ class AutoInvitePlugin extends Plugin {
   setupUserButton() {
     try {
       // Don't setup if already done
-      if (this.autoInviteItem) {
+      if (this.autoInviteItem && this.clearAutoInviteItem) {
         return true;
       }
 
@@ -194,12 +195,18 @@ class AutoInvitePlugin extends Plugin {
         onClick: (user) => this.toggleAutoInvite(user),
       });
 
-      this.log("Auto Invite context menu button added");
+      this.clearAutoInviteItem = this.contextMenuApi.addUserItem("clearAutoInvite", {
+        text: "Clear AutoInvite",
+        icon: "el-icon-delete",
+        onClick: () => this.clearAllAutoInvites(),
+      });
+
+      this.log("Auto Invite context menu buttons added");
       return true;
     } catch (error) {
-      this.error("Error setting up Auto Invite button:", error);
+      this.error("Error setting up Auto Invite buttons:", error);
 
-      if (!this.autoInviteItem) {
+      if (!this.autoInviteItem || !this.clearAutoInviteItem) {
         setTimeout(() => this.setupUserButton(), 2000);
       }
 
@@ -215,12 +222,12 @@ class AutoInvitePlugin extends Plugin {
     if (!this.utils?.isEmpty) return;
 
     if (
-      !this.utils.isEmpty(this.autoInviteUser) &&
+      this.autoInviteUsers.size > 0 &&
       !this.utils.isEmpty(destination)
     ) {
       // Only invite if we haven't already invited to this location
       if (this.lastInvitedTo !== destination) {
-        await this.sendInviteToUser(destination);
+        await this.sendInvitesToUsers(destination);
       }
     }
   }
@@ -235,11 +242,11 @@ class AutoInvitePlugin extends Plugin {
     // Check if user is starting to travel
     if (location === "traveling") {
       if (
-        !utils.isEmpty(this.autoInviteUser) &&
+        this.autoInviteUsers.size > 0 &&
         !utils.isEmpty(travelingToLocation)
       ) {
         if (this.lastInvitedTo !== travelingToLocation) {
-          await this.sendInviteToUser(travelingToLocation);
+          await this.sendInvitesToUsers(travelingToLocation);
         }
       }
     } else if (location && location !== "offline" && location !== "private") {
@@ -262,10 +269,8 @@ class AutoInvitePlugin extends Plugin {
     }
   }
 
-  async sendInviteToUser(destination) {
-    const userName = `"${
-      this.autoInviteUser?.displayName ?? this.autoInviteUser
-    }"`;
+  async sendInvitesToUsers(destination) {
+    if (this.autoInviteUsers.size === 0) return;
 
     let instanceId = destination;
     let worldId = destination.split(":")[0];
@@ -278,107 +283,151 @@ class AutoInvitePlugin extends Plugin {
       this.warn(`Failed to get world name: ${error.message}`);
     }
 
-    this.log(`Inviting ${userName} to "${worldName}" (${instanceId})`);
+    const userNames = Array.from(this.autoInviteUsers.values())
+      .map(u => u.displayName)
+      .join(", ");
+
+    this.log(`Inviting ${this.autoInviteUsers.size} user(s) to "${worldName}" (${instanceId})`);
 
     try {
       const apiHelpers =
         window.customjs?.pluginManager?.getPlugin("api-helpers");
-      await apiHelpers?.API.sendInvite(
-        {
-          instanceId: instanceId,
-          worldId: worldId,
-          worldName: worldName,
-        },
-        this.autoInviteUser.id
+      
+      // Send invites to all users in the list
+      const invitePromises = Array.from(this.autoInviteUsers.values()).map(user => 
+        apiHelpers?.API.sendInvite(
+          {
+            instanceId: instanceId,
+            worldId: worldId,
+            worldName: worldName,
+          },
+          user.id
+        )
       );
 
+      await Promise.all(invitePromises);
+
       this.lastInvitedTo = destination;
-      this.log(`✓ Successfully sent invite to ${userName}`);
+      this.log(`✓ Successfully sent invites to: ${userNames}`);
     } catch (error) {
-      this.error(`Failed to send invite: ${error.message}`);
+      this.error(`Failed to send invites: ${error.message}`);
     }
   }
 
   toggleAutoInvite(user) {
     if (!this.utils || !this.contextMenuApi) return;
 
-    // Log what we received for debugging
-    this.log(
-      `toggleAutoInvite called with user: ${JSON.stringify(
-        user || "undefined"
-      )}`
-    );
+    if (this.utils.isEmpty(user)) {
+      this.logger.showError("Invalid user");
+      return;
+    }
 
-    if (
-      this.utils.isEmpty(user) ||
-      (!this.utils.isEmpty(this.autoInviteUser) &&
-        user.id === this.autoInviteUser?.id)
-    ) {
-      // Disable - Store displayName before clearing
-      const previousUserName = this.autoInviteUser?.displayName || "unknown";
-      this.log(`Disabled Auto Invite for ${previousUserName}`);
-      this.autoInviteUser = null;
+    if (this.autoInviteUsers.has(user.id)) {
+      // Remove user from list
+      this.autoInviteUsers.delete(user.id);
+      this.log(`Removed ${user.displayName} from Auto Invite list`);
+      this.logger.showInfo(`Removed ${user.displayName} from Auto Invite list`);
+    } else {
+      // Add user to list
+      this.autoInviteUsers.set(user.id, user);
+      this.log(`Added ${user.displayName} to Auto Invite list`);
+      this.logger.showSuccess(`Added ${user.displayName} to Auto Invite list`);
+    }
 
+    // Update context menu button text
+    this.updateAutoInviteButtonText();
+  }
+
+  /**
+   * Update the Auto Invite button text based on current list
+   */
+  updateAutoInviteButtonText() {
+    if (!this.contextMenuApi) return;
+
+    if (this.autoInviteUsers.size === 0) {
       this.contextMenuApi.updateUserItem("autoInvite", {
         text: "Auto Invite",
         icon: "el-icon-message",
       });
-
-      this.logger.showInfo("Auto Invite disabled");
-    } else {
-      // Enable
-      this.autoInviteUser = user;
-      this.log(`Enabled Auto Invite for ${this.autoInviteUser.displayName}`);
-
-      this.contextMenuApi.updateUserItem("autoInvite", {
-        text: `Auto Invite: ${this.autoInviteUser.displayName}`,
-        icon: "el-icon-message",
-      });
-
-      this.logger.showSuccess(`Auto Invite enabled for ${user.displayName}`);
-    }
-  }
-
-  /**
-   * Get currently selected auto-invite user
-   * @returns {object|null} User object or null
-   */
-  getAutoInviteUser() {
-    return this.autoInviteUser;
-  }
-
-  /**
-   * Set auto-invite user programmatically
-   * @param {object} user - User object
-   */
-  setAutoInviteUser(user) {
-    this.autoInviteUser = user;
-    this.log(`Auto-invite user set to: ${user?.displayName}`);
-
-    // Update context menu
-    if (this.contextMenuApi) {
+    } else if (this.autoInviteUsers.size === 1) {
+      const user = Array.from(this.autoInviteUsers.values())[0];
       this.contextMenuApi.updateUserItem("autoInvite", {
         text: `Auto Invite: ${user.displayName}`,
         icon: "el-icon-message",
       });
+    } else {
+      this.contextMenuApi.updateUserItem("autoInvite", {
+        text: `Auto Invite (${this.autoInviteUsers.size} users)`,
+        icon: "el-icon-message",
+      });
     }
   }
 
   /**
-   * Clear auto-invite user
+   * Clear all auto-invite users
    */
-  clearAutoInviteUser() {
-    this.autoInviteUser = null;
-    this.lastInvitedTo = null;
-    this.log("Auto-invite user cleared");
-
-    // Update context menu
-    if (this.contextMenuApi) {
-      this.contextMenuApi.updateUserItem("autoInvite", {
-        text: "Auto Invite",
-        icon: "el-icon-message",
-      });
+  clearAllAutoInvites() {
+    if (this.autoInviteUsers.size === 0) {
+      this.logger.showInfo("Auto Invite list is already empty");
+      return;
     }
+
+    const count = this.autoInviteUsers.size;
+    this.autoInviteUsers.clear();
+    this.lastInvitedTo = null;
+    this.log(`Cleared ${count} user(s) from Auto Invite list`);
+    this.logger.showSuccess(`Cleared ${count} user(s) from Auto Invite list`);
+
+    // Update context menu button
+    this.updateAutoInviteButtonText();
+  }
+
+  /**
+   * Get currently selected auto-invite users
+   * @returns {Map<string, object>} Map of userId to user object
+   */
+  getAutoInviteUsers() {
+    return this.autoInviteUsers;
+  }
+
+  /**
+   * Get auto-invite users as array
+   * @returns {Array} Array of user objects
+   */
+  getAutoInviteUsersList() {
+    return Array.from(this.autoInviteUsers.values());
+  }
+
+  /**
+   * Add user to auto-invite list programmatically
+   * @param {object} user - User object
+   */
+  addAutoInviteUser(user) {
+    if (!user || !user.id) return;
+    
+    this.autoInviteUsers.set(user.id, user);
+    this.log(`Auto-invite user added: ${user?.displayName}`);
+    this.updateAutoInviteButtonText();
+  }
+
+  /**
+   * Remove user from auto-invite list programmatically
+   * @param {string} userId - User ID
+   */
+  removeAutoInviteUser(userId) {
+    if (this.autoInviteUsers.has(userId)) {
+      const user = this.autoInviteUsers.get(userId);
+      this.autoInviteUsers.delete(userId);
+      this.log(`Auto-invite user removed: ${user?.displayName}`);
+      this.updateAutoInviteButtonText();
+    }
+  }
+
+  /**
+   * Clear auto-invite users (alias for clearAllAutoInvites)
+   */
+  clearAutoInviteUsers() {
+    this.clearAllAutoInvites();
   }
 }
 

@@ -482,7 +482,7 @@ Last updated: {now}
 
 - `{partners}` - Partners from favorites
 - `{autojoin}` - Auto-join users
-- `{autoinvite}` - Auto-invite user
+- `{autoinvite}` - Auto-invite users
 - `{rank}` - Trust level
 - `{friends}` - Friend count
 - `{blocked}` - Blocked user count
