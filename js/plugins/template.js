@@ -113,6 +113,15 @@ class TemplatePlugin extends Plugin {
   async start() {
     this.log("▶️ start() called - Starting plugin operations...");
 
+    // Wait for dependencies
+    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
+    this.contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
+      "context-menu-api"
+    );
+    this.navMenuApi = await window.customjs.pluginManager.waitForPlugin(
+      "nav-menu-api"
+    );
+
     this.exampleData.startTime = Date.now();
 
     // ========================================================================
@@ -159,15 +168,9 @@ class TemplatePlugin extends Plugin {
     // ========================================================================
 
     // Example: Access other plugins via PluginManager
-    const utilsPlugin = window.customjs.pluginManager.getPlugin("utils");
-    if (utilsPlugin) {
-      this.log(`🔌 Found utils plugin v${utilsPlugin.metadata.version}`);
-    }
-
-    // Example: Use utilities from other plugins
-    const utils = window.customjs.pluginManager.getPlugin("utils");
-    if (utils) {
-      const timestamp = utils.getTimestamp();
+    if (this.utils) {
+      this.log(`🔌 Found utils plugin v${this.utils.metadata.version}`);
+      const timestamp = this.utils.getTimestamp();
       this.log(`🕐 Current timestamp: ${timestamp}`);
     }
 
@@ -286,10 +289,8 @@ class TemplatePlugin extends Plugin {
     // ========================================================================
 
     // Example: Add a context menu item (requires context-menu-api plugin)
-    const contextMenu =
-      window.customjs.pluginManager.getPlugin("context-menu-api");
-    if (contextMenu) {
-      contextMenu.addUserItem("template-action", {
+    if (this.contextMenuApi) {
+      this.contextMenuApi.addUserItem("template-action", {
         text: "🔧 Template Action",
         icon: "el-icon-star",
         onClick: (userData) => this.handleUserClick(userData),
@@ -302,9 +303,8 @@ class TemplatePlugin extends Plugin {
     // ========================================================================
 
     // Example: Add a navigation menu item (requires nav-menu-api plugin)
-    const navMenu = window.customjs.pluginManager.getPlugin("nav-menu-api");
-    if (navMenu) {
-      navMenu.addItem("template", {
+    if (this.navMenuApi) {
+      this.navMenuApi.addItem("template", {
         label: "Template",
         icon: "ri-file-code-line",
         content: this.createContent(),
@@ -348,16 +348,13 @@ class TemplatePlugin extends Plugin {
     this.log("🗑️ Removing UI...");
 
     // Remove context menu items
-    const contextMenu =
-      window.customjs.pluginManager.getPlugin("context-menu-api");
-    if (contextMenu) {
-      contextMenu.removeUserItem("template-action");
+    if (this.contextMenuApi) {
+      this.contextMenuApi.removeUserItem("template-action");
     }
 
     // Remove navigation menu items
-    const navMenu = window.customjs.pluginManager.getPlugin("nav-menu-api");
-    if (navMenu) {
-      navMenu.removeItem("template");
+    if (this.navMenuApi) {
+      this.navMenuApi.removeItem("template");
     }
 
     // Event listeners are automatically removed by cleanupResources()
@@ -389,9 +386,8 @@ class TemplatePlugin extends Plugin {
           this.log("🧪 Test button clicked!");
           this.emit("button-clicked", { timestamp: Date.now() });
 
-          const utils = window.customjs.pluginManager.getPlugin("utils");
-          if (utils) {
-            utils.showSuccess("Template plugin test button clicked!");
+          if (this.utils) {
+            this.utils.showSuccess("Template plugin test button clicked!");
           }
         });
       }
@@ -414,9 +410,8 @@ class TemplatePlugin extends Plugin {
   handleUserClick(userData) {
     this.log("👤 User context menu clicked:", userData);
 
-    const utils = window.customjs.pluginManager.getPlugin("utils");
-    if (utils) {
-      utils.showInfo(`Template action for: ${userData.displayName}`);
+    if (this.utils) {
+      this.utils.showInfo(`Template action for: ${userData.displayName}`);
     }
 
     // Example: Emit event for other plugins

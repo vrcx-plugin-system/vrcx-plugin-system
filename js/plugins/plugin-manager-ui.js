@@ -33,11 +33,13 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   async start() {
-    // Wait for Nav Menu API to be available
-    const navMenu = await window.customjs.pluginManager.waitForPlugin(
+    // Wait for dependencies
+    this.navMenuApi = await window.customjs.pluginManager.waitForPlugin(
       "nav-menu-api"
     );
-    if (!navMenu) {
+    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
+
+    if (!this.navMenuApi) {
       this.error("Nav Menu API plugin not found after waiting");
       return;
     }
@@ -57,9 +59,8 @@ class PluginManagerUIPlugin extends Plugin {
   async stop() {
     this.log("Stopping Plugin Manager UI");
 
-    const navMenu = window.customjs?.pluginManager?.getPlugin("nav-menu-api");
-    if (navMenu) {
-      navMenu.removeItem("plugins");
+    if (this.navMenuApi) {
+      this.navMenuApi.removeItem("plugins");
     }
 
     await super.stop();
@@ -70,13 +71,12 @@ class PluginManagerUIPlugin extends Plugin {
   // ============================================================================
 
   setupNavMenuItem() {
-    const navMenu = window.customjs?.pluginManager?.getPlugin("nav-menu-api");
-    if (!navMenu) {
+    if (!this.navMenuApi) {
       this.error("NavMenu plugin not found!");
       return;
     }
 
-    navMenu.addItem("plugins", {
+    this.navMenuApi.addItem("plugins", {
       label: "Plugins",
       icon: "ri-plug-line",
       content: () => this.createPanelContent(),
@@ -617,7 +617,9 @@ class PluginManagerUIPlugin extends Plugin {
       });
 
       this.registerListener(urlText, "click", () => {
-        window.customjs?.utils?.copyToClipboard(url, "Failed plugin URL");
+        if (this.utils) {
+          this.utils.copyToClipboard(url, "Failed plugin URL");
+        }
       });
 
       this.registerListener(retryBtn, "click", async (e) => {
@@ -711,6 +713,7 @@ class PluginManagerUIPlugin extends Plugin {
       </div>
     `;
 
+    section.appendChild(info);
     return section;
   }
 
@@ -723,7 +726,9 @@ class PluginManagerUIPlugin extends Plugin {
       const plugin = window.customjs.pluginManager.getPlugin(pluginId);
       if (!plugin) {
         this.error(`Plugin not found: ${pluginId}`);
-        window.customjs?.utils?.showError(`Plugin not found: ${pluginId}`);
+        if (this.utils) {
+          this.utils.showError(`Plugin not found: ${pluginId}`);
+        }
         return;
       }
 
@@ -735,25 +740,31 @@ class PluginManagerUIPlugin extends Plugin {
       setTimeout(() => this.refreshPluginList(), 100);
 
       const statusMsg = plugin.enabled ? "enabled" : "disabled";
-      window.customjs?.utils?.showSuccess(
-        `${plugin.metadata.name} ${statusMsg}`
-      );
+      if (this.utils) {
+        this.utils.showSuccess(`${plugin.metadata.name} ${statusMsg}`);
+      }
     } catch (error) {
       this.error(`Error toggling plugin ${pluginId}:`, error);
-      window.customjs?.utils?.showError(`Error: ${error.message}`);
+      if (this.utils) {
+        this.utils.showError(`Error: ${error.message}`);
+      }
     }
   }
 
   async handleReloadPlugin(pluginUrl) {
     if (!pluginUrl) {
       this.warn("No URL available for reload");
-      window.customjs?.utils?.showWarning("Plugin URL not available");
+      if (this.utils) {
+        this.utils.showWarning("Plugin URL not available");
+      }
       return;
     }
 
     try {
       this.log(`Reloading plugin from ${pluginUrl}`);
-      window.customjs?.utils?.showInfo("Reloading plugin...");
+      if (this.utils) {
+        this.utils.showInfo("Reloading plugin...");
+      }
 
       const result = await window.customjs.pluginManager.reloadPlugin(
         pluginUrl
@@ -761,50 +772,46 @@ class PluginManagerUIPlugin extends Plugin {
 
       if (result.success) {
         this.log("Plugin reloaded successfully");
-        window.customjs?.utils?.showSuccess("Plugin reloaded successfully");
+        if (this.utils) {
+          this.utils.showSuccess("Plugin reloaded successfully");
+        }
         setTimeout(() => this.refreshPluginList(), 500);
       } else {
         this.error(`Reload failed: ${result.message}`);
-        window.customjs?.utils?.showError(`Reload failed: ${result.message}`);
+        if (this.utils) {
+          this.utils.showError(`Reload failed: ${result.message}`);
+        }
       }
     } catch (error) {
       this.error("Error reloading plugin:", error);
-      window.customjs?.utils?.showError(`Error: ${error.message}`);
+      if (this.utils) {
+        this.utils.showError(`Error: ${error.message}`);
+      }
     }
   }
 
   handleShowDetails(plugin) {
-    this.log("Showing plugin details:", plugin);
-
     // Open devtools for debugging
     if (window.AppApi?.ShowDevTools) {
       window.AppApi.ShowDevTools();
     }
 
-    // Intentionally using console.* for structured debug output
-    console.group(`Plugin Details: ${plugin.metadata.name}`); // eslint-disable-line no-console
-    console.dir(plugin.metadata); // eslint-disable-line no-console
-    console.table({
-      // eslint-disable-line no-console
-      enabled: plugin.enabled,
-      loaded: plugin.loaded,
-      started: plugin.started,
-    });
-    console.log("Resources:"); // eslint-disable-line no-console
-    console.dir(plugin.resources); // eslint-disable-line no-console
-    console.log("Full Plugin Object:"); // eslint-disable-line no-console
-    console.dir(plugin); // eslint-disable-line no-console
-    console.groupEnd(); // eslint-disable-line no-console
+    // Dump full plugin object to console
+    console.log(plugin); // eslint-disable-line no-console
 
-    window.customjs?.utils?.showInfo(
-      `${plugin.metadata.name} details logged to console (DevTools opened)`
-    );
+    if (this.utils) {
+      this.utils.showInfo(
+        `${plugin.metadata.name} details logged to console (DevTools opened)`
+      );
+    }
   }
 
   async handleRemovePlugin(pluginUrl) {
     if (!pluginUrl) {
       this.warn("No URL available for removal");
-      window.customjs?.utils?.showWarning("Plugin URL not available");
+      if (this.utils) {
+        this.utils.showWarning("Plugin URL not available");
+      }
       return;
     }
 
@@ -825,24 +832,32 @@ class PluginManagerUIPlugin extends Plugin {
 
       if (result.success) {
         this.log("Plugin removed successfully");
-        window.customjs?.utils?.showSuccess(
-          "Plugin removed (restart VRCX to fully unload)"
-        );
+        if (this.utils) {
+          this.utils.showSuccess(
+            "Plugin removed (restart VRCX to fully unload)"
+          );
+        }
         setTimeout(() => this.refreshPluginList(), 500);
       } else {
         this.error(`Removal failed: ${result.message}`);
-        window.customjs?.utils?.showError(`Removal failed: ${result.message}`);
+        if (this.utils) {
+          this.utils.showError(`Removal failed: ${result.message}`);
+        }
       }
     } catch (error) {
       this.error("Error removing plugin:", error);
-      window.customjs?.utils?.showError(`Error: ${error.message}`);
+      if (this.utils) {
+        this.utils.showError(`Error: ${error.message}`);
+      }
     }
   }
 
   async handleRetryFailedPlugin(url) {
     try {
       this.log(`Retrying failed plugin: ${url}`);
-      window.customjs?.utils?.showInfo("Retrying plugin load...");
+      if (this.utils) {
+        this.utils.showInfo("Retrying plugin load...");
+      }
 
       // Remove from failed set
       window.customjs.pluginManager.failedUrls.delete(url);
@@ -851,14 +866,20 @@ class PluginManagerUIPlugin extends Plugin {
       const result = await window.customjs.pluginManager.addPlugin(url);
 
       if (result.success) {
-        window.customjs?.utils?.showSuccess("Plugin loaded successfully!");
+        if (this.utils) {
+          this.utils.showSuccess("Plugin loaded successfully!");
+        }
         setTimeout(() => this.refreshPluginList(), 500);
       } else {
-        window.customjs?.utils?.showError(`Failed again: ${result.message}`);
+        if (this.utils) {
+          this.utils.showError(`Failed again: ${result.message}`);
+        }
       }
     } catch (error) {
       this.error("Error retrying plugin:", error);
-      window.customjs?.utils?.showError(`Error: ${error.message}`);
+      if (this.utils) {
+        this.utils.showError(`Error: ${error.message}`);
+      }
     }
   }
 }

@@ -41,22 +41,20 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async start() {
+    // Wait for dependencies
+    this.contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
+      "context-menu-api"
+    );
+    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
+
     // Setup location tracking
     this.setupLocationTracking();
 
     // Setup location store monitor
     this.setupLocationStoreMonitor();
 
-    // Setup context menu button (will retry if context menu not ready)
+    // Setup context menu button
     this.setupUserButton();
-
-    // Listen for context menu ready event
-    this.registerListener(window, "contextMenuReady", (event) => {
-      if (!this.autoInviteItem) {
-        this.log("Context menu ready event received, setting up button");
-        this.setupUserButton();
-      }
-    });
 
     this.enabled = true;
     this.started = true;
@@ -185,14 +183,12 @@ class AutoInvitePlugin extends Plugin {
         return true;
       }
 
-      const contextMenu = window.customjs?.contextMenu;
-      if (!contextMenu) {
-        // Retry later
-        setTimeout(() => this.setupUserButton(), 2000);
+      if (!this.contextMenuApi) {
+        this.warn("Context Menu API not available");
         return false;
       }
 
-      this.autoInviteItem = contextMenu.addUserItem("autoInvite", {
+      this.autoInviteItem = this.contextMenuApi.addUserItem("autoInvite", {
         text: "Auto Invite",
         icon: "el-icon-message",
         onClick: (user) => this.toggleAutoInvite(user),
@@ -216,10 +212,12 @@ class AutoInvitePlugin extends Plugin {
   // ============================================================================
 
   async onLocationDestinationDetected(destination) {
-    const utils = window.customjs?.utils;
-    if (!utils?.isEmpty) return;
+    if (!this.utils?.isEmpty) return;
 
-    if (!utils.isEmpty(this.autoInviteUser) && !utils.isEmpty(destination)) {
+    if (
+      !this.utils.isEmpty(this.autoInviteUser) &&
+      !this.utils.isEmpty(destination)
+    ) {
       // Only invite if we haven't already invited to this location
       if (this.lastInvitedTo !== destination) {
         await this.sendInviteToUser(destination);
@@ -228,8 +226,7 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async onCurrentUserLocationChanged(location, travelingToLocation) {
-    const utils = window.customjs?.utils;
-    if (!utils?.isEmpty) return;
+    if (!this.utils?.isEmpty) return;
 
     this.log(
       `Location change: ${location} (traveling to: ${travelingToLocation})`
@@ -303,39 +300,34 @@ class AutoInvitePlugin extends Plugin {
   }
 
   toggleAutoInvite(user) {
-    const utils = window.customjs?.utils;
-    const contextMenu = window.customjs?.contextMenu;
+    if (!this.utils || !this.contextMenuApi) return;
 
     if (
-      utils.isEmpty(user) ||
-      (!utils.isEmpty(this.autoInviteUser) &&
+      this.utils.isEmpty(user) ||
+      (!this.utils.isEmpty(this.autoInviteUser) &&
         user.id === this.autoInviteUser?.id)
     ) {
       // Disable
       this.log(`Disabled Auto Invite for ${this.autoInviteUser?.displayName}`);
       this.autoInviteUser = null;
 
-      if (contextMenu) {
-        contextMenu.updateUserItem("autoInvite", {
-          text: "Auto Invite",
-          icon: "el-icon-message",
-        });
-      }
+      this.contextMenuApi.updateUserItem("autoInvite", {
+        text: "Auto Invite",
+        icon: "el-icon-message",
+      });
 
-      utils?.showInfo("Auto Invite disabled");
+      this.utils.showInfo("Auto Invite disabled");
     } else {
       // Enable
       this.autoInviteUser = user;
       this.log(`Enabled Auto Invite for ${this.autoInviteUser.displayName}`);
 
-      if (contextMenu) {
-        contextMenu.updateUserItem("autoInvite", {
-          text: `Auto Invite: ${this.autoInviteUser.displayName}`,
-          icon: "el-icon-message",
-        });
-      }
+      this.contextMenuApi.updateUserItem("autoInvite", {
+        text: `Auto Invite: ${this.autoInviteUser.displayName}`,
+        icon: "el-icon-message",
+      });
 
-      utils?.showSuccess(`Auto Invite enabled for ${user.displayName}`);
+      this.utils.showSuccess(`Auto Invite enabled for ${user.displayName}`);
     }
   }
 
@@ -356,9 +348,8 @@ class AutoInvitePlugin extends Plugin {
     this.log(`Auto-invite user set to: ${user?.displayName}`);
 
     // Update context menu
-    const contextMenu = window.customjs?.contextMenu;
-    if (contextMenu) {
-      contextMenu.updateUserItem("autoInvite", {
+    if (this.contextMenuApi) {
+      this.contextMenuApi.updateUserItem("autoInvite", {
         text: `Auto Invite: ${user.displayName}`,
         icon: "el-icon-message",
       });
@@ -374,9 +365,8 @@ class AutoInvitePlugin extends Plugin {
     this.log("Auto-invite user cleared");
 
     // Update context menu
-    const contextMenu = window.customjs?.contextMenu;
-    if (contextMenu) {
-      contextMenu.updateUserItem("autoInvite", {
+    if (this.contextMenuApi) {
+      this.contextMenuApi.updateUserItem("autoInvite", {
         text: "Auto Invite",
         icon: "el-icon-message",
       });

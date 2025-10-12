@@ -81,11 +81,15 @@ class ManagersPlugin extends Plugin {
                 instanceArgs.json.displayName ?? instanceArgs.json.name
               } (${invisiblePlayers} invisible)`;
 
-              window.customjs?.logger?.log(
-                `Found ${invisiblePlayers} potentially invisible players in instance "${instanceArgs.json.instanceId}" in world "${instanceArgs.json.worldName}"`,
-                { console: true, vrcx: { notify: true } },
-                "warning"
-              );
+              const apiHelpers =
+                window.customjs.pluginManager.getPlugin("api-helpers");
+              if (apiHelpers?.logger) {
+                apiHelpers.logger.log(
+                  `Found ${invisiblePlayers} potentially invisible players in instance "${instanceArgs.json.instanceId}" in world "${instanceArgs.json.worldName}"`,
+                  { console: true, vrcx: { notify: true } },
+                  "warning"
+                );
+              }
             }
           });
         }
@@ -180,11 +184,15 @@ class ManagersPlugin extends Plugin {
 
       if (playerTag) {
         const message = `${playerName} joined (${playerTag.tag})`;
-        window.customjs?.logger?.log(
-          message,
-          { console: true, desktop: true, xsoverlay: true },
-          "info"
-        );
+        const apiHelpers =
+          window.customjs.pluginManager.getPlugin("api-helpers");
+        if (apiHelpers?.logger) {
+          apiHelpers.logger.log(
+            message,
+            { console: true, desktop: true, xsoverlay: true },
+            "info"
+          );
+        }
       }
     } catch (error) {
       this.error("Error handling tagged player join:", error);
@@ -224,15 +232,28 @@ class ManagersPlugin extends Plugin {
       getCurrentLocation: () => window.$app?.lastLocation,
       getFriends: () => window.$pinia?.user?.currentUser?.friends,
       getCustomTags: () => window.$pinia?.user?.customUserTags,
-      getUserTag: (userId) => window.customjs?.tagManager?.getUserTag(userId),
-      clearProcessedMenus: () => window.customjs?.utils?.clearProcessedMenus(),
+      getUserTag: (userId) =>
+        window.customjs.pluginManager
+          .getPlugin("tag-manager")
+          ?.getUserTag(userId),
+      clearProcessedMenus: () =>
+        window.customjs.pluginManager
+          .getPlugin("context-menu-api")
+          ?.clearProcessedMenus(),
       triggerRegistryEvent: (event) =>
-        window.customjs?.registryOverrides?.triggerEvent(event),
-      refreshTags: () => window.customjs?.tagManager?.refreshTags(),
+        window.customjs.pluginManager
+          .getPlugin("registry-overrides")
+          ?.triggerEvent(event),
+      refreshTags: () =>
+        window.customjs.pluginManager.getPlugin("tag-manager")?.refreshTags(),
       getLoadedTagsCount: () =>
-        window.customjs?.tagManager?.getLoadedTagsCount(),
+        window.customjs.pluginManager
+          .getPlugin("tag-manager")
+          ?.getLoadedTagsCount(),
       getActiveTagsCount: () =>
-        window.customjs?.tagManager?.getActiveTagsCount(),
+        window.customjs.pluginManager
+          .getPlugin("tag-manager")
+          ?.getActiveTagsCount(),
       getStores: () => window.$pinia,
       listPlugins: () => window.customjs?.plugins,
       getPlugin: (id) =>

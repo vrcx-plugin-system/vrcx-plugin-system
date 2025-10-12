@@ -35,6 +35,12 @@ class TagManagerPlugin extends Plugin {
   }
 
   async start() {
+    // Wait for dependencies
+    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
+    this.apiHelpers = await window.customjs.pluginManager.waitForPlugin(
+      "api-helpers"
+    );
+
     this.enabled = true;
     this.started = true;
     this.log("Tag Manager plugin started (waiting for login to load tags)");
@@ -59,13 +65,15 @@ class TagManagerPlugin extends Plugin {
       // Log startup message
       try {
         const timestamp =
-          window.customjs?.utils?.getTimestamp() || new Date().toISOString();
+          this.utils?.getTimestamp() || new Date().toISOString();
         const msg = `VRCX Custom Tags loaded at ${timestamp}`;
-        window.customjs?.logger?.log(
-          msg,
-          { console: true, vrcx: { message: true } },
-          "info"
-        );
+        if (this.apiHelpers?.logger) {
+          this.apiHelpers.logger.log(
+            msg,
+            { console: true, vrcx: { message: true } },
+            "info"
+          );
+        }
       } catch (error) {
         this.log(`Tags loaded at ${new Date().toISOString()}`);
       }

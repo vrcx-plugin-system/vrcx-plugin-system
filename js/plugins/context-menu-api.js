@@ -127,30 +127,17 @@ class ContextMenuApiPlugin extends Plugin {
         node.style.display !== "none" &&
         node.getAttribute("aria-hidden") !== "true";
 
-      this.log(
-        `Dropdown visibility changed: display=${
-          node.style.display
-        }, aria-hidden=${node.getAttribute(
-          "aria-hidden"
-        )}, visible=${isVisible}`
-      );
-
       if (isVisible) {
         const menuContainer = node.querySelector(".el-dropdown-menu");
         if (menuContainer) {
           const menuId = menuContainer.id || `menu-${Date.now()}`;
-          this.log(`Found menu container with id: ${menuId}`);
 
           if (!this.processedMenus.has(menuId)) {
             const menuType = this.detectMenuType(menuContainer);
             if (menuType && this.items.get(menuType).size > 0) {
               this.debouncedMenuDetection(menuId, menuType, menuContainer);
             }
-          } else {
-            this.log(`Menu ${menuId} already processed, skipping`);
           }
-        } else {
-          this.log("No .el-dropdown-menu found inside dropdown popper");
         }
       }
     }
@@ -169,36 +156,17 @@ class ContextMenuApiPlugin extends Plugin {
       if (node.classList.contains("el-dropdown-menu")) {
         menuContainer = node;
         menuId = node.id || `menu-${Date.now()}`;
-        this.log(`Dropdown menu added to DOM (id: ${menuId})`);
       } else {
         menuContainer = node.parentElement;
         menuId = node.parentElement?.id || `menu-${Date.now()}`;
-        this.log(`Dropdown menu item added to DOM (parent id: ${menuId})`);
       }
 
-      if (!menuContainer) {
-        this.log("No menu container found");
-        return;
-      }
-
-      if (this.processedMenus.has(menuId)) {
-        this.log(`Menu ${menuId} already processed, skipping`);
-        return;
-      }
+      if (!menuContainer) return;
+      if (this.processedMenus.has(menuId)) return;
 
       const menuType = this.detectMenuType(menuContainer);
-      if (menuType) {
-        const itemCount = this.items.get(menuType).size;
-        if (itemCount > 0) {
-          this.log(`Detected ${menuType} menu with ${itemCount} items to add`);
-          this.debouncedMenuDetection(menuId, menuType, menuContainer);
-        } else {
-          this.log(
-            `Detected ${menuType} menu but no items registered for this type`
-          );
-        }
-      } else {
-        this.log("Could not detect menu type");
+      if (menuType && this.items.get(menuType).size > 0) {
+        this.debouncedMenuDetection(menuId, menuType, menuContainer);
       }
     }
   }
@@ -250,13 +218,9 @@ class ContextMenuApiPlugin extends Plugin {
           dropdown.getAttribute("aria-hidden") !== "true";
 
         if (isStillVisible) {
-          this.log(`Menu ${menuId} is visible, processing...`);
           this.processMenu(menuId, menuType, menuElement);
-        } else {
-          this.log(`Menu ${menuId} became hidden before processing, skipping`);
         }
       } else {
-        this.log(`Menu ${menuId} dropdown not found, processing anyway`);
         this.processMenu(menuId, menuType, menuElement);
       }
       this.debounceTimers.delete(menuId);
@@ -283,16 +247,10 @@ class ContextMenuApiPlugin extends Plugin {
 
     // Get highest z-index dropdown
     const highestDropdown = dropdowns[0];
-    if (!highestDropdown) {
-      this.log("No visible dropdowns found");
-      return null;
-    }
+    if (!highestDropdown) return null;
 
     // Check if our menu is in this dropdown
-    if (!highestDropdown.contains(menuContainer)) {
-      this.log("Menu container not in highest dropdown");
-      return null;
-    }
+    if (!highestDropdown.contains(menuContainer)) return null;
 
     // Try to find trigger button
     let triggerButton = null;
@@ -301,16 +259,10 @@ class ContextMenuApiPlugin extends Plugin {
     const ariaId = highestDropdown.id;
     if (ariaId) {
       triggerButton = document.querySelector(`[aria-controls="${ariaId}"]`);
-      if (triggerButton) {
-        this.log(`Found trigger button via aria-controls="${ariaId}"`);
-      }
     }
 
     // Method 2: If no ID or no button found, search for dialog buttons
     if (!triggerButton) {
-      this.log(
-        "Trying alternate detection method - searching for dialog buttons"
-      );
       // Find all visible dialogs
       const dialogs = [
         ...document.querySelectorAll(".x-user-dialog"),
@@ -334,7 +286,6 @@ class ContextMenuApiPlugin extends Plugin {
             Math.abs(rect.left - dropdownRect.left) < 200
           ) {
             triggerButton = btn;
-            this.log("Found trigger button via proximity search");
             break;
           }
         }
@@ -342,10 +293,7 @@ class ContextMenuApiPlugin extends Plugin {
       }
     }
 
-    if (!triggerButton) {
-      this.log(`No trigger button found (aria-id: "${ariaId}")`);
-      return null;
-    }
+    if (!triggerButton) return null;
 
     // Detect dialog type from trigger button's parent dialog
     const userDialog = triggerButton.closest(".x-user-dialog");
@@ -353,24 +301,11 @@ class ContextMenuApiPlugin extends Plugin {
     const worldDialog = triggerButton.closest(".x-world-dialog");
     const groupDialog = triggerButton.closest(".x-group-dialog");
 
-    if (userDialog) {
-      this.log("Detected user dialog menu");
-      return "user";
-    }
-    if (avatarDialog) {
-      this.log("Detected avatar dialog menu");
-      return "avatar";
-    }
-    if (worldDialog) {
-      this.log("Detected world dialog menu");
-      return "world";
-    }
-    if (groupDialog) {
-      this.log("Detected group dialog menu");
-      return "group";
-    }
+    if (userDialog) return "user";
+    if (avatarDialog) return "avatar";
+    if (worldDialog) return "world";
+    if (groupDialog) return "group";
 
-    this.log("Could not detect dialog type from trigger button");
     return null;
   }
 
@@ -379,15 +314,10 @@ class ContextMenuApiPlugin extends Plugin {
     this.menuContainers.set(menuId, { menuType, container: menuContainer });
 
     const items = this.items.get(menuType);
-    if (!items || items.size === 0) {
-      this.log(`No items to add for ${menuType} menu`);
-      return;
-    }
+    if (!items || items.size === 0) return;
 
-    this.log(`Processing ${menuType} menu (${items.size} items to add)`);
     items.forEach((item, itemId) => {
       this.addMenuItemToContainer(menuContainer, menuType, itemId, item);
-      this.log(`✓ Added ${menuType} menu item to DOM: ${itemId}`);
     });
   }
 

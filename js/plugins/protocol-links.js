@@ -32,11 +32,13 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   async start() {
-    // Wait for context menu API to be available
-    const contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
+    // Wait for dependencies
+    this.contextMenuApi = await window.customjs.pluginManager.waitForPlugin(
       "context-menu-api"
     );
-    if (!contextMenuApi) {
+    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
+
+    if (!this.contextMenuApi) {
       this.error("Context Menu API plugin not found after waiting");
       return;
     }
@@ -67,54 +69,52 @@ class ProtocolLinksPlugin extends Plugin {
   // ============================================================================
 
   setupContextMenuItems() {
-    const contextMenu =
-      window.customjs.pluginManager.getPlugin("context-menu-api");
-    if (!contextMenu) {
+    if (!this.contextMenuApi) {
       this.error("Context Menu API plugin not available");
       return;
     }
 
     // User dialog items
-    contextMenu.addUserItem("copy-user-link", {
+    this.contextMenuApi.addUserItem("copy-user-link", {
       text: "Copy User Link",
       icon: "el-icon-link",
       onClick: (userData) => this.copyUserLink(userData),
     });
 
-    contextMenu.addUserItem("copy-user-import", {
+    this.contextMenuApi.addUserItem("copy-user-import", {
       text: "Copy User Import Link",
       icon: "el-icon-download",
       onClick: (userData) => this.copyUserImportLink(userData),
     });
 
     // Avatar dialog items
-    contextMenu.addAvatarItem("copy-avatar-link", {
+    this.contextMenuApi.addAvatarItem("copy-avatar-link", {
       text: "Copy Avatar Link",
       icon: "el-icon-link",
       onClick: (avatarData) => this.copyAvatarLink(avatarData),
     });
 
-    contextMenu.addAvatarItem("copy-avatar-import", {
+    this.contextMenuApi.addAvatarItem("copy-avatar-import", {
       text: "Copy Avatar Import Link",
       icon: "el-icon-download",
       onClick: (avatarData) => this.copyAvatarImportLink(avatarData),
     });
 
     // World dialog items
-    contextMenu.addWorldItem("copy-world-link", {
+    this.contextMenuApi.addWorldItem("copy-world-link", {
       text: "Copy World Link",
       icon: "el-icon-link",
       onClick: (worldData) => this.copyWorldLink(worldData),
     });
 
-    contextMenu.addWorldItem("copy-world-import", {
+    this.contextMenuApi.addWorldItem("copy-world-import", {
       text: "Copy World Import Link",
       icon: "el-icon-download",
       onClick: (worldData) => this.copyWorldImportLink(worldData),
     });
 
     // Group dialog items
-    contextMenu.addGroupItem("copy-group-link", {
+    this.contextMenuApi.addGroupItem("copy-group-link", {
       text: "Copy Group Link",
       icon: "el-icon-link",
       onClick: (groupData) => this.copyGroupLink(groupData),
@@ -124,24 +124,22 @@ class ProtocolLinksPlugin extends Plugin {
   }
 
   removeContextMenuItems() {
-    const contextMenu =
-      window.customjs.pluginManager.getPlugin("context-menu-api");
-    if (!contextMenu) return;
+    if (!this.contextMenuApi) return;
 
     // Remove user items
-    contextMenu.removeUserItem("copy-user-link");
-    contextMenu.removeUserItem("copy-user-import");
+    this.contextMenuApi.removeUserItem("copy-user-link");
+    this.contextMenuApi.removeUserItem("copy-user-import");
 
     // Remove avatar items
-    contextMenu.removeAvatarItem("copy-avatar-link");
-    contextMenu.removeAvatarItem("copy-avatar-import");
+    this.contextMenuApi.removeAvatarItem("copy-avatar-link");
+    this.contextMenuApi.removeAvatarItem("copy-avatar-import");
 
     // Remove world items
-    contextMenu.removeWorldItem("copy-world-link");
-    contextMenu.removeWorldItem("copy-world-import");
+    this.contextMenuApi.removeWorldItem("copy-world-link");
+    this.contextMenuApi.removeWorldItem("copy-world-import");
 
     // Remove group items
-    contextMenu.removeGroupItem("copy-group-link");
+    this.contextMenuApi.removeGroupItem("copy-group-link");
 
     this.log("All context menu items removed");
   }
@@ -225,31 +223,28 @@ class ProtocolLinksPlugin extends Plugin {
   // ============================================================================
 
   async copyToClipboard(text, description) {
-    const utils = window.customjs.pluginManager.getPlugin("utils");
-    if (!utils) {
+    if (!this.utils) {
       this.error("Utils plugin not available");
       return;
     }
 
-    const success = await utils.copyToClipboard(text, description);
+    const success = await this.utils.copyToClipboard(text, description);
     if (success) {
-      utils.showSuccess(`${description} copied to clipboard: ${text}`);
+      this.utils.showSuccess(`${description} copied to clipboard: ${text}`);
     } else {
-      utils.showError(`Failed to copy ${description.toLowerCase()}`);
+      this.utils.showError(`Failed to copy ${description.toLowerCase()}`);
     }
   }
 
   showSuccess(message) {
-    const utils = window.customjs.pluginManager.getPlugin("utils");
-    if (utils) {
-      utils.showSuccess(message);
+    if (this.utils) {
+      this.utils.showSuccess(message);
     }
   }
 
   showError(message) {
-    const utils = window.customjs.pluginManager.getPlugin("utils");
-    if (utils) {
-      utils.showError(message);
+    if (this.utils) {
+      this.utils.showError(message);
     }
   }
 

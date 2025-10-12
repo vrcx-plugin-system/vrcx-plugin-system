@@ -30,6 +30,18 @@ class BioUpdaterPlugin extends Plugin {
   }
 
   async start() {
+    // Wait for dependencies
+    this.utils = await window.customjs.pluginManager.waitForPlugin("utils");
+    this.apiHelpers = await window.customjs.pluginManager.waitForPlugin(
+      "api-helpers"
+    );
+    this.autoInvite = await window.customjs.pluginManager.waitForPlugin(
+      "auto-invite"
+    );
+    this.tagManager = await window.customjs.pluginManager.waitForPlugin(
+      "tag-manager"
+    );
+
     this.enabled = true;
     this.started = true;
     this.log("Bio updater started (waiting for login to begin updates)");
@@ -88,15 +100,13 @@ class BioUpdaterPlugin extends Plugin {
       // Split bio to preserve custom text before separator
       const oldBio = currentUser.bio.split("\n-\n")[0];
 
-      // Get plugin references
-      const utils = window.customjs.pluginManager.getPlugin("utils");
-      const autoInvite = window.customjs.pluginManager.getPlugin("auto-invite");
-      const tagManager = window.customjs.pluginManager.getPlugin("tag-manager");
-
       // Get Steam playtime if configured
       const steamId = this.getConfig("steam.id");
       const steamKey = this.getConfig("steam.key");
-      const steamPlayTime = await utils?.getSteamPlaytime(steamId, steamKey);
+      const steamPlayTime = await this.utils?.getSteamPlaytime(
+        steamId,
+        steamKey
+      );
 
       let steamHours,
         steamSeconds = null;
@@ -108,7 +118,9 @@ class BioUpdaterPlugin extends Plugin {
       }
 
       // Calculate playtime text
-      let playTimeText = utils?.timeToText(steamSeconds ?? stats.timeSpent);
+      let playTimeText = this.utils?.timeToText(
+        steamSeconds ?? stats.timeSpent
+      );
       if (steamHours) playTimeText += ` (${steamHours})`;
 
       // Get moderations
@@ -136,7 +148,7 @@ class BioUpdaterPlugin extends Plugin {
       const newBio = bioTemplate
         .replace(
           "{last_activity}",
-          utils?.timeToText(now - last_activity) ?? ""
+          this.utils?.timeToText(now - last_activity) ?? ""
         )
         .replace("{playtime}", playTimeText)
         .replace("{date_joined}", currentUser.date_joined ?? "Unknown")
@@ -149,14 +161,17 @@ class BioUpdaterPlugin extends Plugin {
           "{muted}",
           moderations.filter((item) => item.type === "mute").length ?? "?"
         )
-        .replace("{now}", utils?.formatDateTime() ?? new Date().toISOString())
+        .replace(
+          "{now}",
+          this.utils?.formatDateTime() ?? new Date().toISOString()
+        )
         .replace("{autojoin}", joiners.map((f) => f.name).join(", "))
         .replace("{partners}", partners.map((f) => f.name).join(", "))
         .replace(
           "{autoinvite}",
-          autoInvite?.getAutoInviteUser()?.displayName ?? ""
+          this.autoInvite?.getAutoInviteUser()?.displayName ?? ""
         )
-        .replace("{tags_loaded}", tagManager?.getLoadedTagsCount() ?? 0)
+        .replace("{tags_loaded}", this.tagManager?.getLoadedTagsCount() ?? 0)
         .replace("{userId}", currentUser.id)
         .replace("{steamId}", currentUser.steamId)
         .replace("{oculusId}", currentUser.oculusId)
@@ -179,12 +194,11 @@ class BioUpdaterPlugin extends Plugin {
       this.log(`Updating bio (${bio.length} chars)`);
 
       // Save bio via API
-      const apiHelpers = window.customjs.pluginManager.getPlugin("api-helpers");
-      if (!apiHelpers) {
+      if (!this.apiHelpers) {
         this.error("API Helpers plugin not available");
         return;
       }
-      await apiHelpers.API.saveBio(bio);
+      await this.apiHelpers.API.saveBio(bio);
 
       this.log("✓ Bio updated successfully");
 
