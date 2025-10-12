@@ -1,7 +1,7 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "1.7.0",
-  build: "1760409000",
+  version: "1.7.1",
+  build: "1760410000",
 };
 window.customjs.config = {};
 
@@ -837,11 +837,8 @@ class PluginManager {
 
       const loadPromise = new Promise((resolve, reject) => {
         // Get loadTimeout from config or use default
-        const loadTimeout =
-          window.customjs?.config?.loader?.loadTimeout || 10000;
-        console.log(
-          `[CJS|PluginManager] Loading plugin: ${pluginUrl} with timeout: ${loadTimeout}`
-        );
+        const loadTimeoutSetting = window.customjs?.config?.loader?.loadTimeout;
+        const loadTimeout = loadTimeoutSetting?.value ?? loadTimeoutSetting ?? 10000;
 
         const timeout = setTimeout(() => {
           reject(new Error(`Plugin load timeout: ${pluginUrl}`));
