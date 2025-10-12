@@ -5,8 +5,8 @@ class DebugPlugin extends Plugin {
       description:
         "Debug utilities, IPC logging, global scope search, and console commands for development",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1760386522",
+      version: "2.1.1",
+      build: "1760386822",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
       ],
@@ -275,10 +275,19 @@ class DebugPlugin extends Plugin {
               let value;
               let type;
               try {
-                value = obj[key];
-                type = typeof value;
+                // Get the property descriptor to check if it's a getter
+                const descriptor = Object.getOwnPropertyDescriptor(obj, key);
+                if (descriptor && descriptor.get && !descriptor.set) {
+                  // It's a getter-only property, might throw on access
+                  value = "[Getter]";
+                  type = "getter";
+                } else {
+                  value = obj[key];
+                  type = typeof value;
+                }
               } catch (e) {
-                value = "[Error accessing property]";
+                // Silently skip properties that throw errors
+                value = "[Access Error]";
                 type = "error";
               }
 
@@ -306,7 +315,7 @@ class DebugPlugin extends Plugin {
               }
             }
           } catch (e) {
-            // Skip problematic keys
+            // Skip problematic keys entirely
           }
         }
       } catch (e) {
@@ -328,7 +337,11 @@ class DebugPlugin extends Plugin {
       `Search results for "${searchTerm}" (${results.length} matches)`
     ); // eslint-disable-line no-console
     results.forEach((result) => {
-      console.log(`${result.path} [${result.type}]`, result.value); // eslint-disable-line no-console
+      if (result.type === "getter" || result.type === "error") {
+        console.log(`${result.path} [${result.type}]`); // eslint-disable-line no-console
+      } else {
+        console.log(`${result.path} [${result.type}]`, result.value); // eslint-disable-line no-console
+      }
     });
     console.groupEnd(); // eslint-disable-line no-console
 

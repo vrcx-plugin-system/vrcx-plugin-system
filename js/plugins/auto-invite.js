@@ -2,15 +2,17 @@ class AutoInvitePlugin extends Plugin {
   constructor() {
     super({
       name: "Auto Invite Manager",
-      description: "Automatic user invitation system with location tracking",
+      description:
+        "Automatic user invitation system with location tracking and custom messages",
       author: "Bluscream",
-      version: "3.0.0",
+      version: "3.1.0",
       build: "1728735600",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
+        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
       ],
     });
 
@@ -20,11 +22,27 @@ class AutoInvitePlugin extends Plugin {
     this.lastJoined = null;
     this.lastDestinationCheck = null;
 
+    // Default config
+    this.defaultConfig = {
+      customInviteMessage: "Auto-invite from VRCX",
+    };
+
     // Tracking
     this.gameLogHookRetries = 0;
   }
 
   async load() {
+    // Only set default if not already configured
+    if (!this.getConfig("autoinvite.customInviteMessage")) {
+      this.setConfig(
+        "autoinvite.customInviteMessage",
+        this.defaultConfig.customInviteMessage
+      );
+      this.logger.log(
+        "Initialized default config: autoinvite.customInviteMessage"
+      );
+    }
+
     this.logger.log("Auto Invite plugin ready");
     this.loaded = true;
   }
@@ -274,17 +292,48 @@ class AutoInvitePlugin extends Plugin {
       const apiHelpers =
         window.customjs?.pluginManager?.getPlugin("api-helpers");
 
+      // Get custom message template from config
+      const messageTemplate = this.getConfig("autoinvite.customInviteMessage");
+
       // Send invites to all users in the list
       const invitePromises = Array.from(this.autoInviteUsers.values()).map(
-        (user) =>
-          apiHelpers?.API.sendInvite(
-            {
-              instanceId: instanceId,
-              worldId: worldId,
-              worldName: worldName,
-            },
-            user.id
-          )
+        (user) => {
+          // Process template for each user
+          let customMessage = null;
+
+          if (messageTemplate) {
+            customMessage = this.processInviteMessageTemplate(
+              messageTemplate,
+              user,
+              worldName,
+              instanceId
+            );
+          }
+
+          // Fallback to default config if null
+          if (!customMessage && this.defaultConfig.customInviteMessage) {
+            customMessage = this.processInviteMessageTemplate(
+              this.defaultConfig.customInviteMessage,
+              user,
+              worldName,
+              instanceId
+            );
+          }
+
+          // Build invite params
+          const inviteParams = {
+            instanceId: instanceId,
+            worldId: worldId,
+            worldName: worldName,
+          };
+
+          // Only add message if we have one
+          if (customMessage) {
+            inviteParams.message = customMessage;
+          }
+
+          return apiHelpers?.API.sendInvite(inviteParams, user.id);
+        }
       );
 
       await Promise.all(invitePromises);
@@ -294,6 +343,35 @@ class AutoInvitePlugin extends Plugin {
     } catch (error) {
       this.logger.error(`Failed to send invites: ${error.message}`);
     }
+  }
+
+  /**
+   * Process invite message template with variable substitution
+   * @param {string} template - Message template with placeholders
+   * @param {object} user - Target user object
+   * @param {string} worldName - World name
+   * @param {string} instanceId - Instance ID
+   * @returns {string} Processed message
+   */
+  processInviteMessageTemplate(template, user, worldName, instanceId) {
+    const currentUser = window.$pinia?.user?.currentUser;
+    const now = new Date();
+
+    return template
+      .replace("{userId}", user.id || "")
+      .replace("{userName}", user.displayName || "")
+      .replace("{userDisplayName}", user.displayName || "")
+      .replace("{worldName}", worldName || "")
+      .replace("{worldId}", instanceId.split(":")[0] || "")
+      .replace("{instanceId}", instanceId || "")
+      .replace("{myUserId}", currentUser?.id || "")
+      .replace("{myUserName}", currentUser?.displayName || "")
+      .replace("{myDisplayName}", currentUser?.displayName || "")
+      .replace("{now}", this.utils?.formatDateTime?.() || now.toISOString())
+      .replace("{date}", now.toLocaleDateString())
+      .replace("{time}", now.toLocaleTimeString())
+      .replace("{timestamp}", now.getTime().toString())
+      .replace("{iso}", now.toISOString());
   }
 
   toggleAutoInvite(user) {
@@ -410,6 +488,48 @@ class AutoInvitePlugin extends Plugin {
    */
   clearAutoInviteUsers() {
     this.clearAllAutoInvites();
+  }
+
+  /**
+   * Get the current custom invite message template
+   * @returns {string|null} Current message template or null if disabled
+   */
+  getCustomInviteMessage() {
+    const configMessage = this.getConfig("autoinvite.customInviteMessage");
+    if (configMessage !== null && configMessage !== undefined) {
+      return configMessage;
+    }
+    return this.defaultConfig.customInviteMessage || null;
+  }
+
+  /**
+   * Set custom invite message template
+   * @param {string|null} message - Message template with placeholders, or null to disable
+   *
+   * Available placeholders:
+   * - {userId}: Target user ID
+   * - {userName}, {userDisplayName}: Target user display name
+   * - {worldName}: World name
+   * - {worldId}: World ID
+   * - {instanceId}: Full instance ID
+   * - {myUserId}: Current user ID
+   * - {myUserName}, {myDisplayName}: Current user display name
+   * - {now}: Formatted date/time
+   * - {date}: Current date
+   * - {time}: Current time
+   * - {timestamp}: Unix timestamp
+   * - {iso}: ISO 8601 date/time
+   *
+   * Example: "Auto-invite from {myUserName} to {worldName} at {now}"
+   * Set to null to omit custom messages (will use default config or no message)
+   */
+  setCustomInviteMessage(message) {
+    this.setConfig("autoinvite.customInviteMessage", message);
+    if (message === null) {
+      this.logger.log("Custom invite message disabled");
+    } else {
+      this.logger.log(`Custom invite message updated: "${message}"`);
+    }
   }
 }
 
