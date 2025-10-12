@@ -5,12 +5,10 @@ class AutoInvitePlugin extends Plugin {
       description:
         "Automatic user invitation system with location tracking and custom messages",
       author: "Bluscream",
-      version: "5.0.4",
-      build: Math.floor(Date.now() / 1000).toString(),
+      version: "{VERSION}",
+      build: "{BUILD}",
       dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
       ],
     });
 

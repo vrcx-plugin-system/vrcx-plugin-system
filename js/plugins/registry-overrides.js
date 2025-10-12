@@ -5,12 +5,9 @@ class RegistryOverridesPlugin extends Plugin {
       description:
         "VRChat registry settings management with event-based triggers",
       author: "Bluscream",
-      version: "2.3.0",
-      build: Math.floor(Date.now() / 1000).toString(),
-      dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
-      ],
+      version: "{VERSION}",
+      build: "{BUILD}",
+      dependencies: [],
     });
 
     // Map of event names to handlers
@@ -79,14 +76,8 @@ class RegistryOverridesPlugin extends Plugin {
   async stop() {
     this.logger.log("Stopping Registry Overrides plugin");
 
-    // Cleanup game store subscription
-    const unsubscribe = this.resources.get("gameStoreSubscription");
-    if (unsubscribe && typeof unsubscribe === "function") {
-      unsubscribe();
-      this.logger.log("Game store subscription cleaned up");
-    }
-
-    // Parent cleanup will stop the timer automatically
+    // Cleanup is handled automatically by parent class via subscriptions
+    // Parent cleanup will stop the timer and unregister subscriptions automatically
     await super.stop();
   }
 
@@ -138,7 +129,7 @@ class RegistryOverridesPlugin extends Plugin {
         this._lastGameRunning = gameStore.isGameRunning;
 
         // Store unsubscribe function for cleanup
-        this.registerResource("gameStoreSubscription", unsubscribe);
+        this.registerSubscription(unsubscribe);
 
         this.logger.log(
           "Game store subscription registered (using Pinia $subscribe)"

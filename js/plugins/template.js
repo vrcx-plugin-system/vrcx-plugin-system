@@ -7,11 +7,10 @@ class TemplatePlugin extends Plugin {
       description:
         "Example plugin demonstrating all available features and lifecycle events",
       author: "Bluscream",
-      version: "1.2.3",
-      build: Math.floor(Date.now() / 1000).toString(),
+      version: "{VERSION}",
+      build: "{BUILD}",
       dependencies: [
         // Always include plugin.js as first dependency
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         // List URLs of other plugins this depends on (optional)
         // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
       ],

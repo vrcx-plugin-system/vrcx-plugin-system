@@ -50,11 +50,9 @@ class InviteMessageApiPlugin extends Plugin {
       description:
         "API for managing and rotating custom invite messages with cooldown tracking",
       author: "Bluscream",
-      version: "1.1.0",
-      build: "1728924000",
-      dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-      ],
+      version: "{VERSION}",
+      build: "{BUILD}",
+      dependencies: [],
     });
 
     // Cache for message stores

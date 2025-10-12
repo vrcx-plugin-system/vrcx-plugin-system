@@ -5,11 +5,9 @@ class DebugPlugin extends Plugin {
       description:
         "Debug utilities, IPC logging, global scope search, and console commands for development",
       author: "Bluscream",
-      version: "2.1.1",
-      build: "1760386822",
-      dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-      ],
+      version: "{VERSION}",
+      build: "{BUILD}",
+      dependencies: [],
     });
   }
 

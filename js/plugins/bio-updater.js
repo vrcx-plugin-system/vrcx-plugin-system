@@ -5,12 +5,9 @@ class BioUpdaterPlugin extends Plugin {
       description:
         "Automatic bio updating with user statistics and custom templates",
       author: "Bluscream",
-      version: "3.0.6",
-      build: Math.floor(Date.now() / 1000).toString(),
-      dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
-      ],
+      version: "{VERSION}",
+      build: "{BUILD}",
+      dependencies: [],
     });
 
     this.updateTimerId = null;

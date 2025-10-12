@@ -1,8 +1,3 @@
-// ============================================================================
-// SELF INVITE ON BLOCKED PLAYER PLUGIN
-// Automatically creates a self-invite to a new instance when a blocked player joins
-// ============================================================================
-
 /**
  * Self Invite On Blocked Player Plugin
  *
@@ -23,12 +18,9 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       description:
         "Automatically creates a self-invite to a new instance when a blocked player joins your current instance",
       author: "Bluscream",
-      version: "1.1.1",
-      build: Math.floor(Date.now() / 1000).toString(),
-      dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
-      ],
+      version: "{VERSION}",
+      build: "{BUILD}",
+      dependencies: [],
     });
 
     // Tracking
@@ -122,13 +114,7 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
   async stop() {
     this.logger.log("Stopping Self Invite on Blocked Player plugin");
 
-    // Cleanup subscription
-    const unsubscribe = this.resources.get("gameLogSubscription");
-    if (unsubscribe && typeof unsubscribe === "function") {
-      unsubscribe();
-      this.logger.log("GameLog subscription cleaned up");
-    }
-
+    // Cleanup is handled automatically by parent class via subscriptions
     await super.stop();
   }
 
@@ -166,7 +152,7 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
         );
 
         // Store unsubscribe function for cleanup
-        this.registerResource("gameLogSubscription", unsubscribe);
+        this.registerSubscription(unsubscribe);
 
         this.logger.log(
           "GameLog store subscription registered (using Pinia $subscribe)"

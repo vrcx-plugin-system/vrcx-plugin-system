@@ -1,9 +1,3 @@
-// ============================================================================
-// AUTO FOLLOW PLUGIN
-// Version: 1.0.0
-// Build: 1728735700
-// ============================================================================
-
 /**
  * Auto Follow Plugin
  * Automatic location tracking system that follows selected users
@@ -36,12 +30,10 @@ class AutoFollowPlugin extends Plugin {
       description:
         "Automatic location tracking system that follows selected users",
       author: "Bluscream",
-      version: "3.0.4",
-      build: Math.floor(Date.now() / 1000).toString(),
+      version: "{VERSION}",
+      build: "{BUILD}",
       dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
       ],
     });
 

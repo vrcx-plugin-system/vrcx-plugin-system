@@ -4,11 +4,9 @@ class NavMenuApiPlugin extends Plugin {
       name: "Navigation Menu API",
       description: "API for adding custom navigation menu items to VRCX",
       author: "Bluscream",
-      version: "2.0.0",
-      build: "1728668400",
-      dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-      ],
+      version: "{VERSION}",
+      build: "{BUILD}",
+      dependencies: [],
     });
 
     // Map of itemId -> item config

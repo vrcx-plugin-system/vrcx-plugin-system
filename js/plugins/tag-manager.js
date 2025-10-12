@@ -4,12 +4,9 @@ class TagManagerPlugin extends Plugin {
       name: "Tag Manager",
       description: "Custom user tags management with URL-based loading",
       author: "Bluscream",
-      version: "3.1.1",
-      build: Math.floor(Date.now() / 1000).toString(),
-      dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
-      ],
+      version: "{VERSION}",
+      build: "{BUILD}",
+      dependencies: [],
     });
 
     // Map of URL -> Set of tag objects
@@ -119,14 +116,8 @@ class TagManagerPlugin extends Plugin {
     // Clear loaded tags
     this.loadedTags.clear();
 
-    // Cleanup gameLog subscription
-    const unsubscribe = this.resources.get("gameLogSubscription");
-    if (unsubscribe && typeof unsubscribe === "function") {
-      unsubscribe();
-      this.logger.log("GameLog subscription cleaned up");
-    }
-
-    // Parent cleanup (will clear the timer automatically)
+    // Cleanup is handled automatically by parent class via subscriptions
+    // Parent cleanup (will clear the timer and subscriptions automatically)
     await super.stop();
   }
 
@@ -357,7 +348,7 @@ class TagManagerPlugin extends Plugin {
         );
 
         // Store unsubscribe function for cleanup
-        this.registerResource("gameLogSubscription", unsubscribe);
+        this.registerSubscription(unsubscribe);
 
         this.logger.log(
           "Player join monitoring registered (using Pinia $subscribe)"

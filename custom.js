@@ -7,10 +7,10 @@ window.customjs.config = {};
 
 // Core modules that are not actual plugins
 window.customjs.core_modules = [
+  "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
   "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/logger.js",
   "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/config.js",
   "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/utils.js",
-  "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
 ];
 
 // Default plugin configuration
@@ -115,7 +115,7 @@ class PluginManager {
 
   registerPlugin(plugin) {
     if (!plugin || !plugin.metadata) {
-      console.error("[CJS|[PluginManager] Invalid plugin registration");
+      console.error("[CJS|PluginManager] Invalid plugin registration");
       return false;
     }
 
@@ -283,7 +283,7 @@ class PluginManager {
       try {
         callback(currentUser);
       } catch (error) {
-        console.error("[CJS|[PluginManager] Error in login callback:", error);
+        console.error("[CJS|PluginManager] Error in login callback:", error);
       }
     } else {
       this.loginCallbacks.push(callback);
@@ -318,7 +318,7 @@ class PluginManager {
       try {
         callback(user);
       } catch (error) {
-        console.error("[CJS|[PluginManager] Error in login callback:", error);
+        console.error("[CJS|PluginManager] Error in login callback:", error);
       }
     }
   }
@@ -780,7 +780,7 @@ class PluginManager {
 
     if (window.$app?.playNoty) {
       window.$app.playNoty({
-        text: `Loaded <strong>${pluginUrls.length}</strong> plugins...`,
+        text: `Loaded <strong>${enabledPlugins.length}</strong> plugins...`,
         type: "success",
       });
     }

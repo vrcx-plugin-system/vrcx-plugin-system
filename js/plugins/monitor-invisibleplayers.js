@@ -1,8 +1,3 @@
-// ============================================================================
-// INVISIBLE PLAYERS MONITOR PLUGIN
-// Detects potentially invisible players in instances
-// ============================================================================
-
 /**
  * Invisible Players Monitor Plugin
  *
@@ -22,12 +17,9 @@ class InvisiblePlayersMonitorPlugin extends Plugin {
       description:
         "Detects and notifies when potentially invisible players are in your instance",
       author: "Bluscream",
-      version: "1.0.0",
-      build: Math.floor(Date.now() / 1000).toString(),
-      dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
-      ],
+      version: "{VERSION}",
+      build: "{BUILD}",
+      dependencies: [],
     });
 
     this.lastInvisiblePlayers = 0;
