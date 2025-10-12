@@ -84,6 +84,10 @@ class ContextMenuApiPlugin extends Plugin {
     );
   }
 
+  async onLogin(user) {
+    // No login-specific logic needed for context menu API
+  }
+
   async stop() {
     this.log("Stopping Context Menu API");
 

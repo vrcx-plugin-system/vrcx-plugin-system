@@ -48,6 +48,10 @@ class PluginManagerUIPlugin extends Plugin {
     this.log("Plugin Manager UI started");
   }
 
+  async onLogin(user) {
+    // No login-specific logic needed for plugin manager UI
+  }
+
   async stop() {
     this.log("Stopping Plugin Manager UI");
 
@@ -437,10 +441,12 @@ class PluginManagerUIPlugin extends Plugin {
       <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
         <div style="flex: 1;">
           <h4 style="margin: 0 0 5px 0; font-size: 18px; font-weight: 600; color: #212529;">
-            ${plugin.name}
+            ${plugin.metadata.name}
           </h4>
           <div style="font-size: 11px; color: #6c757d; font-family: monospace; margin-bottom: 8px;">
-            ID: ${plugin.id} • v${plugin.version} • Build: ${plugin.build}
+            ID: ${plugin.metadata.id} • v${plugin.metadata.version} • Build: ${
+      plugin.metadata.build
+    }
           </div>
           <div style="margin-bottom: 8px;">
             ${badges.join("")}
@@ -496,7 +502,7 @@ class PluginManagerUIPlugin extends Plugin {
       if (toggleBtn) {
         this.registerListener(toggleBtn, "click", async (e) => {
           e.stopPropagation();
-          await this.handleTogglePlugin(plugin.id);
+          await this.handleTogglePlugin(plugin.metadata.id);
         });
       }
 
@@ -741,19 +747,28 @@ class PluginManagerUIPlugin extends Plugin {
   handleShowDetails(plugin) {
     this.log("Showing plugin details:", plugin);
 
-    console.group(`Plugin Details: ${plugin.metadata.name}`);
-    console.log("Metadata:", plugin.metadata);
-    console.log("State:", {
+    // Open devtools for debugging
+    if (window.AppApi?.ShowDevTools) {
+      window.AppApi.ShowDevTools();
+    }
+
+    // Intentionally using console.* for structured debug output
+    console.group(`Plugin Details: ${plugin.metadata.name}`); // eslint-disable-line no-console
+    console.dir(plugin.metadata); // eslint-disable-line no-console
+    console.table({
+      // eslint-disable-line no-console
       enabled: plugin.enabled,
       loaded: plugin.loaded,
       started: plugin.started,
     });
-    console.log("Resources:", plugin.resources);
-    console.log("Full Plugin Object:", plugin);
-    console.groupEnd();
+    console.log("Resources:"); // eslint-disable-line no-console
+    console.dir(plugin.resources); // eslint-disable-line no-console
+    console.log("Full Plugin Object:"); // eslint-disable-line no-console
+    console.dir(plugin); // eslint-disable-line no-console
+    console.groupEnd(); // eslint-disable-line no-console
 
     window.customjs?.utils?.showInfo(
-      `${plugin.metadata.name} details logged to console`
+      `${plugin.metadata.name} details logged to console (DevTools opened)`
     );
   }
 

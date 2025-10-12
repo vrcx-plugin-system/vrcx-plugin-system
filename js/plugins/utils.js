@@ -40,6 +40,10 @@ class UtilsPlugin extends Plugin {
     this.log("Utils plugin started and ready");
   }
 
+  async onLogin(user) {
+    // No login-specific logic needed for utils plugin
+  }
+
   // ============================================================================
   // UTILITY METHODS
   // ============================================================================
@@ -213,7 +217,8 @@ class UtilsPlugin extends Plugin {
     if (window.$app?.playNoty) {
       window.$app.playNoty({ message, type: "success" });
     } else {
-      console.log(`✓ ${message}`);
+      // Fallback when VRCX notification system not available
+      console.log(`✓ ${message}`); // eslint-disable-line no-console
     }
   }
 
@@ -225,7 +230,8 @@ class UtilsPlugin extends Plugin {
     if (window.$app?.playNoty) {
       window.$app.playNoty({ message, type: "error" });
     } else {
-      console.error(`✗ ${message}`);
+      // Fallback when VRCX notification system not available
+      console.error(`✗ ${message}`); // eslint-disable-line no-console
     }
   }
 
@@ -237,7 +243,8 @@ class UtilsPlugin extends Plugin {
     if (window.$app?.playNoty) {
       window.$app.playNoty({ message, type: "info" });
     } else {
-      console.log(`ℹ ${message}`);
+      // Fallback when VRCX notification system not available
+      console.log(`ℹ ${message}`); // eslint-disable-line no-console
     }
   }
 

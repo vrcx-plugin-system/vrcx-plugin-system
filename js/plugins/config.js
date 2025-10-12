@@ -39,6 +39,10 @@ class ConfigPlugin extends Plugin {
     this.log("Configuration plugin started");
   }
 
+  async onLogin(user) {
+    // No login-specific logic needed for config plugin
+  }
+
   /**
    * Get a config value by path
    * @param {string} path - Dot-notation path (e.g., "steam.id")

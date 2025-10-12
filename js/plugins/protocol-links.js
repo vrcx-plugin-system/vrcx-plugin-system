@@ -50,6 +50,10 @@ class ProtocolLinksPlugin extends Plugin {
     this.log("Protocol Links plugin started, menu items added");
   }
 
+  async onLogin(user) {
+    // No login-specific logic needed for protocol links plugin
+  }
+
   async stop() {
     this.log("Stopping Protocol Links plugin");
 

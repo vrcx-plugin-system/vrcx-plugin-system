@@ -46,6 +46,10 @@ class ApiHelpersPlugin extends Plugin {
     this.log("API helpers started");
   }
 
+  async onLogin(user) {
+    // No login-specific logic needed for API helpers plugin
+  }
+
   // ============================================================================
   // API WRAPPER FUNCTIONS
   // ============================================================================
@@ -168,10 +172,11 @@ class ApiHelpersPlugin extends Plugin {
 
       // Console logging
       if (opts.console) {
+        // Intentional console output - this IS the logger
         if (typeof console[level] === "function") {
-          console[level](timestampedMsg);
+          console[level](timestampedMsg); // eslint-disable-line no-console
         } else {
-          console.log(timestampedMsg);
+          console.log(timestampedMsg); // eslint-disable-line no-console
         }
       }
 
@@ -180,7 +185,7 @@ class ApiHelpersPlugin extends Plugin {
         try {
           window.AppApi.SendIpc("Noty", timestampedMsg);
         } catch (error) {
-          console.warn("Failed to send Noty event:", error);
+          console.warn("Failed to send Noty event:", error); // eslint-disable-line no-console - Error fallback
         }
       }
 
@@ -193,7 +198,7 @@ class ApiHelpersPlugin extends Plugin {
           const userId = window.$pinia.user.currentUser?.id || "";
           window.AppApi.SendIpc("External", `${userId}:${timestampedMsg}`);
         } catch (error) {
-          console.warn("Failed to send External event:", error);
+          console.warn("Failed to send External event:", error); // eslint-disable-line no-console - Error fallback
         }
       }
 
@@ -206,7 +211,7 @@ class ApiHelpersPlugin extends Plugin {
               timestampedMsg
             );
           } catch (error) {
-            console.error("Error sending desktop notification:", error);
+            console.error("Error sending desktop notification:", error); // eslint-disable-line no-console - Error fallback
           }
         }, 0);
       }
@@ -223,7 +228,7 @@ class ApiHelpersPlugin extends Plugin {
               ""
             );
           } catch (error) {
-            console.error("Error sending XSOverlay notification:", error);
+            console.error("Error sending XSOverlay notification:", error); // eslint-disable-line no-console - Error fallback
           }
         }, 0);
       }
@@ -242,7 +247,7 @@ class ApiHelpersPlugin extends Plugin {
               null
             );
           } catch (error) {
-            console.error("Error sending OVRToolkit notification:", error);
+            console.error("Error sending OVRToolkit notification:", error); // eslint-disable-line no-console - Error fallback
           }
         }, 0);
       }
@@ -265,7 +270,7 @@ class ApiHelpersPlugin extends Plugin {
             });
           }
         } catch (error) {
-          console.error("Error sending VRCX notify:", error);
+          console.error("Error sending VRCX notify:", error); // eslint-disable-line no-console - Error fallback
         }
       }
 
@@ -279,7 +284,7 @@ class ApiHelpersPlugin extends Plugin {
             window.$app.$message.info(msg);
           }
         } catch (error) {
-          console.error("Error sending VRCX message:", error);
+          console.error("Error sending VRCX message:", error); // eslint-disable-line no-console - Error fallback
         }
       }
 
@@ -305,7 +310,7 @@ class ApiHelpersPlugin extends Plugin {
               });
             }
           } catch (error) {
-            console.error("Error sending webhook notification:", error);
+            console.error("Error sending webhook notification:", error); // eslint-disable-line no-console - Error fallback
           }
         }, 0);
       }

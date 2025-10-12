@@ -70,6 +70,10 @@ class AutoInvitePlugin extends Plugin {
     this.log("Auto Invite plugin started, location tracking active");
   }
 
+  async onLogin(user) {
+    // No login-specific logic needed for auto invite plugin
+  }
+
   async stop() {
     this.log("Stopping Auto Invite plugin");
 
@@ -127,18 +131,15 @@ class AutoInvitePlugin extends Plugin {
       window.$app?.setCurrentUserLocation
     ) {
       // Use the hook system to intercept location changes
-      this.registerPostHook(
-        "$app.setCurrentUserLocation",
-        (result, args) => {
-          const [location, travelingToLocation] = args;
-          setTimeout(async () => {
-            await this.onCurrentUserLocationChanged(
-              location,
-              travelingToLocation
-            );
-          }, 1000);
-        }
-      );
+      this.registerPostHook("$app.setCurrentUserLocation", (result, args) => {
+        const [location, travelingToLocation] = args;
+        setTimeout(async () => {
+          await this.onCurrentUserLocationChanged(
+            location,
+            travelingToLocation
+          );
+        }, 1000);
+      });
 
       this.log("Hooked into setCurrentUserLocation");
     }

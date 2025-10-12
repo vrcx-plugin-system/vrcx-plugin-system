@@ -52,6 +52,10 @@ class ManagersPlugin extends Plugin {
     this.log("Managers plugin started, all hooks registered");
   }
 
+  async onLogin(user) {
+    // No login-specific logic needed for managers plugin
+  }
+
   async stop() {
     this.log("Stopping Managers plugin");
     await super.stop();
@@ -205,7 +209,7 @@ class ManagersPlugin extends Plugin {
     // Use PRE-HOOK to log IPC calls
     // Hook system will automatically wait for the function to exist
     this.registerPreHook("AppApi.SendIpc", (args) => {
-      console.log(`[IPC OUT]`, args);
+      console.log(`[IPC OUT]`, args); // eslint-disable-line no-console - Intentional debug output for IPC monitoring
     });
 
     this.log(
@@ -237,39 +241,61 @@ class ManagersPlugin extends Plugin {
       getPluginList: () => window.customjs?.pluginManager?.getPluginList(),
       // New helper functions for the refactored system
       inspectPlugin: (id) => {
+        // Open devtools for debugging
+        if (window.AppApi?.ShowDevTools) {
+          window.AppApi.ShowDevTools();
+        }
+
         const plugin = window.customjs?.plugins?.find(
           (p) => p.metadata.id === id
         );
         if (plugin) {
-          console.log("Plugin:", plugin);
-          console.log("Metadata:", plugin.metadata);
-          console.log("State:", {
+          // Intentional console output for debug inspection
+          console.group(`Plugin: ${plugin.metadata.name}`); // eslint-disable-line no-console
+          console.log("Metadata:"); // eslint-disable-line no-console
+          console.dir(plugin.metadata); // eslint-disable-line no-console
+          console.table({
+            // eslint-disable-line no-console
             enabled: plugin.enabled,
             loaded: plugin.loaded,
             started: plugin.started,
           });
-          console.log("Resources:", plugin.resources);
+          console.log("Resources:"); // eslint-disable-line no-console
+          console.dir(plugin.resources); // eslint-disable-line no-console
+          console.groupEnd(); // eslint-disable-line no-console
+        } else {
+          console.warn(`Plugin not found: ${id}`); // eslint-disable-line no-console
         }
         return plugin;
       },
       listEvents: () => {
+        // Open devtools for debugging
+        if (window.AppApi?.ShowDevTools) {
+          window.AppApi.ShowDevTools();
+        }
+
         const events = window.customjs?.events || {};
+        // Intentional console output for debug listing
+        console.group("Custom Events"); // eslint-disable-line no-console
         Object.keys(events).forEach((eventName) => {
-          console.log(
-            `Event: ${eventName} (${events[eventName].length} listeners)`
-          );
+          console.log(`${eventName}: ${events[eventName].length} listeners`); // eslint-disable-line no-console
         });
+        console.groupEnd(); // eslint-disable-line no-console
         return events;
       },
       listHooks: () => {
-        console.log(
-          "Pre-hooks:",
-          Object.keys(window.customjs?.hooks?.pre || {})
-        );
-        console.log(
-          "Post-hooks:",
-          Object.keys(window.customjs?.hooks?.post || {})
-        );
+        // Open devtools for debugging
+        if (window.AppApi?.ShowDevTools) {
+          window.AppApi.ShowDevTools();
+        }
+
+        // Intentional console output for debug listing
+        console.group("Registered Hooks"); // eslint-disable-line no-console
+        console.log("Pre-hooks:"); // eslint-disable-line no-console
+        console.dir(Object.keys(window.customjs?.hooks?.pre || {})); // eslint-disable-line no-console
+        console.log("Post-hooks:"); // eslint-disable-line no-console
+        console.dir(Object.keys(window.customjs?.hooks?.post || {})); // eslint-disable-line no-console
+        console.groupEnd(); // eslint-disable-line no-console
         return window.customjs?.hooks;
       },
     };
@@ -278,7 +304,9 @@ class ManagersPlugin extends Plugin {
     window.customjs.debugFunctions = debugFunctions;
     window.debugVRCX = debugFunctions; // Legacy
 
-    this.log("Console debug functions registered");
+    this.log(
+      "Console debug functions registered (will open DevTools when used)"
+    );
   }
 }
 

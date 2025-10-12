@@ -56,6 +56,10 @@ class RegistryOverridesPlugin extends Plugin {
     this.log("Registry Overrides plugin started, periodic updates enabled");
   }
 
+  async onLogin(user) {
+    // No login-specific logic needed for registry overrides plugin
+  }
+
   async stop() {
     this.log("Stopping Registry Overrides plugin");
 
@@ -149,9 +153,7 @@ class RegistryOverridesPlugin extends Plugin {
             continue;
           }
 
-          this.log(
-            `[${triggerEvent}] ${key}: ${oldVal} → ${value}`
-          );
+          this.log(`[${triggerEvent}] ${key}: ${oldVal} → ${value}`);
 
           // Determine the registry type based on the value type
           let registryType = 3; // Default to REG_DWORD
