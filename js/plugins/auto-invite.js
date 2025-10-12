@@ -36,7 +36,7 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async load() {
-    this.log("Auto Invite plugin ready");
+    this.logger.log("Auto Invite plugin ready");
     this.loaded = true;
   }
 
@@ -58,7 +58,7 @@ class AutoInvitePlugin extends Plugin {
 
     this.enabled = true;
     this.started = true;
-    this.log("Auto Invite plugin started, location tracking active");
+    this.logger.log("Auto Invite plugin started, location tracking active");
   }
 
   async onLogin(user) {
@@ -66,7 +66,7 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async stop() {
-    this.log("Stopping Auto Invite plugin");
+    this.logger.log("Stopping Auto Invite plugin");
 
     // Remove context menu items
     const contextMenu =
@@ -95,25 +95,25 @@ class AutoInvitePlugin extends Plugin {
     // Also try to setup game log hook
     this.setupGameLogHook();
 
-    this.log("Location tracking setup complete");
+    this.logger.log("Location tracking setup complete");
   }
 
   setupGameLogHook() {
     // Try to access game log store
     if (window.$pinia?.gameLog || window.$pinia?.location) {
-      this.log("Using location store monitoring for travel detection");
+      this.logger.log("Using location store monitoring for travel detection");
     } else {
       // Retry after delay
       if (this.gameLogHookRetries < 3) {
         this.gameLogHookRetries++;
         setTimeout(() => {
-          this.log(
+          this.logger.log(
             `Retrying store access (attempt ${this.gameLogHookRetries}/3)...`
           );
           this.setupGameLogHook();
         }, 3000);
       } else {
-        this.warn("Max retries reached, relying on location store polling");
+        this.logger.warn("Max retries reached, relying on location store polling");
       }
     }
   }
@@ -135,7 +135,7 @@ class AutoInvitePlugin extends Plugin {
         }, 1000);
       });
 
-      this.log("Hooked into setCurrentUserLocation");
+      this.logger.log("Hooked into setCurrentUserLocation");
     }
   }
 
@@ -147,7 +147,7 @@ class AutoInvitePlugin extends Plugin {
       }, 1000)
     );
 
-    this.log("Location store monitor started");
+    this.logger.log("Location store monitor started");
   }
 
   checkLocationStoreChanges() {
@@ -164,7 +164,7 @@ class AutoInvitePlugin extends Plugin {
         destination &&
         destination !== this.lastDestinationCheck
       ) {
-        this.log(`Location store traveling detected: ${destination}`);
+        this.logger.log(`Location store traveling detected: ${destination}`);
         this.lastDestinationCheck = destination;
         this.onLocationDestinationDetected(destination);
       }
@@ -185,7 +185,7 @@ class AutoInvitePlugin extends Plugin {
       }
 
       if (!this.contextMenuApi) {
-        this.warn("Context Menu API not available");
+        this.logger.warn("Context Menu API not available");
         return false;
       }
 
@@ -195,16 +195,19 @@ class AutoInvitePlugin extends Plugin {
         onClick: (user) => this.toggleAutoInvite(user),
       });
 
-      this.clearAutoInviteItem = this.contextMenuApi.addUserItem("clearAutoInvite", {
-        text: "Clear AutoInvite",
-        icon: "el-icon-delete",
-        onClick: () => this.clearAllAutoInvites(),
-      });
+      this.clearAutoInviteItem = this.contextMenuApi.addUserItem(
+        "clearAutoInvite",
+        {
+          text: "Clear AutoInvite",
+          icon: "el-icon-delete",
+          onClick: () => this.clearAllAutoInvites(),
+        }
+      );
 
-      this.log("Auto Invite context menu buttons added");
+      this.logger.log("Auto Invite context menu buttons added");
       return true;
     } catch (error) {
-      this.error("Error setting up Auto Invite buttons:", error);
+      this.logger.error("Error setting up Auto Invite buttons:", error);
 
       if (!this.autoInviteItem || !this.clearAutoInviteItem) {
         setTimeout(() => this.setupUserButton(), 2000);
@@ -221,10 +224,7 @@ class AutoInvitePlugin extends Plugin {
   async onLocationDestinationDetected(destination) {
     if (!this.utils?.isEmpty) return;
 
-    if (
-      this.autoInviteUsers.size > 0 &&
-      !this.utils.isEmpty(destination)
-    ) {
+    if (this.autoInviteUsers.size > 0 && !this.utils.isEmpty(destination)) {
       // Only invite if we haven't already invited to this location
       if (this.lastInvitedTo !== destination) {
         await this.sendInvitesToUsers(destination);
@@ -235,7 +235,7 @@ class AutoInvitePlugin extends Plugin {
   async onCurrentUserLocationChanged(location, travelingToLocation) {
     if (!this.utils?.isEmpty) return;
 
-    this.log(
+    this.logger.log(
       `Location change: ${location} (traveling to: ${travelingToLocation})`
     );
 
@@ -252,7 +252,7 @@ class AutoInvitePlugin extends Plugin {
     } else if (location && location !== "offline" && location !== "private") {
       // User has arrived at a new location
       this.lastJoined = location;
-      this.log(`User arrived at: ${location}`);
+      this.logger.log(`User arrived at: ${location}`);
 
       // Trigger registry overrides for instance switching
       const registryPlugin = window.customjs?.plugins?.find(
@@ -280,37 +280,40 @@ class AutoInvitePlugin extends Plugin {
     try {
       worldName = await window.$app.getWorldName(worldId);
     } catch (error) {
-      this.warn(`Failed to get world name: ${error.message}`);
+      this.logger.warn(`Failed to get world name: ${error.message}`);
     }
 
     const userNames = Array.from(this.autoInviteUsers.values())
-      .map(u => u.displayName)
+      .map((u) => u.displayName)
       .join(", ");
 
-    this.log(`Inviting ${this.autoInviteUsers.size} user(s) to "${worldName}" (${instanceId})`);
+    this.logger.log(
+      `Inviting ${this.autoInviteUsers.size} user(s) to "${worldName}" (${instanceId})`
+    );
 
     try {
       const apiHelpers =
         window.customjs?.pluginManager?.getPlugin("api-helpers");
-      
+
       // Send invites to all users in the list
-      const invitePromises = Array.from(this.autoInviteUsers.values()).map(user => 
-        apiHelpers?.API.sendInvite(
-          {
-            instanceId: instanceId,
-            worldId: worldId,
-            worldName: worldName,
-          },
-          user.id
-        )
+      const invitePromises = Array.from(this.autoInviteUsers.values()).map(
+        (user) =>
+          apiHelpers?.API.sendInvite(
+            {
+              instanceId: instanceId,
+              worldId: worldId,
+              worldName: worldName,
+            },
+            user.id
+          )
       );
 
       await Promise.all(invitePromises);
 
       this.lastInvitedTo = destination;
-      this.log(`✓ Successfully sent invites to: ${userNames}`);
+      this.logger.log(`✓ Successfully sent invites to: ${userNames}`);
     } catch (error) {
-      this.error(`Failed to send invites: ${error.message}`);
+      this.logger.error(`Failed to send invites: ${error.message}`);
     }
   }
 
@@ -325,12 +328,12 @@ class AutoInvitePlugin extends Plugin {
     if (this.autoInviteUsers.has(user.id)) {
       // Remove user from list
       this.autoInviteUsers.delete(user.id);
-      this.log(`Removed ${user.displayName} from Auto Invite list`);
+      this.logger.log(`Removed ${user.displayName} from Auto Invite list`);
       this.logger.showInfo(`Removed ${user.displayName} from Auto Invite list`);
     } else {
       // Add user to list
       this.autoInviteUsers.set(user.id, user);
-      this.log(`Added ${user.displayName} to Auto Invite list`);
+      this.logger.log(`Added ${user.displayName} to Auto Invite list`);
       this.logger.showSuccess(`Added ${user.displayName} to Auto Invite list`);
     }
 
@@ -375,7 +378,7 @@ class AutoInvitePlugin extends Plugin {
     const count = this.autoInviteUsers.size;
     this.autoInviteUsers.clear();
     this.lastInvitedTo = null;
-    this.log(`Cleared ${count} user(s) from Auto Invite list`);
+    this.logger.log(`Cleared ${count} user(s) from Auto Invite list`);
     this.logger.showSuccess(`Cleared ${count} user(s) from Auto Invite list`);
 
     // Update context menu button
@@ -404,9 +407,9 @@ class AutoInvitePlugin extends Plugin {
    */
   addAutoInviteUser(user) {
     if (!user || !user.id) return;
-    
+
     this.autoInviteUsers.set(user.id, user);
-    this.log(`Auto-invite user added: ${user?.displayName}`);
+    this.logger.log(`Auto-invite user added: ${user?.displayName}`);
     this.updateAutoInviteButtonText();
   }
 
@@ -418,7 +421,7 @@ class AutoInvitePlugin extends Plugin {
     if (this.autoInviteUsers.has(userId)) {
       const user = this.autoInviteUsers.get(userId);
       this.autoInviteUsers.delete(userId);
-      this.log(`Auto-invite user removed: ${user?.displayName}`);
+      this.logger.log(`Auto-invite user removed: ${user?.displayName}`);
       this.updateAutoInviteButtonText();
     }
   }

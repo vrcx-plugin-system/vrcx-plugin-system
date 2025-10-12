@@ -25,7 +25,7 @@ class BioUpdaterPlugin extends Plugin {
   }
 
   async load() {
-    this.log("Bio updater ready (waiting for login)");
+    this.logger.log("Bio updater ready (waiting for login)");
     this.loaded = true;
   }
 
@@ -44,15 +44,15 @@ class BioUpdaterPlugin extends Plugin {
 
     this.enabled = true;
     this.started = true;
-    this.log("Bio updater started (waiting for login to begin updates)");
+    this.logger.log("Bio updater started (waiting for login to begin updates)");
   }
 
   async onLogin(currentUser) {
-    this.log(`User logged in: ${currentUser?.displayName}`);
+    this.logger.log(`User logged in: ${currentUser?.displayName}`);
 
     const config = this.getConfig("bio");
     if (!config) {
-      this.warn("Bio config not available, skipping bio updates");
+      this.logger.warn("Bio config not available, skipping bio updates");
       return;
     }
 
@@ -63,7 +63,7 @@ class BioUpdaterPlugin extends Plugin {
       }, config.updateInterval)
     );
 
-    this.log(
+    this.logger.log(
       `Bio update timer registered (interval: ${config.updateInterval}ms)`
     );
 
@@ -72,23 +72,23 @@ class BioUpdaterPlugin extends Plugin {
       await this.updateBio();
     }, config.initialDelay);
 
-    this.log(`Initial bio update scheduled (delay: ${config.initialDelay}ms)`);
+    this.logger.log(`Initial bio update scheduled (delay: ${config.initialDelay}ms)`);
   }
 
   async stop() {
-    this.log("Stopping bio updater");
+    this.logger.log("Stopping bio updater");
     await super.stop(); // This will clean up all timers automatically
   }
 
   async updateBio() {
     try {
-      this.log("Updating bio...");
+      this.logger.log("Updating bio...");
 
       const now = Date.now();
       const currentUser = window.$pinia?.user?.currentUser;
 
       if (!currentUser) {
-        this.warn("Current user not available, skipping bio update");
+        this.logger.warn("Current user not available, skipping bio update");
         return;
       }
 
@@ -184,28 +184,28 @@ class BioUpdaterPlugin extends Plugin {
       // Ensure bio doesn't exceed 512 characters
       if (bio.length > 512) {
         bio = bio.substring(0, 499) + "...";
-        this.warn(
+        this.logger.warn(
           `Bio truncated to 499 chars + "..." (was ${
             oldBio.length + newBio.length
           } chars)`
         );
       }
 
-      this.log(`Updating bio (${bio.length} chars)`);
+      this.logger.log(`Updating bio (${bio.length} chars)`);
 
       // Save bio via API
       if (!this.apiHelpers) {
-        this.error("API Helpers plugin not available");
+        this.logger.error("API Helpers plugin not available");
         return;
       }
       await this.apiHelpers.API.saveBio(bio);
 
-      this.log("✓ Bio updated successfully");
+      this.logger.log("✓ Bio updated successfully");
 
       // Emit event for other plugins
       this.emit("bio-updated", { bio, timestamp: now });
     } catch (error) {
-      this.error(`Error updating bio: ${error.message}`);
+      this.logger.error(`Error updating bio: ${error.message}`);
     }
   }
 
@@ -213,7 +213,7 @@ class BioUpdaterPlugin extends Plugin {
    * Manually trigger bio update
    */
   async triggerUpdate() {
-    this.log("Manual bio update triggered");
+    this.logger.log("Manual bio update triggered");
     await this.updateBio();
   }
 }

@@ -44,7 +44,7 @@ class ContextMenuApiPlugin extends Plugin {
       this.items.set(menuType, new Map());
     });
 
-    this.log("Context Menu API ready");
+    this.logger.log("Context Menu API ready");
     this.loaded = true;
   }
 
@@ -67,7 +67,7 @@ class ContextMenuApiPlugin extends Plugin {
     this.enabled = true;
     this.started = true;
 
-    this.log("Context Menu API started, watching for dialogs");
+    this.logger.log("Context Menu API started, watching for dialogs");
 
     // Dispatch ready event for other plugins
     window.dispatchEvent(
@@ -82,7 +82,7 @@ class ContextMenuApiPlugin extends Plugin {
   }
 
   async stop() {
-    this.log("Stopping Context Menu API");
+    this.logger.log("Stopping Context Menu API");
 
     // Clear all debounce timers
     this.debounceTimers.forEach((timerId) => clearTimeout(timerId));
@@ -363,7 +363,7 @@ class ContextMenuApiPlugin extends Plugin {
       try {
         item.onClick(dialogData);
       } catch (error) {
-        this.error(`Error in ${menuType} menu item ${itemId}:`, error);
+        this.logger.error(`Error in ${menuType} menu item ${itemId}:`, error);
       }
     }
   }
@@ -414,7 +414,7 @@ class ContextMenuApiPlugin extends Plugin {
         }
       }
     } catch (error) {
-      this.error("Error extracting dialog data from Pinia:", error);
+      this.logger.error("Error extracting dialog data from Pinia:", error);
     }
 
     return null;
@@ -446,19 +446,19 @@ class ContextMenuApiPlugin extends Plugin {
 
   addItem(menuType, itemId, item) {
     if (!this.menuTypes.includes(menuType)) {
-      this.error(`Invalid menu type: ${menuType}`);
+      this.logger.error(`Invalid menu type: ${menuType}`);
       return false;
     }
 
     if (!item || !item.text) {
-      this.error("Menu item must have a 'text' property");
+      this.logger.error("Menu item must have a 'text' property");
       return false;
     }
 
     const items = this.items.get(menuType);
     items.set(itemId, item);
 
-    this.log(`Added ${menuType} menu item: ${itemId}`);
+    this.logger.log(`Added ${menuType} menu item: ${itemId}`);
     return true;
   }
 
@@ -487,7 +487,7 @@ class ContextMenuApiPlugin extends Plugin {
     if (items) {
       const removed = items.delete(itemId);
       if (removed) {
-        this.log(`Removed ${menuType} menu item: ${itemId}`);
+        this.logger.log(`Removed ${menuType} menu item: ${itemId}`);
 
         // Remove from any currently open menus
         this.removeItemFromOpenMenus(itemId);
@@ -529,12 +529,12 @@ class ContextMenuApiPlugin extends Plugin {
     const item = items?.get(itemId);
 
     if (!item) {
-      this.warn(`Cannot update ${menuType} item ${itemId}: not found`);
+      this.logger.warn(`Cannot update ${menuType} item ${itemId}: not found`);
       return false;
     }
 
     Object.assign(item, updates);
-    this.log(`Updated ${menuType} menu item: ${itemId}`);
+    this.logger.log(`Updated ${menuType} menu item: ${itemId}`);
 
     // Update in open menus
     this.updateItemInOpenMenus(menuType, itemId, item);
@@ -595,7 +595,7 @@ class ContextMenuApiPlugin extends Plugin {
     const items = this.items.get(menuType);
     if (items) {
       items.clear();
-      this.log(`Cleared all ${menuType} menu items`);
+      this.logger.log(`Cleared all ${menuType} menu items`);
       return true;
     }
     return false;
