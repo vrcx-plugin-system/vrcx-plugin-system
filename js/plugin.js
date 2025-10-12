@@ -36,6 +36,9 @@ class Plugin extends Module {
     // Create personal logger instance for this plugin
     this.logger = new window.customjs.Logger(this.metadata.id);
 
+    // Initialize config object for PluginSetting instances
+    this.config = {};
+
     // Add hooks tracking to resources
     this.resources.hooks = new Set();
 
@@ -336,6 +339,32 @@ class Plugin extends Module {
     if (args.length > 0) {
       console.error(`[${this.metadata.name}]`, ...args); // eslint-disable-line no-console
     }
+  }
+
+  /**
+   * Create a PluginSetting instance (automatically adds plugin reference)
+   * @param {object} options - Setting options
+   * @returns {PluginSetting} Setting instance
+   * @example
+   * this.config.myMessage = this.createSetting({
+   *   key: "message",
+   *   category: "general",
+   *   name: "Custom Message",
+   *   description: "Message to display",
+   *   type: "string",
+   *   defaultValue: "Hello"
+   * });
+   */
+  createSetting(options) {
+    if (!window.customjs?.PluginSetting) {
+      this.warn("PluginSetting class not available");
+      return null;
+    }
+
+    return new window.customjs.PluginSetting({
+      ...options,
+      plugin: this,
+    });
   }
 
   /**

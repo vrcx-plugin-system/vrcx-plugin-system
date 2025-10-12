@@ -5,7 +5,7 @@ class BioUpdaterPlugin extends Plugin {
       description:
         "Automatic bio updating with user statistics and custom templates",
       author: "Bluscream",
-      version: "2.0.0",
+      version: "2.1.0",
       build: "1728778800",
       dependencies: [],
     });
@@ -14,7 +14,7 @@ class BioUpdaterPlugin extends Plugin {
   }
 
   async load() {
-    // Settings are accessed via this.get() with defaults
+    // Define settings with metadata
     const defaultTemplate = `-
 Relationship: {partners} <3
 Auto Accept: {autojoin}
@@ -31,11 +31,67 @@ User ID: {userId}
 Steam ID: {steamId}
 Oculus ID: {oculusId}`;
 
-    const updateInterval = this.get("timing.updateInterval", 7200000);
-    const template = this.get("content.template", defaultTemplate);
+    this.config.updateInterval = this.createSetting({
+      key: "updateInterval",
+      category: "timing",
+      name: "Update Interval (ms)",
+      description: "How often to update bio (default: 2 hours)",
+      type: "number",
+      defaultValue: 7200000,
+    });
 
-    this.logger.log(`⚙️ Update interval: ${updateInterval}ms`);
-    this.logger.log(`⚙️ Template configured: ${template.length} chars`);
+    this.config.initialDelay = this.createSetting({
+      key: "initialDelay",
+      category: "timing",
+      name: "Initial Delay (ms)",
+      description:
+        "Delay before first update after login (default: 20 seconds)",
+      type: "number",
+      defaultValue: 20000,
+    });
+
+    this.config.steamId = this.createSetting({
+      key: "steamId",
+      category: "steam",
+      name: "Steam ID",
+      description: "Your Steam ID64 (can be base64 encoded)",
+      type: "string",
+      defaultValue: "",
+    });
+
+    this.config.apiKey = this.createSetting({
+      key: "apiKey",
+      category: "steam",
+      name: "Steam API Key",
+      description: "Your Steam Web API key (can be base64 encoded)",
+      type: "string",
+      defaultValue: "",
+    });
+
+    this.config.appId = this.createSetting({
+      key: "appId",
+      category: "steam",
+      name: "Steam App ID",
+      description: "Steam app ID for VRChat (default: 438100)",
+      type: "string",
+      defaultValue: "438100",
+    });
+
+    this.config.template = this.createSetting({
+      key: "template",
+      category: "content",
+      name: "Bio Template",
+      description: "Bio template with placeholders",
+      type: "string",
+      defaultValue: defaultTemplate,
+    });
+
+    this.logger.log(
+      `⚙️ Update interval: ${this.config.updateInterval.get()}ms`
+    );
+    this.logger.log(
+      `⚙️ Template configured: ${this.config.template.get().length} chars`
+    );
 
     this.logger.log("Bio updater ready (waiting for login)");
     this.loaded = true;
@@ -62,8 +118,8 @@ Oculus ID: {oculusId}`;
     this.logger.log(`User logged in: ${currentUser?.displayName}`);
 
     // Use settings from ConfigManager
-    const updateInterval = this.get("timing.updateInterval", 7200000);
-    const initialDelay = this.get("timing.initialDelay", 20000);
+    const updateInterval = this.config.updateInterval.get();
+    const initialDelay = this.config.initialDelay.get();
 
     // Register update timer with automatic cleanup
     this.updateTimerId = this.registerTimer(
@@ -110,9 +166,9 @@ Oculus ID: {oculusId}`;
       const oldBio = currentUser.bio.split("\n-\n")[0];
 
       // Get Steam playtime if configured
-      const steamId = this.get("steam.steamId", "");
-      const steamKey = this.get("steam.apiKey", "");
-      const steamAppId = this.get("steam.appId", "438100");
+      const steamId = this.config.steamId.get();
+      const steamKey = this.config.apiKey.get();
+      const steamAppId = this.config.appId.get();
       const steamPlayTime = await this.getSteamPlaytime(
         steamId,
         steamKey,
@@ -152,7 +208,7 @@ Oculus ID: {oculusId}`;
       );
 
       // Apply template with replacements
-      const bioTemplate = this.get("content.template", "");
+      const bioTemplate = this.config.template.get();
 
       const newBio = bioTemplate
         .replace("{last_activity}", this.timeToText(now - last_activity))

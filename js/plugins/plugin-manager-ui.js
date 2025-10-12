@@ -4,7 +4,7 @@ class PluginManagerUIPlugin extends Plugin {
       name: "Plugin Manager UI",
       description: "Visual UI for managing VRCX custom plugins",
       author: "Bluscream",
-      version: "5.2.0",
+      version: "5.3.0",
       build: "1728778800",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
@@ -1003,12 +1003,14 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   handleShowSettings(plugin) {
-    // Check if plugin has settings
-    const settings =
+    // Check if plugin has settings (either PluginSetting instances or raw localStorage)
+    const hasConfigDefinitions =
+      plugin.config && Object.keys(plugin.config).length > 0;
+    const storedSettings =
       window.customjs?.configManager?.getPluginConfig(plugin.metadata.id) || {};
-    const hasSettings = Object.keys(settings).length > 0;
+    const hasStoredSettings = Object.keys(storedSettings).length > 0;
 
-    if (!hasSettings) {
+    if (!hasConfigDefinitions && !hasStoredSettings) {
       this.logger.showWarn("This plugin has no configurable settings");
       return;
     }
@@ -1155,7 +1157,35 @@ class PluginManagerUIPlugin extends Plugin {
   buildSettingsUI(plugin) {
     const container = document.createElement("div");
 
-    // Get all settings for this plugin as nested object
+    // Try to use PluginSetting definitions from plugin.config first (has metadata)
+    if (plugin.config && Object.keys(plugin.config).length > 0) {
+      // Group PluginSettings by category
+      const categorized = {};
+
+      Object.entries(plugin.config).forEach(([configKey, settingInstance]) => {
+        if (settingInstance instanceof window.customjs.PluginSetting) {
+          const category = settingInstance.category || "general";
+          if (!categorized[category]) {
+            categorized[category] = [];
+          }
+          categorized[category].push(settingInstance);
+        }
+      });
+
+      if (Object.keys(categorized).length > 0) {
+        // Render with metadata from PluginSetting instances
+        Object.entries(categorized).forEach(([categoryKey, settingsArray]) => {
+          this.renderCategoryWithMetadata(
+            container,
+            categoryKey,
+            settingsArray
+          );
+        });
+        return container;
+      }
+    }
+
+    // Fallback: Get all settings from localStorage as nested object (no metadata)
     const allSettings =
       window.customjs.configManager.getPluginConfig(plugin.metadata.id) || {};
 
@@ -1169,7 +1199,7 @@ class PluginManagerUIPlugin extends Plugin {
       return container;
     }
 
-    // Render each category (top-level keys)
+    // Render each category (top-level keys) - raw localStorage without metadata
     Object.entries(allSettings).forEach(([categoryKey, categorySettings]) => {
       // Category header
       const categoryHeader = document.createElement("div");
@@ -1212,6 +1242,244 @@ class PluginManagerUIPlugin extends Plugin {
     });
 
     return container;
+  }
+
+  /**
+   * Render category with PluginSetting metadata
+   * @param {HTMLElement} container - Container to append to
+   * @param {string} categoryKey - Category key
+   * @param {PluginSetting[]} settingsArray - Array of PluginSetting instances
+   */
+  renderCategoryWithMetadata(container, categoryKey, settingsArray) {
+    // Category header
+    const categoryHeader = document.createElement("div");
+    categoryHeader.style.cssText = `
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e9ecef;
+    `;
+    categoryHeader.innerHTML = `
+      <h4 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: #212529;">
+        ${this.formatCategoryName(categoryKey)}
+      </h4>
+    `;
+    container.appendChild(categoryHeader);
+
+    // Settings in category
+    const settingsContainer = document.createElement("div");
+    settingsContainer.style.cssText =
+      "display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;";
+
+    settingsArray.forEach((setting) => {
+      const settingRow = this.createSettingInputWithMetadata(setting);
+      settingsContainer.appendChild(settingRow);
+    });
+
+    container.appendChild(settingsContainer);
+  }
+
+  /**
+   * Create setting input using PluginSetting metadata
+   * @param {PluginSetting} setting - PluginSetting instance
+   * @returns {HTMLElement} Setting row
+   */
+  createSettingInputWithMetadata(setting) {
+    const row = document.createElement("div");
+    row.style.cssText = `
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #dee2e6;
+    `;
+
+    // Label section (with metadata)
+    const labelSection = document.createElement("div");
+    labelSection.style.cssText = "flex: 1; min-width: 0;";
+
+    const label = document.createElement("div");
+    label.style.cssText =
+      "font-size: 14px; font-weight: 500; color: #212529; margin-bottom: 3px;";
+    label.textContent = setting.name;
+
+    const description = document.createElement("div");
+    description.style.cssText = "font-size: 12px; color: #6c757d;";
+    description.textContent = setting.description || "";
+
+    const keyInfo = document.createElement("div");
+    keyInfo.style.cssText =
+      "font-size: 11px; color: #adb5bd; font-family: monospace; margin-top: 2px;";
+    keyInfo.textContent = setting.toKey();
+
+    labelSection.appendChild(label);
+    if (setting.description) {
+      labelSection.appendChild(description);
+    }
+    labelSection.appendChild(keyInfo);
+
+    // Input section
+    const inputSection = document.createElement("div");
+    inputSection.style.cssText = "margin-left: 15px; min-width: 200px;";
+
+    const input = this.createInputForType(setting);
+    inputSection.appendChild(input);
+
+    row.appendChild(labelSection);
+    row.appendChild(inputSection);
+
+    return row;
+  }
+
+  /**
+   * Create input element for PluginSetting based on type
+   * @param {PluginSetting} setting - PluginSetting instance
+   * @returns {HTMLElement} Input element
+   */
+  createInputForType(setting) {
+    const currentValue = setting.get();
+
+    switch (setting.type) {
+      case "boolean":
+        return this.createBooleanInputFor(setting, currentValue);
+      case "number":
+        return this.createNumberInputFor(setting, currentValue);
+      case "string":
+        return this.createStringInputFor(setting, currentValue);
+      case "array":
+      case "object":
+        return this.createJsonInputFor(setting, currentValue);
+      default:
+        const span = document.createElement("span");
+        span.textContent = `Unsupported type: ${setting.type}`;
+        span.style.cssText = "color: #f56c6c; font-size: 13px;";
+        return span;
+    }
+  }
+
+  createBooleanInputFor(setting, currentValue) {
+    const label = document.createElement("label");
+    label.className = "el-switch";
+    label.style.cssText = "cursor: pointer;";
+
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = currentValue;
+    checkbox.style.cssText = "display: none;";
+
+    const core = document.createElement("span");
+    core.style.cssText = `
+      display: inline-block;
+      position: relative;
+      width: 40px;
+      height: 20px;
+      border-radius: 10px;
+      background: ${currentValue ? "#409eff" : "#dcdfe6"};
+      transition: background-color 0.3s;
+      cursor: pointer;
+    `;
+
+    const action = document.createElement("span");
+    action.style.cssText = `
+      position: absolute;
+      top: 1px;
+      left: ${currentValue ? "21px" : "1px"};
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: white;
+      transition: all 0.3s;
+    `;
+
+    core.appendChild(action);
+    label.appendChild(checkbox);
+    label.appendChild(core);
+
+    this.registerListener(label, "click", () => {
+      const newValue = !setting.get();
+      setting.set(newValue);
+      checkbox.checked = newValue;
+      core.style.background = newValue ? "#409eff" : "#dcdfe6";
+      action.style.left = newValue ? "21px" : "1px";
+      this.logger.log(`Updated ${setting.name} to ${newValue}`);
+    });
+
+    return label;
+  }
+
+  createNumberInputFor(setting, currentValue) {
+    const input = document.createElement("input");
+    input.type = "number";
+    input.className = "el-input__inner";
+    input.value = currentValue;
+    input.style.cssText = `
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      font-size: 14px;
+    `;
+
+    this.registerListener(input, "change", () => {
+      const newValue = parseFloat(input.value);
+      if (!isNaN(newValue)) {
+        setting.set(newValue);
+        this.logger.log(`Updated ${setting.name} to ${newValue}`);
+      }
+    });
+
+    return input;
+  }
+
+  createStringInputFor(setting, currentValue) {
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "el-input__inner";
+    input.value = currentValue || "";
+    input.style.cssText = `
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      font-size: 14px;
+    `;
+
+    this.registerListener(input, "change", () => {
+      setting.set(input.value);
+      this.logger.log(`Updated ${setting.name} to ${input.value}`);
+    });
+
+    return input;
+  }
+
+  createJsonInputFor(setting, currentValue) {
+    const input = document.createElement("textarea");
+    input.className = "el-textarea__inner";
+    input.value = JSON.stringify(currentValue, null, 2);
+    input.rows = 4;
+    input.style.cssText = `
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: 'Consolas', monospace;
+      resize: vertical;
+    `;
+
+    this.registerListener(input, "change", () => {
+      try {
+        const newValue = JSON.parse(input.value);
+        setting.set(newValue);
+        input.style.borderColor = "#dcdfe6";
+        this.logger.log(`Updated ${setting.name}`);
+      } catch (error) {
+        input.style.borderColor = "#f56c6c";
+        this.logger.showError("Invalid JSON format");
+      }
+    });
+
+    return input;
   }
 
   /**

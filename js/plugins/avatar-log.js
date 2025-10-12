@@ -5,7 +5,7 @@ class AvatarLogPlugin extends Plugin {
       description:
         "Logs and submits avatar IDs to various avatar database providers (avtrDB, NSVR, PAW, VRCDB, VRCWB)",
       author: "Bluscream",
-      version: "2.0.0",
+      version: "2.1.0",
       build: "1728778800",
       dependencies: [],
     });
@@ -44,19 +44,115 @@ class AvatarLogPlugin extends Plugin {
   async load() {
     this.logger.log("📦 Loading Avatar Logger...");
 
-    // Settings are accessed via this.get() with defaults
-    // Log current provider settings
-    const providers = {
-      avtrDB: this.get("providers.enableAvtrDB", true),
-      nsvr: this.get("providers.enableNSVR", true),
-      paw: this.get("providers.enablePAW", true),
-      vrcdb: this.get("providers.enableVRCDB", true),
-      vrcwb: this.get("providers.enableVRCWB", true),
-    };
+    // Define settings with metadata
+    this.config.attribution = this.createSetting({
+      key: "attribution",
+      category: "general",
+      name: "Discord User ID (Attribution)",
+      description:
+        "Your Discord User ID for attribution (leave empty for anonymous)",
+      type: "string",
+      defaultValue: "",
+    });
 
-    const enabledProviders = Object.entries(providers)
-      .filter(([k, v]) => v)
-      .map(([k]) => k);
+    this.config.logToConsole = this.createSetting({
+      key: "logToConsole",
+      category: "general",
+      name: "Log to Console",
+      description: "Log avatar processing to browser console",
+      type: "boolean",
+      defaultValue: true,
+    });
+
+    this.config.enableAvtrDB = this.createSetting({
+      key: "enableAvtrDB",
+      category: "providers",
+      name: "Enable avtrDB",
+      description: "avtrDB - Avatar Search (api.avtrdb.com)",
+      type: "boolean",
+      defaultValue: true,
+    });
+
+    this.config.enableNSVR = this.createSetting({
+      key: "enableNSVR",
+      category: "providers",
+      name: "Enable NSVR",
+      description: "NSVR - NekoSune Community (avtr.nekosunevr.co.uk)",
+      type: "boolean",
+      defaultValue: true,
+    });
+
+    this.config.enablePAW = this.createSetting({
+      key: "enablePAW",
+      category: "providers",
+      name: "Enable PAW",
+      description: "PAW - Puppy's Avatar World (paw-api.amelia.fun)",
+      type: "boolean",
+      defaultValue: true,
+    });
+
+    this.config.enableVRCDB = this.createSetting({
+      key: "enableVRCDB",
+      category: "providers",
+      name: "Enable VRCDB",
+      description: "VRCDB - Avatar Search (search.bs002.de)",
+      type: "boolean",
+      defaultValue: true,
+    });
+
+    this.config.enableVRCWB = this.createSetting({
+      key: "enableVRCWB",
+      category: "providers",
+      name: "Enable VRCWB",
+      description: "VRCWB - World Balancer (avatar.worldbalancer.com)",
+      type: "boolean",
+      defaultValue: true,
+    });
+
+    this.config.batchSize = this.createSetting({
+      key: "batchSize",
+      category: "advanced",
+      name: "Batch Size",
+      description: "Number of avatars to process simultaneously",
+      type: "number",
+      defaultValue: 5,
+    });
+
+    this.config.queueDelay = this.createSetting({
+      key: "queueDelay",
+      category: "advanced",
+      name: "Queue Delay (ms)",
+      description: "Delay between processing batches",
+      type: "number",
+      defaultValue: 2000,
+    });
+
+    this.config.retryAttempts = this.createSetting({
+      key: "retryAttempts",
+      category: "advanced",
+      name: "Retry Attempts",
+      description: "Number of retry attempts for failed requests",
+      type: "number",
+      defaultValue: 3,
+    });
+
+    this.config.scanOnStartup = this.createSetting({
+      key: "scanOnStartup",
+      category: "advanced",
+      name: "Scan Stores on Startup",
+      description: "Scan avatar stores on login",
+      type: "boolean",
+      defaultValue: true,
+    });
+
+    const enabledProviders = [
+      this.config.enableAvtrDB.get() && "avtrDB",
+      this.config.enableNSVR.get() && "NSVR",
+      this.config.enablePAW.get() && "PAW",
+      this.config.enableVRCDB.get() && "VRCDB",
+      this.config.enableVRCWB.get() && "VRCWB",
+    ].filter(Boolean);
+
     this.logger.log(`⚙️ Enabled providers: ${enabledProviders.join(", ")}`);
 
     // Load processed avatars from storage
@@ -75,7 +171,7 @@ class AvatarLogPlugin extends Plugin {
   }
 
   async onLogin() {
-    if (!this.get("advanced.scanOnStartup", true)) return;
+    if (!this.config.scanOnStartup.get()) return;
 
     this.logger.log("👤 User logged in, scanning avatar stores...");
 
@@ -165,7 +261,7 @@ class AvatarLogPlugin extends Plugin {
       return;
     }
 
-    if (this.get("general.logToConsole", true)) {
+    if (this.config.logToConsole.get()) {
       this.logger.log(`📋 Queuing avatar: ${avatarId} (from: ${source})`);
     }
 
@@ -187,7 +283,7 @@ class AvatarLogPlugin extends Plugin {
     this.isProcessing = true;
 
     try {
-      const batchSize = this.get("advanced.batchSize", 5);
+      const batchSize = this.config.batchSize.get();
       const batch = Array.from(this.pendingQueue).slice(0, batchSize);
 
       // Process batch
@@ -199,7 +295,7 @@ class AvatarLogPlugin extends Plugin {
 
       // Continue processing if more in queue
       if (this.pendingQueue.size > 0) {
-        const delay = this.get("advanced.queueDelay", 2000);
+        const delay = this.config.queueDelay.get();
         setTimeout(() => {
           this.isProcessing = false;
           this.processQueue();
@@ -216,7 +312,7 @@ class AvatarLogPlugin extends Plugin {
 
   // Send avatar ID to all enabled providers
   async sendToProviders(avatarId) {
-    const attribution = this.get("general.attribution", "");
+    const attribution = this.config.attribution.get();
     const userId = attribution || "1007655277732651069"; // VRC-LOG Dev ID as default
 
     const results = {
@@ -225,23 +321,23 @@ class AvatarLogPlugin extends Plugin {
     };
 
     // Send to each enabled provider
-    if (this.get("providers.enableAvtrDB", true)) {
+    if (this.config.enableAvtrDB.get()) {
       results.providers.avtrdb = await this.sendToAvtrDB(avatarId, userId);
     }
-    if (this.get("providers.enableNSVR", true)) {
+    if (this.config.enableNSVR.get()) {
       results.providers.nsvr = await this.sendToNSVR(avatarId, userId);
     }
-    if (this.get("providers.enablePAW", true)) {
+    if (this.config.enablePAW.get()) {
       results.providers.paw = await this.sendToPAW(avatarId);
     }
-    if (this.get("providers.enableVRCDB", true)) {
+    if (this.config.enableVRCDB.get()) {
       results.providers.vrcdb = await this.sendToVRCDB(avatarId, userId);
     }
-    if (this.get("providers.enableVRCWB", true)) {
+    if (this.config.enableVRCWB.get()) {
       results.providers.vrcwb = await this.sendToVRCWB(avatarId, userId);
     }
 
-    if (this.get("general.logToConsole", true)) {
+    if (this.config.logToConsole.get()) {
       this.logger.log(`✅ Processed ${avatarId}:`, results.providers);
     }
 

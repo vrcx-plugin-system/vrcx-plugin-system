@@ -5,7 +5,7 @@ class AutoInvitePlugin extends Plugin {
       description:
         "Automatic user invitation system with location tracking and custom messages",
       author: "Bluscream",
-      version: "2.0.0",
+      version: "2.1.0",
       build: "1728778800",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
@@ -28,13 +28,19 @@ class AutoInvitePlugin extends Plugin {
   }
 
   async load() {
-    // Settings are accessed via this.get() with defaults
-    const message = this.get(
-      "messages.customInviteMessage",
-      "Auto-invite from VRCX"
-    );
+    // Define settings with metadata
+    this.config.customInviteMessage = this.createSetting({
+      key: "customInviteMessage",
+      category: "messages",
+      name: "Custom Invite Message",
+      description: "Message to send when inviting users automatically",
+      type: "string",
+      defaultValue: "Auto-invite from VRCX",
+    });
 
-    this.logger.log(`⚙️ Custom invite message: "${message}"`);
+    this.logger.log(
+      `⚙️ Custom invite message: "${this.config.customInviteMessage.get()}"`
+    );
 
     this.logger.log("Auto Invite plugin ready");
     this.loaded = true;
@@ -302,12 +308,9 @@ class AutoInvitePlugin extends Plugin {
           }
 
           // Fallback to default config if null
-          if (
-            !customMessage &&
-            this.get("messages.customInviteMessage", "Auto-invite from VRCX")
-          ) {
+          if (!customMessage && this.config.customInviteMessage.get()) {
             customMessage = this.processInviteMessageTemplate(
-              this.get("messages.customInviteMessage", "Auto-invite from VRCX"),
+              this.config.customInviteMessage.get(),
               user,
               worldName,
               instanceId
@@ -492,7 +495,7 @@ class AutoInvitePlugin extends Plugin {
    * @returns {string|null} Current message template or null if disabled
    */
   getCustomInviteMessage() {
-    return this.get("messages.customInviteMessage", "Auto-invite from VRCX");
+    return this.config.customInviteMessage.get();
   }
 
   /**
@@ -517,7 +520,7 @@ class AutoInvitePlugin extends Plugin {
    * Set to null to omit custom messages (will use default config or no message)
    */
   async setCustomInviteMessage(message) {
-    this.set("messages.customInviteMessage", message);
+    this.config.customInviteMessage.set(message);
     // Settings are now auto-saved!
     if (message === null) {
       this.logger.log("Custom invite message disabled");

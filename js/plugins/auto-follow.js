@@ -30,7 +30,7 @@ class AutoFollowPlugin extends Plugin {
       description:
         "Automatic location tracking system that follows selected users",
       author: "Bluscream",
-      version: "2.0.0",
+      version: "2.1.0",
       build: "1728778800",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
@@ -49,10 +49,19 @@ class AutoFollowPlugin extends Plugin {
   }
 
   async load() {
-    // Settings are accessed via this.get() with defaults
-    const message = this.get("messages.customInviteMessage", "Can I join you?");
+    // Define settings with metadata
+    this.config.customInviteMessage = this.createSetting({
+      key: "customInviteMessage",
+      category: "messages",
+      name: "Custom Invite Message",
+      description: "Message template for invite requests when following users",
+      type: "string",
+      defaultValue: "Can I join you?",
+    });
 
-    this.logger.log(`⚙️ Custom invite message: "${message}"`);
+    this.logger.log(
+      `⚙️ Custom invite message: "${this.config.customInviteMessage.get()}"`
+    );
 
     this.logger.log("Auto Follow plugin ready");
     this.loaded = true;
@@ -473,7 +482,7 @@ class AutoFollowPlugin extends Plugin {
    * @returns {string|null} Current message template or null if disabled
    */
   getCustomInviteMessage() {
-    return this.get("messages.customInviteMessage", "Can I join you?");
+    return this.config.customInviteMessage.get();
   }
 
   /**

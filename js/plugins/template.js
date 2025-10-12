@@ -7,7 +7,7 @@ class TemplatePlugin extends Plugin {
       description:
         "Example plugin demonstrating all available features and lifecycle events",
       author: "Bluscream",
-      version: "2.0.0",
+      version: "2.1.0",
       build: "1728778800",
       dependencies: [
         // Always include plugin.js as first dependency
@@ -44,30 +44,74 @@ class TemplatePlugin extends Plugin {
     // You can still expose specific utility methods if really needed
     // window.customjs.templateMethod = () => this.doSomething();
 
-    // ✅ NEW: Simplified settings with get/set (auto-saved to localStorage)
-    // Use dot notation for categories: "category.key"
-    // Settings are automatically saved when you call this.set()
+    // ===================================================================
+    // SETTINGS: Two ways to define settings
+    // ===================================================================
 
-    // Example: Get settings with defaults
-    const enableFeature = this.get("general.enableFeature", true);
-    const updateInterval = this.get("general.updateInterval", 60000);
-    const username = this.get("general.username", "Guest");
-    const showDesktop = this.get("notifications.showDesktop", false);
-    const soundEnabled = this.get("notifications.soundEnabled", true);
+    // METHOD 1: Simple get/set (recommended for basic usage)
+    // Just use this.get() and this.set() with defaults inline
+    const quickSetting = this.get("quick.value", "default");
+    this.logger.log(`Quick setting: ${quickSetting}`);
 
-    this.logger.log(`⚙️ Feature enabled: ${enableFeature}`);
-    this.logger.log(`⚙️ Update interval: ${updateInterval}ms`);
-    this.logger.log(`⚙️ Username: ${username}`);
-    this.logger.log(`⚙️ Desktop notifications: ${showDesktop}`);
-    this.logger.log(`⚙️ Sound enabled: ${soundEnabled}`);
+    // METHOD 2: PluginSetting instances (recommended when you need metadata)
+    // Define settings in this.config for documentation and type info
 
-    // Example: Set a setting (instantly saved to localStorage)
-    // this.set("general.enableFeature", false);
-    // this.set("general.username", "Bluscream");
+    this.config.enableFeature = this.createSetting({
+      key: "enableFeature",
+      category: "general",
+      name: "Enable Feature",
+      description: "Enable the main feature of this plugin",
+      type: "boolean",
+      defaultValue: true,
+    });
 
-    // Example: Get all settings for this plugin as an object
-    // const allSettings = this.getAllSettings();
-    // this.logger.log("All settings:", allSettings);
+    this.config.updateInterval = this.createSetting({
+      key: "updateInterval",
+      category: "general",
+      name: "Update Interval (ms)",
+      description: "How often to update in milliseconds",
+      type: "number",
+      defaultValue: 60000,
+    });
+
+    this.config.username = this.createSetting({
+      key: "username",
+      category: "general",
+      name: "Username",
+      description: "Your username",
+      type: "string",
+      defaultValue: "Guest",
+    });
+
+    this.config.showDesktop = this.createSetting({
+      key: "showDesktop",
+      category: "notifications",
+      name: "Desktop Notifications",
+      description: "Show desktop notifications",
+      type: "boolean",
+      defaultValue: false,
+    });
+
+    this.config.soundEnabled = this.createSetting({
+      key: "soundEnabled",
+      category: "notifications",
+      name: "Sound Enabled",
+      description: "Play sound for notifications",
+      type: "boolean",
+      defaultValue: true,
+    });
+
+    // Access via PluginSetting
+    this.logger.log(`⚙️ Feature enabled: ${this.config.enableFeature.get()}`);
+    this.logger.log(
+      `⚙️ Update interval: ${this.config.updateInterval.get()}ms`
+    );
+    this.logger.log(`⚙️ Username: ${this.config.username.get()}`);
+    this.logger.log(`⚙️ Is modified? ${this.config.username.isModified()}`);
+
+    // You can also use simple get() for ad-hoc settings
+    const adhocValue = this.get("adhoc.setting", "default");
+    this.logger.log(`Ad-hoc setting: ${adhocValue}`);
 
     // Example: Register a pre-hook to run BEFORE a function
     // this.registerPreHook('AppApi.SendIpc', (args) => {
@@ -213,8 +257,9 @@ class TemplatePlugin extends Plugin {
     this.setConfig("template.lastLogin", Date.now());
 
     // Example: Update plugin settings (instantly saved)
-    this.set("general.username", displayName || "Unknown");
-    this.logger.log(`⚙️ Updated username to: ${this.get("general.username")}`);
+    this.config.username.set(displayName || "Unknown");
+    this.logger.log(`⚙️ Updated username to: ${this.config.username.get()}`);
+    this.logger.log(`⚙️ Is modified? ${this.config.username.isModified()}`);
     // Settings are now instantly saved to localStorage!
     this.logger.log("💾 Setting automatically saved to localStorage");
 
@@ -328,19 +373,15 @@ class TemplatePlugin extends Plugin {
       <p><strong>Events Received:</strong> <span id="template-events">0</span></p>
       <hr>
       <h3>⚙️ Settings</h3>
-      <p><strong>Feature Enabled:</strong> ${this.get(
-        "general.enableFeature",
-        true
-      )}</p>
-      <p><strong>Update Interval:</strong> ${this.get(
-        "general.updateInterval",
-        60000
-      )}ms</p>
-      <p><strong>Username:</strong> ${this.get("general.username", "Guest")}</p>
-      <p><strong>Desktop Notifications:</strong> ${this.get(
-        "notifications.showDesktop",
-        false
-      )}</p>
+      <p><strong>Feature Enabled:</strong> ${this.config.enableFeature.get()} (default: ${
+      this.config.enableFeature.defaultValue
+    })</p>
+      <p><strong>Update Interval:</strong> ${this.config.updateInterval.get()}ms</p>
+      <p><strong>Username:</strong> ${this.config.username.get()} ${
+      this.config.username.isModified() ? "(modified)" : "(default)"
+    }</p>
+      <p><strong>Desktop Notifications:</strong> ${this.config.showDesktop.get()}</p>
+      <p><strong>Sound Enabled:</strong> ${this.config.soundEnabled.get()}</p>
       <hr>
       <button id="template-test-btn" class="el-button el-button--primary">
         🧪 Test Button
@@ -384,8 +425,8 @@ class TemplatePlugin extends Plugin {
       const toggleBtn = container.querySelector("#template-toggle-btn");
       if (toggleBtn) {
         this.registerListener(toggleBtn, "click", () => {
-          const newValue = !this.get("general.enableFeature", true);
-          this.set("general.enableFeature", newValue);
+          const newValue = !this.config.enableFeature.get();
+          this.config.enableFeature.set(newValue);
           this.logger.log(`🔄 Feature toggled: ${newValue}`);
           if (this.utils) {
             this.logger.showSuccess(

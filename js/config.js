@@ -11,15 +11,21 @@
  *
  * Usage in plugins:
  *
- * // Get setting (auto-prepends plugin ID):
+ * // Simple usage (auto-prepends plugin ID):
  * const message = this.get("message", "default value");
- *
- * // Set setting (auto-prepends plugin ID):
  * this.set("message", "new value");
  *
- * // Use dot notation for categories:
- * this.get("general.enabled", true);
- * this.set("general.enabled", false);
+ * // With PluginSetting for metadata:
+ * this.config.myMessage = new PluginSetting({
+ *   key: "message",
+ *   category: "general",
+ *   name: "Custom Message",
+ *   description: "Message to display",
+ *   type: "string",
+ *   defaultValue: "Hello"
+ * });
+ * const message = this.config.myMessage.get();
+ * this.config.myMessage.set("New value");
  *
  * Global API:
  * - window.customjs.configManager.get(key, defaultValue) - Get value from localStorage
@@ -28,9 +34,128 @@
  * - window.customjs.configManager.clear(prefix) - Clear all keys with prefix
  */
 
+// ============================================================================
+// PLUGIN SETTING CLASS
+// ============================================================================
+
+/**
+ * PluginSetting - Metadata wrapper for plugin settings
+ * Stores metadata and provides get/set methods that use ConfigManager
+ */
+class PluginSetting {
+  /**
+   * Create a new plugin setting
+   * @param {object} options - Setting configuration
+   * @param {string} options.key - Setting key
+   * @param {string} options.category - Category (e.g., "general", "notifications")
+   * @param {string} options.name - Display name
+   * @param {string} options.description - Description text
+   * @param {string} options.type - Type (string, number, boolean, object, array)
+   * @param {any} options.defaultValue - Default value
+   * @param {Plugin} options.plugin - Plugin instance (required for get/set)
+   */
+  constructor(options = {}) {
+    this.key = options.key || "unknown";
+    this.category = options.category || "";
+    this.name = options.name || this.key;
+    this.description = options.description || "";
+    this.type = options.type || "string";
+    this.defaultValue = options.defaultValue;
+    this.plugin = options.plugin;
+
+    if (!this.plugin) {
+      console.warn(
+        "[PluginSetting] No plugin instance provided - get/set will not work"
+      );
+    }
+  }
+
+  /**
+   * Get the full storage key (category.key format)
+   * @returns {string} Full key for use with ConfigManager
+   */
+  toKey() {
+    return this.category ? `${this.category}.${this.key}` : this.key;
+  }
+
+  /**
+   * Get the current value from localStorage
+   * @returns {any} Current value or default
+   */
+  get() {
+    if (!this.plugin) {
+      console.error("[PluginSetting] Cannot get() - no plugin instance");
+      return this.defaultValue;
+    }
+    return this.plugin.get(this.toKey(), this.defaultValue);
+  }
+
+  /**
+   * Set the value in localStorage
+   * @param {any} value - Value to set
+   * @returns {boolean} Success status
+   */
+  set(value) {
+    if (!this.plugin) {
+      console.error("[PluginSetting] Cannot set() - no plugin instance");
+      return false;
+    }
+    return this.plugin.set(this.toKey(), value);
+  }
+
+  /**
+   * Check if this setting has been modified from default
+   * @returns {boolean} True if modified
+   */
+  isModified() {
+    const current = this.get();
+    return JSON.stringify(current) !== JSON.stringify(this.defaultValue);
+  }
+
+  /**
+   * Reset to default value
+   */
+  reset() {
+    return this.set(this.defaultValue);
+  }
+
+  /**
+   * Delete this setting from storage
+   */
+  delete() {
+    if (!this.plugin) {
+      console.error("[PluginSetting] Cannot delete() - no plugin instance");
+      return false;
+    }
+    return this.plugin.deleteSetting(this.toKey());
+  }
+
+  /**
+   * Get metadata about this setting
+   * @returns {object} Setting metadata
+   */
+  getMetadata() {
+    return {
+      key: this.key,
+      category: this.category,
+      fullKey: this.toKey(),
+      name: this.name,
+      description: this.description,
+      type: this.type,
+      defaultValue: this.defaultValue,
+      currentValue: this.get(),
+      isModified: this.isModified(),
+    };
+  }
+}
+
+// ============================================================================
+// CONFIG MANAGER
+// ============================================================================
+
 class ConfigManager {
   constructor() {
-    this.version = "3.1.0";
+    this.version = "3.2.0";
     this.build = "1728778800";
 
     // localStorage key prefix
@@ -330,7 +455,7 @@ class ConfigModule extends window.customjs.CoreModule {
       name: "ConfigManager",
       description: "Configuration management system for VRCX Custom",
       author: "Bluscream",
-      version: "3.1.0",
+      version: "3.2.0",
       build: "1728778800",
     });
   }
@@ -340,11 +465,14 @@ class ConfigModule extends window.customjs.CoreModule {
 
     // Export classes globally
     window.customjs = window.customjs || {};
+    window.customjs.PluginSetting = PluginSetting;
     window.customjs.ConfigManager = ConfigManager;
     window.customjs.configManager = new ConfigManager();
 
     this.loaded = true;
-    this.log("✓ ConfigManager class loaded and instance created");
+    this.log(
+      "✓ ConfigManager and PluginSetting classes loaded and instance created"
+    );
   }
 
   async start() {
