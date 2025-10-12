@@ -332,13 +332,45 @@ if (typeof window !== "undefined") {
 // BOOTSTRAP
 // ============================================================================
 
-// Wait for DOM ready, then instantiate PluginManager from plugin.js
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", () => {
+// Bootstrap function: Load core modules, then start plugin system
+async function bootstrapPluginSystem() {
+  try {
+    // Step 1: Use ModuleLoader to load core modules (including plugin.js)
+    const moduleLoader = new window.customjs.ModuleLoader();
+
+    console.log(
+      `%c[VRCX Custom] %cLoading ${moduleLoader.coreModules.length} core modules...`,
+      "font-weight: bold; color: #00aaff",
+      "color: #888"
+    );
+
+    await moduleLoader.loadModules(moduleLoader.coreModules, 3000);
+
+    // Step 2: Verify PluginManager is now available (loaded from plugin.js)
+    if (!window.customjs.PluginManager) {
+      throw new Error("PluginManager not available after loading core modules");
+    }
+
+    console.log(
+      `%c[VRCX Custom] %cCore modules loaded, initializing plugin system...`,
+      "font-weight: bold; color: #00aaff",
+      "color: #888"
+    );
+
+    // Step 3: Instantiate PluginManager and load plugins
     const manager = new window.customjs.PluginManager();
-    manager.loadAllPlugins();
-  });
+    await manager.loadAllPlugins();
+  } catch (error) {
+    console.error("[VRCX Custom] Bootstrap failed:", error);
+    alert(
+      `VRCX Custom: Failed to initialize plugin system.\n\n${error.message}\n\nCheck console for details.`
+    );
+  }
+}
+
+// Wait for DOM ready, then bootstrap
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", bootstrapPluginSystem);
 } else {
-  const manager = new window.customjs.PluginManager();
-  manager.loadAllPlugins();
+  bootstrapPluginSystem();
 }

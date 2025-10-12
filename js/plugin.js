@@ -1221,25 +1221,7 @@ class PluginManager {
   }
 
   async loadAllPlugins() {
-    // Phase 1: Load core modules first with retry logic and 3s delay
-    const moduleLoader = new window.customjs.ModuleLoader();
-
-    console.log(
-      `%c[CJS|PluginManager] %cLoading ${moduleLoader.coreModules.length} core modules (with 3s delay)...`,
-      "font-weight: bold; color: #00aaff",
-      "color: #888"
-    );
-
-    try {
-      await moduleLoader.loadModules(moduleLoader.coreModules, 3000); // 3 second delay
-    } catch (error) {
-      console.error(
-        "[CJS|PluginManager] ✗ Critical error loading core modules:",
-        error
-      );
-      return; // Stop entire loading process
-    }
-
+    // Core modules are already loaded by bootstrap in custom.js
     // Ensure Logger exists (provide fallback if loading failed)
     if (!window.customjs.Logger) {
       console.warn(
@@ -1248,13 +1230,7 @@ class PluginManager {
       this.setupFallbackLogger();
     }
 
-    console.log(
-      `%c[CJS|PluginManager] %cCore modules loaded`,
-      "font-weight: bold; color: #00aaff",
-      "color: #888"
-    );
-
-    // Phase 2: Initialize core modules
+    // Phase 1: Initialize core modules
     console.log(
       `%c[CJS|PluginManager] %cInitializing core modules...`,
       "font-weight: bold; color: #00aaff",
@@ -1281,7 +1257,7 @@ class PluginManager {
       }
     }
 
-    // Phase 3: Initialize ConfigManager (if exists)
+    // Phase 2: Initialize ConfigManager (if exists)
     if (window.customjs?.configManager) {
       console.log(
         `%c[CJS|PluginManager] %cInitializing ConfigManager...`,
@@ -1299,7 +1275,7 @@ class PluginManager {
       }
     }
 
-    // Phase 4: Get plugin list from config (merge with defaults)
+    // Phase 3: Get plugin list from config (merge with defaults)
     const pluginConfig = this.getPluginConfig();
     const enabledPlugins = Object.entries(pluginConfig)
       .filter(([url, enabled]) => enabled)
@@ -1318,7 +1294,7 @@ class PluginManager {
       });
     }
 
-    // Phase 5: Load enabled plugins using PluginLoader
+    // Phase 4: Load enabled plugins using PluginLoader
     if (window.customjs?.PluginLoader) {
       const pluginLoader = new window.customjs.PluginLoader(this);
 
@@ -1342,7 +1318,7 @@ class PluginManager {
       );
     }
 
-    // Phase 6: Call load() on all plugins
+    // Phase 5: Call load() on all plugins
     console.log(
       `%c[CJS|PluginManager] %cCalling load() on ${window.customjs.plugins.length} plugins...`,
       "font-weight: bold; color: #00aaff",
@@ -1359,13 +1335,13 @@ class PluginManager {
       }
     }
 
-    // Phase 7: Call start() on all plugins
+    // Phase 6: Call start() on all plugins
     await this.startAllPlugins();
 
-    // Phase 8: Start login monitoring
+    // Phase 7: Start login monitoring
     this.startLoginMonitoring();
 
-    // Phase 9: Save plugin config to disk
+    // Phase 8: Save plugin config to disk
     this.savePluginConfig(pluginConfig);
     if (window.customjs?.configManager) {
       await window.customjs.configManager.save();
