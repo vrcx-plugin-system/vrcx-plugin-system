@@ -30,7 +30,6 @@ class ApiHelpersPlugin extends Plugin {
     // No login-specific logic needed for API helpers plugin
   }
 
-
   API = {
     /**
      * Mark notification as seen
@@ -74,6 +73,28 @@ class ApiHelpersPlugin extends Plugin {
     },
 
     /**
+     * Send invite request to user (request to join them)
+     * @param {object} params - Invite request parameters
+     * @param {string} receiverUserId - User ID to request invite from
+     * @returns {Promise} API response
+     */
+    sendInviteRequest: function (params, receiverUserId) {
+      return window.request.notificationRequest.sendRequestInvite(
+        params,
+        receiverUserId
+      );
+    },
+
+    /**
+     * Get user by ID
+     * @param {string} userId - User ID to fetch
+     * @returns {Promise} API response with user data
+     */
+    getUser: function (userId) {
+      return window.request.userRequest.getUser({ userId });
+    },
+
+    /**
      * Save current user data
      * @param {object} params - User parameters to save
      * @returns {Promise} API response
@@ -96,7 +117,6 @@ class ApiHelpersPlugin extends Plugin {
       });
     },
   };
-
 
   LocationManager = {
     /**
