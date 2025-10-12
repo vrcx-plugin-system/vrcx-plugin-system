@@ -131,8 +131,8 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "1.6.0";
-    this.build = "1728781200";
+    this.version = "1.6.1";
+    this.build = "1760486400";
 
     // Store setting definitions and categories
     this.categories = new Map(); // pluginId -> Map(categoryKey -> {name, description})
@@ -161,6 +161,7 @@ class ConfigManager {
   async init() {
     try {
       await this.load();
+      this._setupProxies();
       console.log("[CJS|ConfigManager] ✓ Initialized and loaded config");
     } catch (error) {
       console.error("[CJS|ConfigManager] Error initializing:", error);
@@ -215,11 +216,20 @@ class ConfigManager {
 
     this.generalSettings.get(categoryKey).set(key, setting);
 
-    // Initialize in global config
+    // Initialize in global config and set up proxy
+    window.customjs.config = window.customjs.config || {};
     if (!window.customjs.config[categoryKey]) {
       window.customjs.config[categoryKey] = {};
     }
-    window.customjs.config[categoryKey][key] = setting;
+
+    Object.defineProperty(window.customjs.config[categoryKey], key, {
+      get: () => setting.value,
+      set: (newValue) => {
+        setting.value = newValue;
+      },
+      enumerable: true,
+      configurable: true,
+    });
 
     console.log(
       `[CJS|ConfigManager] Registered general setting: ${categoryKey}.${key} (${type})`
@@ -315,6 +325,27 @@ class ConfigManager {
     // Store reference to the PluginSetting object (not just the value)
     // This allows access to metadata like .defaultValue, .isModified(), etc.
     pluginInstance.config[categoryKey][key] = setting;
+
+    // Set up global proxy immediately
+    window.customjs.config = window.customjs.config || {};
+    window.customjs.config.settings = window.customjs.config.settings || {};
+    window.customjs.config.settings[pluginId] =
+      window.customjs.config.settings[pluginId] || {};
+    window.customjs.config.settings[pluginId][categoryKey] =
+      window.customjs.config.settings[pluginId][categoryKey] || {};
+
+    Object.defineProperty(
+      window.customjs.config.settings[pluginId][categoryKey],
+      key,
+      {
+        get: () => setting.value,
+        set: (newValue) => {
+          setting.value = newValue;
+        },
+        enumerable: true,
+        configurable: true,
+      }
+    );
 
     console.log(
       `[CJS|ConfigManager] Registered setting: ${pluginId}.${categoryKey}.${key} (${type})`
