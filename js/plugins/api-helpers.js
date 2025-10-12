@@ -1,20 +1,19 @@
 // ============================================================================
 // API HELPERS PLUGIN
-// Version: 3.0.0
-// Build: 1728668400
+// Version: 4.0.0
+// Build: 1744630000
 // ============================================================================
 
 class ApiHelpersPlugin extends Plugin {
   constructor() {
     super({
       name: "API Helpers Plugin",
-      description:
-        "API wrapper functions, logging, and location management for VRCX",
+      description: "API wrapper functions and location management for VRCX",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1728668400",
+      version: "4.0.0",
+      build: "1744630000",
       dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/Plugin.js",
+        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
       ],
     });
@@ -104,203 +103,6 @@ class ApiHelpersPlugin extends Plugin {
         bio: bio ?? currentUser?.bio,
         bioLinks: bioLinks ?? currentUser?.bioLinks,
       });
-    },
-  };
-
-  // ============================================================================
-  // LOGGING & NOTIFICATIONS
-  // ============================================================================
-
-  Logger = {
-    // Default options object with all logging methods enabled
-    defaultOptions: {
-      console: true,
-      vrcx: {
-        notify: true,
-        message: true,
-      },
-      event: {
-        noty: true,
-        external: true,
-      },
-      desktop: true,
-      xsoverlay: true,
-      ovrtoolkit: true,
-      webhook: true,
-    },
-
-    /**
-     * Log message to various outputs
-     * @param {string} msg - Message to log
-     * @param {object} options - Logging options (which outputs to use)
-     * @param {string} level - Log level (info, warn, error)
-     */
-    log: function (msg, options = {}, level = "info") {
-      // Merge with default options, assuming false for missing properties
-      const opts = {
-        console: options.console ?? false,
-        vrcx: {
-          notify: options.vrcx?.notify ?? false,
-          message: options.vrcx?.message ?? false,
-        },
-        event: {
-          noty: options.event?.noty ?? false,
-          external: options.event?.external ?? false,
-        },
-        desktop: options.desktop ?? false,
-        xsoverlay: options.xsoverlay ?? false,
-        ovrtoolkit: options.ovrtoolkit ?? false,
-        webhook: options.webhook ?? false,
-      };
-
-      // Add timestamp to longer messages
-      const timestamp = new Date().toISOString();
-      const timestampedMsg = msg.length > 50 ? `[${timestamp}] ${msg}` : msg;
-
-      // Console logging
-      if (opts.console) {
-        // Intentional console output - this IS the logger
-        if (typeof console[level] === "function") {
-          console[level](timestampedMsg); // eslint-disable-line no-console
-        } else {
-          console.log(timestampedMsg); // eslint-disable-line no-console
-        }
-      }
-
-      // VRCX event logging via IPC
-      if (opts.event.noty && window.AppApi?.SendIpc) {
-        try {
-          window.AppApi.SendIpc("Noty", timestampedMsg);
-        } catch (error) {
-          console.warn("Failed to send Noty event:", error); // eslint-disable-line no-console - Error fallback
-        }
-      }
-
-      if (
-        opts.event.external &&
-        window.$pinia?.user &&
-        window.AppApi?.SendIpc
-      ) {
-        try {
-          const userId = window.$pinia.user.currentUser?.id || "";
-          window.AppApi.SendIpc("External", `${userId}:${timestampedMsg}`);
-        } catch (error) {
-          console.warn("Failed to send External event:", error); // eslint-disable-line no-console - Error fallback
-        }
-      }
-
-      // Desktop notifications
-      if (opts.desktop && window.AppApi?.DesktopNotification) {
-        setTimeout(async () => {
-          try {
-            await window.AppApi.DesktopNotification(
-              "VRCX Addon",
-              timestampedMsg
-            );
-          } catch (error) {
-            console.error("Error sending desktop notification:", error); // eslint-disable-line no-console - Error fallback
-          }
-        }, 0);
-      }
-
-      // XSOverlay notifications
-      if (opts.xsoverlay && window.AppApi?.XSNotification) {
-        setTimeout(async () => {
-          try {
-            await window.AppApi.XSNotification(
-              "VRCX Addon",
-              timestampedMsg,
-              5000,
-              1.0,
-              ""
-            );
-          } catch (error) {
-            console.error("Error sending XSOverlay notification:", error); // eslint-disable-line no-console - Error fallback
-          }
-        }, 0);
-      }
-
-      // OVRToolkit notifications
-      if (opts.ovrtoolkit && window.AppApi?.OVRTNotification) {
-        setTimeout(async () => {
-          try {
-            await window.AppApi.OVRTNotification(
-              true,
-              true,
-              "VRCX Addon",
-              timestampedMsg,
-              5000,
-              1.0,
-              null
-            );
-          } catch (error) {
-            console.error("Error sending OVRToolkit notification:", error); // eslint-disable-line no-console - Error fallback
-          }
-        }, 0);
-      }
-
-      // VRCX UI notifications
-      if (opts.vrcx.notify && window.$app?.$notify) {
-        try {
-          const notifyMethod = window.$app.$notify[level];
-          if (typeof notifyMethod === "function") {
-            notifyMethod({
-              title: "VRCX Addon",
-              message: msg,
-              type: level,
-            });
-          } else {
-            window.$app.$notify.info({
-              title: "VRCX Addon",
-              message: msg,
-              type: "info",
-            });
-          }
-        } catch (error) {
-          console.error("Error sending VRCX notify:", error); // eslint-disable-line no-console - Error fallback
-        }
-      }
-
-      // VRCX message toasts
-      if (opts.vrcx.message && window.$app?.$message) {
-        try {
-          const messageMethod = window.$app.$message[level];
-          if (typeof messageMethod === "function") {
-            messageMethod(msg);
-          } else {
-            window.$app.$message.info(msg);
-          }
-        } catch (error) {
-          console.error("Error sending VRCX message:", error); // eslint-disable-line no-console - Error fallback
-        }
-      }
-
-      // Webhook notifications
-      if (opts.webhook) {
-        setTimeout(async () => {
-          try {
-            const webhookUrl = window.customjs?.config?.webhook;
-            if (webhookUrl) {
-              const payload = {
-                message: msg,
-                level: level,
-                timestamp: timestamp,
-                source: "VRCX-Addon",
-              };
-
-              await fetch(webhookUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify(payload),
-              });
-            }
-          } catch (error) {
-            console.error("Error sending webhook notification:", error); // eslint-disable-line no-console - Error fallback
-          }
-        }, 0);
-      }
     },
   };
 

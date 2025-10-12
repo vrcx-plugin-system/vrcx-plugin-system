@@ -25,8 +25,8 @@ class TemplatePlugin extends Plugin {
       version: "1.0.0",
       build: "1728668400",
       dependencies: [
-        // Always include Plugin.js as first dependency
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/Plugin.js",
+        // Always include plugin.js as first dependency
+        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         // List URLs of other plugins this depends on (optional)
         // "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
       ],

@@ -1,7 +1,7 @@
 // ============================================================================
 // MANAGERS PLUGIN
-// Version: 3.0.0
-// Build: 1728668400
+// Version: 3.1.0
+// Build: 1744630000
 // ============================================================================
 
 /**
@@ -16,10 +16,10 @@ class ManagersPlugin extends Plugin {
       description:
         "Management classes for instance monitoring, notifications, and debug tools",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1728668400",
+      version: "3.1.0",
+      build: "1744630000",
       dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/Plugin.js",
+        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
       ],
@@ -81,15 +81,12 @@ class ManagersPlugin extends Plugin {
                 instanceArgs.json.displayName ?? instanceArgs.json.name
               } (${invisiblePlayers} invisible)`;
 
-              const apiHelpers =
-                window.customjs.pluginManager.getPlugin("api-helpers");
-              if (apiHelpers?.logger) {
-                apiHelpers.logger.log(
-                  `Found ${invisiblePlayers} potentially invisible players in instance "${instanceArgs.json.instanceId}" in world "${instanceArgs.json.worldName}"`,
-                  { console: true, vrcx: { notify: true } },
-                  "warning"
-                );
-              }
+              // Use the plugin's own logger
+              this.logger.log(
+                `Found ${invisiblePlayers} potentially invisible players in instance "${instanceArgs.json.instanceId}" in world "${instanceArgs.json.worldName}"`,
+                { console: true, vrcx: { notify: true } },
+                "warning"
+              );
             }
           });
         }
@@ -184,15 +181,12 @@ class ManagersPlugin extends Plugin {
 
       if (playerTag) {
         const message = `${playerName} joined (${playerTag.tag})`;
-        const apiHelpers =
-          window.customjs.pluginManager.getPlugin("api-helpers");
-        if (apiHelpers?.logger) {
-          apiHelpers.logger.log(
-            message,
-            { console: true, desktop: true, xsoverlay: true },
-            "info"
-          );
-        }
+        // Use the plugin's own logger
+        this.logger.log(
+          message,
+          { console: true, desktop: true, xsoverlay: true },
+          "info"
+        );
       }
     } catch (error) {
       this.error("Error handling tagged player join:", error);

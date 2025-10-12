@@ -1,7 +1,7 @@
 // ============================================================================
 // TAG MANAGER PLUGIN
-// Version: 2.0.0
-// Build: 1728668400
+// Version: 2.1.0
+// Build: 1744630000
 // ============================================================================
 
 /**
@@ -15,10 +15,10 @@ class TagManagerPlugin extends Plugin {
       name: "Tag Manager",
       description: "Custom user tags management with URL-based loading",
       author: "Bluscream",
-      version: "2.0.0",
-      build: "1728668400",
+      version: "2.1.0",
+      build: "1744630000",
       dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/Plugin.js",
+        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/api-helpers.js",
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
@@ -67,13 +67,12 @@ class TagManagerPlugin extends Plugin {
         const timestamp =
           this.utils?.getTimestamp() || new Date().toISOString();
         const msg = `VRCX Custom Tags loaded at ${timestamp}`;
-        if (this.apiHelpers?.logger) {
-          this.apiHelpers.logger.log(
-            msg,
-            { console: true, vrcx: { message: true } },
-            "info"
-          );
-        }
+        // Use the plugin's own logger
+        this.logger.log(
+          msg,
+          { console: true, vrcx: { message: true } },
+          "info"
+        );
       } catch (error) {
         this.log(`Tags loaded at ${new Date().toISOString()}`);
       }

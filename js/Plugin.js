@@ -1,7 +1,7 @@
 // ============================================================================
 // PLUGIN BASE CLASS
-// Version: 2.1.0
-// Build: 1728668400
+// Version: 2.2.0
+// Build: 1744630000
 // ============================================================================
 
 /**
@@ -45,6 +45,9 @@ class Plugin {
     this.enabled = false;
     this.loaded = false;
     this.started = false;
+
+    // Create personal logger instance for this plugin
+    this.logger = new window.customjs.Logger(this.metadata.name);
 
     // Resource tracking for automatic cleanup
     this.resources = {
@@ -353,16 +356,40 @@ class Plugin {
   // UTILITY METHODS
   // ============================================================================
 
+  /**
+   * Log info message (uses personal logger instance)
+   * @param {string} message - Message to log
+   * @param {...any} args - Additional arguments (will be logged separately)
+   */
   log(message, ...args) {
-    console.log(`[${this.metadata.name}]`, message, ...args);
+    this.logger.logInfo(message);
+    if (args.length > 0) {
+      console.log(`[${this.metadata.name}]`, ...args); // eslint-disable-line no-console
+    }
   }
 
+  /**
+   * Log warning message (uses personal logger instance)
+   * @param {string} message - Message to log
+   * @param {...any} args - Additional arguments (will be logged separately)
+   */
   warn(message, ...args) {
-    console.warn(`[${this.metadata.name}]`, message, ...args);
+    this.logger.logWarn(message);
+    if (args.length > 0) {
+      console.warn(`[${this.metadata.name}]`, ...args); // eslint-disable-line no-console
+    }
   }
 
+  /**
+   * Log error message (uses personal logger instance)
+   * @param {string} message - Message to log
+   * @param {...any} args - Additional arguments (will be logged separately)
+   */
   error(message, ...args) {
-    console.error(`[${this.metadata.name}]`, message, ...args);
+    this.logger.logError(message);
+    if (args.length > 0) {
+      console.error(`[${this.metadata.name}]`, ...args); // eslint-disable-line no-console
+    }
   }
 
   /**

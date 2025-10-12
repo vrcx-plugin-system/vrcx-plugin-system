@@ -14,7 +14,7 @@ class UtilsPlugin extends Plugin {
       version: "2.0.0",
       build: "1728668400",
       dependencies: [
-        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/Plugin.js",
+        "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
       ],
     });
 

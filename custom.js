@@ -1,12 +1,12 @@
 // ============================================================================
-// VRCX CUSTOM PLUGINS SYSTEM v2.1.0
-// Build: 1728668400
+// VRCX CUSTOM PLUGINS SYSTEM v2.2.0
+// Build: 1744630000
 // ============================================================================
 
 // Initialize global customjs namespace - ALL custom JS code goes under this object
 window.customjs = {
-  version: "2.1.0",
-  build: "1728668400",
+  version: "2.2.0",
+  build: "1744630000",
   config: {}, // User configuration (replaces old USER_CONFIG)
   plugins: [], // Array of Plugin instances
   pluginManager: null, // PluginManager instance (handles both management & loading)
@@ -86,8 +86,10 @@ Oculus ID: {oculusId}`,
 
 window.customjs.pluginConfig = {
   plugins: [
-    // Base Plugin class must be loaded first
-    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/Plugin.js",
+    // Logger must be loaded first (before Plugin base class)
+    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/logger.js",
+    // Base Plugin class must be loaded second
+    "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugin.js",
     // Core plugins
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/config.js",
     "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/utils.js",
@@ -525,7 +527,7 @@ class PluginManager {
       const pluginCountBefore = window.customjs.plugins.length;
 
       // Check if this is the base Plugin class
-      const isBaseClass = pluginUrl.includes("/Plugin.js");
+      const isBaseClass = pluginUrl.includes("/plugin.js");
 
       // Wrap in IIFE to isolate scope, but don't auto-execute plugin initialization
       const wrappedCode = `(function() { 
@@ -675,8 +677,8 @@ class PluginManager {
     const results = { success: [], failed: [] };
 
     for (const url of urls) {
-      // Skip Plugin.js base class
-      if (url.endsWith("/Plugin.js")) continue;
+      // Skip plugin.js base class
+      if (url.endsWith("/plugin.js")) continue;
 
       try {
         await this.reloadPlugin(url);
