@@ -5,8 +5,8 @@ class PluginManagerUIPlugin extends Plugin {
       description:
         "Visual UI for managing VRCX custom plugins - Equicord inspired",
       author: "Bluscream",
-      version: "6.8.1",
-      build: "1760442573",
+      version: "6.8.2",
+      build: "1760443892",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -1560,13 +1560,18 @@ class PluginManagerUIPlugin extends Plugin {
       e.stopPropagation();
       
       try {
-        const newValue = !plugin.settings.store[key];
+        // Read current state from checkbox instead of store to avoid Proxy issues
+        const newValue = !checkbox.checked;
+        
+        // Update the store
         plugin.settings.store[key] = newValue;
+        
+        // Update UI elements
         checkbox.checked = newValue;
         core.style.background = newValue ? "#409eff" : "#dcdfe6";
         action.style.left = newValue ? "21px" : "1px";
         
-        this.logger.log(`Setting ${key} changed to ${newValue}`);
+        this.logger.log(`Setting ${key} changed to ${newValue} (old: ${!newValue})`);
       } catch (error) {
         this.logger.error(`Error toggling ${key}:`, error);
       }
