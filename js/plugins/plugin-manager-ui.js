@@ -1557,7 +1557,6 @@ class PluginManagerUIPlugin extends Plugin {
     label.appendChild(core);
 
     this.registerListener(label, "click", (e) => {
-      e.preventDefault();
       e.stopPropagation();
       
       try {
