@@ -314,6 +314,26 @@ Update VRCX Plugin System - $timestamp
 # Commit and push from the project directory
 $hasChanges = Commit-AndPushChanges -RepositoryPath $ProjectDir -CommitMessage $commitMessage -BranchName $Branch
 
+# Commit changes from the plugins directory
+Write-Host ""
+Write-Host "--- Plugins Repository ---" -ForegroundColor Cyan
+
+$PluginsDir = Join-Path $PluginSystemRoot "plugins"
+if (Test-Path $PluginsDir) {
+    $pluginsCommitMessage = @"
+Update plugins - $timestamp
+"@
+    
+    $hasPluginChanges = Commit-AndPushChanges -RepositoryPath $PluginsDir -CommitMessage $pluginsCommitMessage -BranchName $Branch
+    
+    if ($hasPluginChanges) {
+        Write-Host "✓ Plugins repository updated" -ForegroundColor Green
+    }
+}
+else {
+    Write-Host "⚠ Plugins directory not found: $PluginsDir" -ForegroundColor Yellow
+}
+
 # Create GitHub Release if gh CLI is available and there were changes
 if ($ghAvailable -and $hasChanges) {
     Write-Host ""
