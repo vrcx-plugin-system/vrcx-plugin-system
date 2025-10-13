@@ -477,11 +477,14 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "4.0.0";
-    this.build = "1728847200";
+    this.version = "4.1.1";
+    this.build = "1729027200";
 
     // localStorage key prefix
     this.keyPrefix = "customjs";
+
+    // VRChat config path (fallback)
+    this.vrchatConfigPath = "%LOCALAPPDATA%\\VRChat\\VRChat\\config.json";
 
     console.log(
       `[CJS|ConfigManager] ConfigManager v${this.version} (${this.build}) initialized - Equicord-inspired settings system`
@@ -761,6 +764,191 @@ class ConfigManager {
       data: data,
     };
   }
+
+  /**
+   * Export all settings to VRChat config.json
+   * Stores under vrcx.customjs path
+   * @returns {Promise<boolean>} Success status
+   */
+  async exportToVRChatConfig() {
+    try {
+      console.log("[CJS|ConfigManager] Exporting to VRChat config.json...");
+
+      // Get all customjs settings from localStorage
+      const customjsData = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(this.keyPrefix + ".")) {
+          const shortKey = key.substring(this.keyPrefix.length + 1);
+          customjsData[shortKey] = this.get(shortKey);
+        }
+      }
+
+      // Build nested structure for vrcx.customjs
+      const vrcxCustomjs = {
+        loader: {
+          plugins: customjsData.plugins || {},
+          loadTimeout: customjsData.loadTimeout || 10000,
+        },
+        settings: {},
+      };
+
+      // Organize plugin settings
+      Object.keys(customjsData).forEach((key) => {
+        if (key === "plugins" || key === "loadTimeout") {
+          return; // Already handled
+        }
+
+        // Check if it's a plugin setting (has a dot for plugin.category.setting)
+        const parts = key.split(".");
+        if (parts.length >= 2) {
+          const pluginId = parts[0];
+          const settingPath = parts.slice(1).join(".");
+
+          if (!vrcxCustomjs.settings[pluginId]) {
+            vrcxCustomjs.settings[pluginId] = {};
+          }
+
+          // Build nested structure
+          const settingParts = settingPath.split(".");
+          let current = vrcxCustomjs.settings[pluginId];
+
+          for (let i = 0; i < settingParts.length - 1; i++) {
+            const part = settingParts[i];
+            if (!current[part]) {
+              current[part] = {};
+            }
+            current = current[part];
+          }
+
+          current[settingParts[settingParts.length - 1]] = customjsData[key];
+        }
+      });
+
+      // Read current VRChat config
+      const currentConfigJson = await window.AppApi.ReadConfigFileSafe();
+      const currentConfig = currentConfigJson
+        ? JSON.parse(currentConfigJson)
+        : {};
+
+      // Merge with vrcx.customjs
+      if (!currentConfig.vrcx) {
+        currentConfig.vrcx = {};
+      }
+      currentConfig.vrcx.customjs = vrcxCustomjs;
+
+      // Save back to VRChat config
+      await window.AppApi.WriteConfigFile(
+        JSON.stringify(currentConfig, null, 2)
+      );
+
+      console.log(
+        `[CJS|ConfigManager] ✓ Exported ${
+          Object.keys(customjsData).length
+        } settings to VRChat config.json`
+      );
+      return {
+        success: true,
+        settingsCount: Object.keys(customjsData).length,
+        filePath: this.vrchatConfigPath,
+      };
+    } catch (error) {
+      console.error(
+        "[CJS|ConfigManager] Error exporting to VRChat config:",
+        error
+      );
+      return { success: false, settingsCount: 0, filePath: null };
+    }
+  }
+
+  /**
+   * Import settings from VRChat config.json
+   * Reads from vrcx.customjs path
+   * @returns {Promise<boolean>} Success status
+   */
+  async importFromVRChatConfig() {
+    try {
+      console.log("[CJS|ConfigManager] Importing from VRChat config.json...");
+
+      // Read VRChat config
+      const configJson = await window.AppApi.ReadConfigFileSafe();
+      if (!configJson) {
+        console.warn("[CJS|ConfigManager] VRChat config.json is empty");
+        return { success: false, importCount: 0 };
+      }
+
+      const config = JSON.parse(configJson);
+      const vrcxCustomjs = config?.vrcx?.customjs;
+
+      if (!vrcxCustomjs) {
+        console.warn(
+          "[CJS|ConfigManager] No vrcx.customjs section in VRChat config"
+        );
+        return { success: true, importCount: 0 };
+      }
+
+      let importCount = 0;
+
+      // Import loader settings
+      if (vrcxCustomjs.loader) {
+        if (vrcxCustomjs.loader.plugins) {
+          this.set("plugins", vrcxCustomjs.loader.plugins);
+          importCount++;
+        }
+        if (vrcxCustomjs.loader.loadTimeout) {
+          this.set("loadTimeout", vrcxCustomjs.loader.loadTimeout);
+          importCount++;
+        }
+      }
+
+      // Import plugin settings
+      if (vrcxCustomjs.settings) {
+        const flattenSettings = (obj, prefix = "") => {
+          for (const [key, value] of Object.entries(obj)) {
+            const fullKey = prefix ? `${prefix}.${key}` : key;
+
+            if (
+              value &&
+              typeof value === "object" &&
+              !Array.isArray(value) &&
+              Object.keys(value).length > 0
+            ) {
+              // Check if all values are primitives (leaf node)
+              const allPrimitives = Object.values(value).every(
+                (v) => v === null || typeof v !== "object" || Array.isArray(v)
+              );
+
+              if (allPrimitives) {
+                // This is a leaf object, store it as-is
+                this.set(fullKey, value);
+                importCount++;
+              } else {
+                // Recurse deeper
+                flattenSettings(value, fullKey);
+              }
+            } else {
+              // Primitive value, store it
+              this.set(fullKey, value);
+              importCount++;
+            }
+          }
+        };
+
+        flattenSettings(vrcxCustomjs.settings);
+      }
+
+      console.log(
+        `[CJS|ConfigManager] ✓ Imported ${importCount} settings from VRChat config.json`
+      );
+      return { success: true, importCount: importCount };
+    } catch (error) {
+      console.error(
+        "[CJS|ConfigManager] Error importing from VRChat config:",
+        error
+      );
+      return { success: false, importCount: 0 };
+    }
+  }
 }
 
 // ============================================================================
@@ -778,8 +966,8 @@ class ConfigModule extends window.customjs.CoreModule {
       description:
         "Equicord-inspired configuration management system for VRCX Custom",
       author: "Bluscream",
-      version: "4.0.0",
-      build: "1728847200",
+      version: "4.1.1",
+      build: "1729027200",
     });
   }
 

@@ -5,8 +5,8 @@ class PluginManagerUIPlugin extends Plugin {
       description:
         "Visual UI for managing VRCX custom plugins - Equicord inspired",
       author: "Bluscream",
-      version: "6.0.0",
-      build: "1734091200",
+      version: "6.2.0",
+      build: "1729027200",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -121,6 +121,10 @@ class PluginManagerUIPlugin extends Plugin {
       // Stats cards section
       const statsSection = this.createStatsSection();
       container.appendChild(statsSection);
+
+      // Config sync section (import/export)
+      const syncSection = this.createConfigSyncSection();
+      container.appendChild(syncSection);
 
       // Load plugin section
       const loadSection = this.createLoadPluginSection();
@@ -239,6 +243,194 @@ class PluginManagerUIPlugin extends Plugin {
     });
 
     return card;
+  }
+
+  createConfigSyncSection() {
+    const section = document.createElement("div");
+    section.style.cssText = "margin-bottom: 20px;";
+
+    // Title
+    const title = document.createElement("h5");
+    title.style.cssText =
+      "margin: 0 0 12px 0; font-size: 16px; font-weight: 600;";
+    title.textContent = "⚙️ Config Sync";
+    section.appendChild(title);
+
+    // Description
+    const description = document.createElement("p");
+    description.style.cssText =
+      "margin: 0 0 12px 0; font-size: 14px; color: #6c757d;";
+    description.textContent =
+      "Sync settings between browser localStorage and VRChat config.json (vrcx.customjs path)";
+    section.appendChild(description);
+
+    // Buttons container
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.style.cssText = "display: flex; gap: 12px;";
+
+    // Import button
+    const importBtn = document.createElement("button");
+    importBtn.className = "el-button el-button--primary";
+    importBtn.innerHTML =
+      '<i class="ri-download-cloud-line"></i> Import from VRChat Config';
+    this.registerListener(importBtn, "click", async () => {
+      await this.handleImportConfig(importBtn);
+    });
+
+    // Export button
+    const exportBtn = document.createElement("button");
+    exportBtn.className = "el-button el-button--success";
+    exportBtn.innerHTML =
+      '<i class="ri-upload-cloud-line"></i> Export to VRChat Config';
+    this.registerListener(exportBtn, "click", async () => {
+      await this.handleExportConfig(exportBtn);
+    });
+
+    buttonsContainer.appendChild(importBtn);
+    buttonsContainer.appendChild(exportBtn);
+    section.appendChild(buttonsContainer);
+
+    return section;
+  }
+
+  async handleImportConfig(button) {
+    const originalHTML = button.innerHTML;
+    try {
+      button.disabled = true;
+      button.innerHTML =
+        '<i class="ri-loader-4-line ri-spin"></i> Importing...';
+
+      const result =
+        await window.customjs.configManager.importFromVRChatConfig();
+
+      if (result && result.importCount > 0) {
+        button.innerHTML = '<i class="ri-check-line"></i> Imported!';
+        button.className = "el-button el-button--success";
+
+        if (window.$app?.playNoty) {
+          window.$app.playNoty({
+            message: `Successfully imported ${result.importCount} settings from VRChat config.json!`,
+            type: "success",
+          });
+        }
+
+        // Refresh the UI after a short delay
+        setTimeout(() => {
+          this.refreshPluginGrid();
+          button.innerHTML = originalHTML;
+          button.className = "el-button el-button--primary";
+          button.disabled = false;
+        }, 2000);
+      } else if (result && result.importCount === 0) {
+        button.innerHTML = '<i class="ri-information-line"></i> No settings';
+        button.className = "el-button el-button--warning";
+
+        if (window.$app?.playNoty) {
+          window.$app.playNoty({
+            message: "No settings found to import from VRChat config.json",
+            type: "warning",
+          });
+        }
+
+        setTimeout(() => {
+          button.innerHTML = originalHTML;
+          button.className = "el-button el-button--primary";
+          button.disabled = false;
+        }, 2000);
+      } else {
+        button.innerHTML = '<i class="ri-error-warning-line"></i> Failed';
+        button.className = "el-button el-button--danger";
+
+        if (window.$app?.playNoty) {
+          window.$app.playNoty({
+            message: "Failed to import settings from VRChat config.json",
+            type: "error",
+          });
+        }
+
+        setTimeout(() => {
+          button.innerHTML = originalHTML;
+          button.className = "el-button el-button--primary";
+          button.disabled = false;
+        }, 2000);
+      }
+    } catch (error) {
+      this.logger.error("Error importing config:", error);
+      button.innerHTML = '<i class="ri-error-warning-line"></i> Error';
+      button.className = "el-button el-button--danger";
+
+      setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.className = "el-button el-button--primary";
+        button.disabled = false;
+      }, 2000);
+    }
+  }
+
+  async handleExportConfig(button) {
+    const originalHTML = button.innerHTML;
+    try {
+      button.disabled = true;
+      button.innerHTML =
+        '<i class="ri-loader-4-line ri-spin"></i> Exporting...';
+
+      const result = await window.customjs.configManager.exportToVRChatConfig();
+
+      if (result && result.success) {
+        button.innerHTML = '<i class="ri-check-line"></i> Exported!';
+        button.className = "el-button el-button--success";
+
+        // Copy file path to clipboard
+        const configPath =
+          result.filePath || window.customjs.configManager.vrchatConfigPath;
+        await this.utils.copyToClipboard(configPath, "VRChat config.json path");
+
+        // Print to console
+        console.log(`[CJS|PluginManagerUI] Exported to: ${configPath}`);
+        console.log(
+          `[CJS|PluginManagerUI] Exported ${result.settingsCount} settings`
+        );
+
+        if (window.$app?.playNoty) {
+          window.$app.playNoty({
+            message: `Settings exported successfully! Path copied to clipboard.`,
+            type: "success",
+          });
+        }
+
+        setTimeout(() => {
+          button.innerHTML = originalHTML;
+          button.className = "el-button el-button--success";
+          button.disabled = false;
+        }, 2000);
+      } else {
+        button.innerHTML = '<i class="ri-error-warning-line"></i> Failed';
+        button.className = "el-button el-button--danger";
+
+        if (window.$app?.playNoty) {
+          window.$app.playNoty({
+            message: "Failed to export settings to VRChat config.json",
+            type: "error",
+          });
+        }
+
+        setTimeout(() => {
+          button.innerHTML = originalHTML;
+          button.className = "el-button el-button--success";
+          button.disabled = false;
+        }, 2000);
+      }
+    } catch (error) {
+      this.logger.error("Error exporting config:", error);
+      button.innerHTML = '<i class="ri-error-warning-line"></i> Error';
+      button.className = "el-button el-button--danger";
+
+      setTimeout(() => {
+        button.innerHTML = originalHTML;
+        button.className = "el-button el-button--success";
+        button.disabled = false;
+      }, 2000);
+    }
   }
 
   createFilterSection() {
