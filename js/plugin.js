@@ -1062,9 +1062,8 @@ class PluginManager {
 
   async startAllPlugins() {
     console.log(
-      `%c[CJS|PluginManager] %cCalling start() on ${window.customjs.plugins.length} plugins...`,
-      "font-weight: bold; color: #4caf50",
-      "color: #888"
+      `%c[CJS|PluginManager] Calling start() on ${window.customjs.plugins.length} plugins...`,
+      "color: #4caf50"
     );
 
     for (const plugin of window.customjs.plugins) {
