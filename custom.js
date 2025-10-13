@@ -17,7 +17,10 @@ console.log(
   `%c[CJS] Starting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
   `color: ${window.customjs.logColors.CustomJS}`
 );
-console.log(`%c[CJS] Cache buster: ${Date.now()}`, `color: ${window.customjs.logColors.CustomJS}`);
+console.log(
+  `%c[CJS] Cache buster: ${Date.now()}`,
+  `color: ${window.customjs.logColors.CustomJS}`
+);
 
 // ============================================================================
 // MODULE BASE CLASSES

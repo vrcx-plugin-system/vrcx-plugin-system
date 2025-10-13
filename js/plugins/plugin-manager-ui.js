@@ -5,8 +5,8 @@ class PluginManagerUIPlugin extends Plugin {
       description:
         "Visual UI for managing VRCX custom plugins - Equicord inspired",
       author: "Bluscream",
-      version: "6.8.3",
-      build: "1760444125",
+      version: "6.8.4",
+      build: "1760444890",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -86,14 +86,26 @@ class PluginManagerUIPlugin extends Plugin {
   setupMenuWatcher() {
     // Subscribe immediately without delay
     this.subscribe("UI", ({ menuActiveIndex }) => {
+      this.logger.log(`Menu changed to: ${menuActiveIndex}`);
+      
       if (menuActiveIndex === "plugins") {
+        this.logger.log(`Plugins tab activated! contentRendered=${this.contentRendered}, hasContainer=${!!this.contentContainer}`);
+        
         // Ensure content is rendered when tab becomes active
         if (!this.contentRendered && this.contentContainer) {
+          this.logger.log("Rendering content now...");
           this.renderContent(this.contentContainer);
           this.contentRendered = true;
+          this.logger.log("Content rendered!");
+        } else if (this.contentRendered) {
+          this.logger.log("Content already rendered, skipping");
+        } else {
+          this.logger.warn("No container available to render content!");
         }
+        
         // Also refresh grid when switching to this tab
         setTimeout(() => {
+          this.logger.log("Refreshing plugin grid...");
           this.refreshPluginGrid();
         }, 100);
       }
@@ -102,6 +114,8 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   createPanelContent() {
+    this.logger.log("createPanelContent() called");
+    
     const container = document.createElement("div");
     container.style.cssText = `
       padding: 20px;
@@ -110,50 +124,73 @@ class PluginManagerUIPlugin extends Plugin {
     `;
 
     this.contentContainer = container;
+    this.logger.log("Content container created and stored");
     
     // Check if we're already on the plugins tab
-    const isPluginsActive = window.$pinia?.ui?.menuActiveIndex === "plugins";
+    const currentMenuIndex = window.$pinia?.ui?.menuActiveIndex;
+    const isPluginsActive = currentMenuIndex === "plugins";
+    
+    this.logger.log(`Current menu index: ${currentMenuIndex}, isPluginsActive: ${isPluginsActive}`);
     
     if (isPluginsActive) {
       // If already active, render immediately
+      this.logger.log("Already on plugins tab, rendering immediately");
       this.renderContent(container);
       this.contentRendered = true;
     } else {
       // Otherwise wait for menu watcher to trigger render
-      this.logger.log("Content container created, waiting for tab activation");
+      this.logger.log("Not on plugins tab yet, waiting for tab activation");
     }
     
+    this.logger.log("createPanelContent() returning container");
     return container;
   }
 
   renderContent(container) {
+    this.logger.log("renderContent() called");
+    this.logger.log(`Container: ${container ? 'exists' : 'NULL'}, isInDOM: ${container?.parentElement ? 'yes' : 'no'}`);
+    
     try {
       container.innerHTML = "";
+      this.logger.log("Container cleared");
 
       // Stats cards section
+      this.logger.log("Creating stats section...");
       const statsSection = this.createStatsSection();
       container.appendChild(statsSection);
+      this.logger.log("Stats section added");
 
       // Config sync section (import/export)
+      this.logger.log("Creating config sync section...");
       const syncSection = this.createConfigSyncSection();
       container.appendChild(syncSection);
+      this.logger.log("Config sync section added");
 
       // Load plugin section
+      this.logger.log("Creating load plugin section...");
       const loadSection = this.createLoadPluginSection();
       container.appendChild(loadSection);
+      this.logger.log("Load plugin section added");
 
       // Filter section
+      this.logger.log("Creating filter section...");
       const filterSection = this.createFilterSection();
       container.appendChild(filterSection);
+      this.logger.log("Filter section added");
 
       // Plugin grid container
+      this.logger.log("Creating plugin grid container...");
       const pluginGrid = document.createElement("div");
       pluginGrid.id = "plugin-grid-container";
       pluginGrid.className = "vc-plugins-grid";
       container.appendChild(pluginGrid);
+      this.logger.log("Plugin grid container added");
 
       // Refresh grid immediately since we know container is in DOM and visible
+      this.logger.log("Scheduling grid refresh in 50ms...");
       setTimeout(() => this.refreshPluginGrid(), 50);
+      
+      this.logger.log("renderContent() complete!");
     } catch (error) {
       this.logger.error("Error rendering plugin manager content:", error);
       const errorDiv = document.createElement("div");
@@ -649,15 +686,23 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   refreshPluginGrid() {
+    this.logger.log("refreshPluginGrid() called");
+    
     try {
+      this.logger.log(`Looking for grid container, contentContainer: ${this.contentContainer ? 'exists' : 'NULL'}`);
+      
       const gridContainer = this.contentContainer?.querySelector(
         "#plugin-grid-container"
       );
+      
+      this.logger.log(`Grid container: ${gridContainer ? 'found' : 'NOT FOUND'}`);
+      
       if (!gridContainer) {
-        this.logger.warn("Plugin grid container not found");
+        this.logger.warn("Plugin grid container not found - cannot refresh");
         return;
       }
 
+      this.logger.log("Clearing grid container...");
       gridContainer.innerHTML = "";
 
       // Get all plugins and apply filters
@@ -666,6 +711,8 @@ class PluginManagerUIPlugin extends Plugin {
       const failedUrls =
         window.customjs?.pluginManager?.failedUrls || new Set();
 
+      this.logger.log(`Total plugins: ${allPlugins.length}, Core: ${coreModules.length}, Failed: ${failedUrls.size}`);
+
       // Filter plugins
       const filteredPlugins = this.filterPlugins(
         allPlugins,
@@ -673,8 +720,11 @@ class PluginManagerUIPlugin extends Plugin {
         failedUrls
       );
 
+      this.logger.log(`Filtered plugins: ${filteredPlugins.length}`);
+
       // Reset visible count when filter changes
       this.visibleCount = Math.min(this.pluginsPerPage, filteredPlugins.length);
+      this.logger.log(`Visible count: ${this.visibleCount}`);
 
       // Create title for plugins section
       const pluginsTitle = document.createElement("h5");
@@ -682,6 +732,7 @@ class PluginManagerUIPlugin extends Plugin {
         "margin: 0 0 16px 0; font-size: 16px; font-weight: 600;";
       pluginsTitle.textContent = `Plugins (${filteredPlugins.length})`;
       gridContainer.appendChild(pluginsTitle);
+      this.logger.log("Added plugins title");
 
       // Create grid
       const grid = document.createElement("div");
@@ -689,6 +740,7 @@ class PluginManagerUIPlugin extends Plugin {
         "display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px; margin-bottom: 20px;";
 
       if (filteredPlugins.length === 0) {
+        this.logger.warn("No filtered plugins to display");
         const noResults = document.createElement("div");
         noResults.style.cssText =
           "padding: 40px; text-align: center; color: #6c757d;";
@@ -699,12 +751,18 @@ class PluginManagerUIPlugin extends Plugin {
 
       // Show only visible plugins
       const visiblePlugins = filteredPlugins.slice(0, this.visibleCount);
-      visiblePlugins.forEach((plugin) => {
+      this.logger.log(`Rendering ${visiblePlugins.length} plugin cards...`);
+      
+      visiblePlugins.forEach((plugin, index) => {
         const card = this.createPluginCard(plugin);
         grid.appendChild(card);
+        if (index === 0) {
+          this.logger.log(`First plugin card: ${plugin.metadata?.name}`);
+        }
       });
 
       gridContainer.appendChild(grid);
+      this.logger.log("Grid appended to container");
 
       // Load more button if needed
       if (this.visibleCount < filteredPlugins.length) {
@@ -725,8 +783,11 @@ class PluginManagerUIPlugin extends Plugin {
 
         gridContainer.appendChild(loadMoreBtn);
       }
+      
+      this.logger.log("✅ refreshPluginGrid() complete!");
     } catch (error) {
-      this.logger.error("Error refreshing plugin grid:", error);
+      this.logger.error("❌ Error refreshing plugin grid:", error);
+      console.error(error);
     }
   }
 
