@@ -309,10 +309,6 @@ Write-Host "--- Plugin System Core (Submodule) ---" -ForegroundColor Cyan
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 $commitMessage = @"
 Update VRCX Plugin System - $timestamp
-
-- Built and bundled plugin system
-- Updated custom.js distribution file
-- Automated update via build script
 "@
 
 # Commit and push from the project directory
@@ -331,7 +327,7 @@ if ($ghAvailable -and $hasChanges) {
 Automated build and release of VRCX Plugin System at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 
 ## Installation
-Download \`custom.js\` and place it in your VRCX AppData folder.
+Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in your VRCX AppData folder.
 "@
     
     Write-Host "Creating release '$releaseTag'..." -ForegroundColor Yellow
