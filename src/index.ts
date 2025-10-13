@@ -59,6 +59,10 @@ window.customjs.Plugin = Plugin;
 window.customjs.PluginLoader = PluginLoader;
 window.customjs.PluginManager = PluginManager;
 
+// Also export Plugin class directly to global scope for plugins to extend
+(window as any).Plugin = Plugin;
+(window as any).Logger = Logger;
+
 // Initialize ConfigManager
 const configManager = new ConfigManager();
 window.customjs.configManager = configManager;
