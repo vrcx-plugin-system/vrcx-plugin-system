@@ -47,10 +47,11 @@ class Logger {
 
     parts.push(msg);
 
-    // Return styled message with gray color for all plugin messages
+    // Return styled message with gray color for all plugin messages (use centralized color)
+    const logColor = window.customjs?.logColors?.Plugin;
     return {
       message: `%c${parts.join(" ")}`,
-      styles: ["color: #888888"],
+      styles: [`color: ${logColor}`],
     };
   }
 
@@ -474,8 +475,8 @@ class LoggerModule extends CoreModule {
       name: "Logger",
       description: "Centralized logging system for VRCX Custom",
       author: "Bluscream",
-      version: "2.2.0",
-      build: "1728840000",
+      version: "2.3.0",
+      build: "1728840100",
     });
   }
 

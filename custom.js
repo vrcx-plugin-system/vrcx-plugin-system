@@ -1,19 +1,23 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "2.2.0",
-  build: "1729027200",
+  version: "2.3.0",
+  build: "1728840100",
+  // Centralized log colors for different components
+  logColors: {
+    CustomJS: "#00ff88", // Bright green for main CustomJS
+    PluginLoader: "#2196f3", // Blue for PluginLoader
+    PluginManager: "#4caf50", // Green for PluginManager
+    Plugin: "#888888", // Gray for individual plugins
+    Config: "#ff9800", // Orange for config-related
+    Utils: "#9c27b0", // Purple for utilities
+  },
 };
 
 console.log(
-  `%c[CJS] %cStarting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
-  "font-weight: bold; color: #00ff88",
-  "color: #888"
+  `%c[CJS] Starting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
+  `color: ${window.customjs.logColors.CustomJS}`
 );
-console.log(
-  `%c[CJS] %cCache buster: ${Date.now()}`,
-  "font-weight: bold; color: #00ff88",
-  "color: #888"
-);
+console.log(`%c[CJS] Cache buster: ${Date.now()}`, `color: ${window.customjs.logColors.CustomJS}`);
 
 // ============================================================================
 // MODULE BASE CLASSES

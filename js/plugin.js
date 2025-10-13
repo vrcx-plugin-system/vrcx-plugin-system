@@ -39,6 +39,9 @@ class Plugin extends Module {
     // Add hooks tracking to resources
     this.resources.hooks = new Set();
 
+    // Store log color for this plugin
+    this.logColor = window.customjs?.logColors?.Plugin;
+
     // Automatically register with plugin manager
     if (window.customjs?.pluginManager) {
       window.customjs.pluginManager.registerPlugin(this);
@@ -345,7 +348,11 @@ class Plugin extends Module {
   log(message, ...args) {
     this.logger.logInfo(message);
     if (args.length > 0) {
-      console.log(`[${this.metadata.name}]`, ...args); // eslint-disable-line no-console
+      console.log(
+        `%c[${this.metadata.name}]`,
+        `color: ${this.logColor}`,
+        ...args
+      ); // eslint-disable-line no-console
     }
   }
 
@@ -357,7 +364,11 @@ class Plugin extends Module {
   warn(message, ...args) {
     this.logger.logWarn(message);
     if (args.length > 0) {
-      console.warn(`[${this.metadata.name}]`, ...args); // eslint-disable-line no-console
+      console.warn(
+        `%c[${this.metadata.name}]`,
+        `color: ${this.logColor}`,
+        ...args
+      ); // eslint-disable-line no-console
     }
   }
 
@@ -369,7 +380,11 @@ class Plugin extends Module {
   error(message, ...args) {
     this.logger.logError(message);
     if (args.length > 0) {
-      console.error(`[${this.metadata.name}]`, ...args); // eslint-disable-line no-console
+      console.error(
+        `%c[${this.metadata.name}]`,
+        `color: ${this.logColor}`,
+        ...args
+      ); // eslint-disable-line no-console
     }
   }
 
@@ -556,6 +571,9 @@ class PluginLoader extends ModuleLoader {
     super();
     this.pluginManager = pluginManager;
 
+    // Store log color for PluginLoader
+    this.logColor = window.customjs?.logColors?.PluginLoader;
+
     // Default plugin configuration
     this.defaultPlugins = [
       {
@@ -668,11 +686,13 @@ class PluginLoader extends ModuleLoader {
           try {
             const PluginClass = window.customjs.__LAST_PLUGIN_CLASS__ ;
             const pluginInstance = new PluginClass();
-            console.log(\`%c[CJS|PluginLoader] ✓ Instantiated plugin: \${pluginInstance.metadata.name}\`, "color: #2196f3");
+            const logColor = window.customjs?.logColors?.PluginLoader;
+            console.log(\`%c[CJS|PluginLoader] ✓ Instantiated plugin: \${pluginInstance.metadata.name}\`, \`color: \${logColor}\`);
             delete window.customjs.__LAST_PLUGIN_CLASS__ ;
             delete window.customjs.__currentPluginUrl;
           } catch (e) {
-            console.error('%c[CJS|PluginLoader] Error instantiating plugin:', "color: #2196f3", e);
+            const logColor = window.customjs?.logColors?.PluginLoader;
+            console.error('%c[CJS|PluginLoader] Error instantiating plugin:', \`color: \${logColor}\`, e);
             delete window.customjs.__currentPluginUrl;
           }
         }
@@ -736,15 +756,27 @@ class PluginLoader extends ModuleLoader {
   }
 
   log(message, ...args) {
-    console.log(`%c[CJS|PluginLoader] ${message}`, "color: #2196f3", ...args);
+    console.log(
+      `%c[CJS|PluginLoader] ${message}`,
+      `color: ${this.logColor}`,
+      ...args
+    );
   }
 
   warn(message, ...args) {
-    console.warn(`%c[CJS|PluginLoader] ${message}`, "color: #2196f3", ...args);
+    console.warn(
+      `%c[CJS|PluginLoader] ${message}`,
+      `color: ${this.logColor}`,
+      ...args
+    );
   }
 
   error(message, ...args) {
-    console.error(`%c[CJS|PluginLoader] ${message}`, "color: #2196f3", ...args);
+    console.error(
+      `%c[CJS|PluginLoader] ${message}`,
+      `color: ${this.logColor}`,
+      ...args
+    );
   }
 }
 
@@ -754,6 +786,9 @@ class PluginLoader extends ModuleLoader {
 
 class PluginManager {
   constructor() {
+    // Store log color for PluginManager
+    this.logColor = window.customjs?.logColors?.PluginManager;
+
     // Login tracking
     this.loginCallbacks = [];
     this.isLoggedIn = false;
@@ -793,7 +828,7 @@ class PluginManager {
     if (!plugin || !plugin.metadata) {
       console.error(
         "%c[CJS|PluginManager] Invalid plugin registration",
-        "color: #4caf50"
+        `color: ${this.logColor}`
       );
       return false;
     }
@@ -805,7 +840,7 @@ class PluginManager {
     if (existing) {
       console.warn(
         `%c[CJS|PluginManager] Plugin already registered: ${plugin.metadata.id}`,
-        "color: #4caf50"
+        `color: ${this.logColor}`
       );
       return false;
     }
@@ -819,7 +854,7 @@ class PluginManager {
 
     console.log(
       `%c[CJS|PluginManager] Registered plugin: ${plugin.metadata.name} v${plugin.metadata.version}`,
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
     return true;
   }
@@ -856,7 +891,7 @@ class PluginManager {
         } catch (error) {
           console.error(
             `%c[CJS|PluginManager] Error unsubscribing for ${pluginId}:`,
-            "color: #4caf50",
+            `color: ${this.logColor}`,
             error
           );
         }
@@ -866,7 +901,7 @@ class PluginManager {
     subscriptions.clear();
     console.log(
       `%c[CJS|PluginManager] Unregistered ${count} subscriptions for ${pluginId}`,
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
   }
 
@@ -1063,7 +1098,7 @@ class PluginManager {
   async startAllPlugins() {
     console.log(
       `%c[CJS|PluginManager] Calling start() on ${window.customjs.plugins.length} plugins...`,
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
 
     for (const plugin of window.customjs.plugins) {
@@ -1078,13 +1113,13 @@ class PluginManager {
           await plugin.start();
           console.log(
             `%c[CJS|PluginManager] ✓ Started ${plugin.metadata.name} v${plugin.metadata.version}`,
-            "color: #4caf50"
+            `color: ${this.logColor}`
           );
         }
       } catch (error) {
         console.error(
           `%c[CJS|PluginManager] ✗ Error starting ${plugin.metadata.name}:`,
-          "color: #4caf50",
+          `color: ${this.logColor}`,
           error
         );
       }
@@ -1092,7 +1127,7 @@ class PluginManager {
 
     console.log(
       `%c[CJS|PluginManager] ✓ All plugins started`,
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
   }
 
@@ -1103,7 +1138,7 @@ class PluginManager {
       } catch (error) {
         console.error(
           `%c[CJS|PluginManager] Error stopping ${plugin.metadata.name}:`,
-          "color: #4caf50",
+          `color: ${this.logColor}`,
           error
         );
       }
@@ -1118,7 +1153,7 @@ class PluginManager {
       } catch (error) {
         console.error(
           "%c[CJS|PluginManager] Error in login callback:",
-          "color: #4caf50",
+          `color: ${this.logColor}`,
           error
         );
       }
@@ -1145,7 +1180,7 @@ class PluginManager {
       } catch (error) {
         console.error(
           `%c[CJS|PluginManager] Error in ${plugin.metadata.name}.onLogin:`,
-          "color: #4caf50",
+          `color: ${this.logColor}`,
           error
         );
       }
@@ -1158,7 +1193,7 @@ class PluginManager {
       } catch (error) {
         console.error(
           "%c[CJS|PluginManager] Error in login callback:",
-          "color: #4caf50",
+          `color: ${this.logColor}`,
           error
         );
       }
@@ -1192,7 +1227,7 @@ class PluginManager {
 
     console.log(
       `%c[CJS|PluginManager] Registered pre-hook for ${functionPath} from ${plugin.metadata.name}`,
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
   }
 
@@ -1206,7 +1241,7 @@ class PluginManager {
 
     console.log(
       `%c[CJS|PluginManager] Registered post-hook for ${functionPath} from ${plugin.metadata.name}`,
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
   }
 
@@ -1220,7 +1255,7 @@ class PluginManager {
 
     console.log(
       `%c[CJS|PluginManager] Registered void-hook for ${functionPath} from ${plugin.metadata.name}`,
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
   }
 
@@ -1234,7 +1269,7 @@ class PluginManager {
 
     console.log(
       `%c[CJS|PluginManager] Registered replace-hook for ${functionPath} from ${plugin.metadata.name}`,
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
   }
 
@@ -1252,14 +1287,14 @@ class PluginManager {
           `%c[CJS|PluginManager] Retrying to wrap ${functionPath} (attempt ${
             retries + 1
           }/${maxRetries})...`,
-          "color: #4caf50"
+          `color: ${this.logColor}`
         );
         this.wrapFunctionWhenReady(functionPath, retries + 1, maxRetries);
       }, delay);
     } else {
       console.warn(
         `%c[CJS|PluginManager] Failed to wrap ${functionPath} after ${maxRetries} attempts - function may not exist`,
-        "color: #4caf50"
+        `color: ${this.logColor}`
       );
     }
 
@@ -1306,7 +1341,7 @@ class PluginManager {
           } catch (error) {
             console.error(
               `%c[CJS|PluginManager] Error in void-hook for ${functionPath}:`,
-              "color: #4caf50",
+              `color: ${this.logColor}`,
               error
             );
           }
@@ -1322,7 +1357,7 @@ class PluginManager {
         } catch (error) {
           console.error(
             `%c[CJS|PluginManager] Error in pre-hook for ${functionPath}:`,
-            "color: #4caf50",
+            `color: ${this.logColor}`,
             error
           );
         }
@@ -1347,7 +1382,7 @@ class PluginManager {
             } catch (error) {
               console.error(
                 `%c[CJS|PluginManager] Error in replace-hook for ${functionPath}:`,
-                "color: #4caf50",
+                `color: ${this.logColor}`,
                 error
               );
               // On error, call the next function in chain
@@ -1370,7 +1405,7 @@ class PluginManager {
         } catch (error) {
           console.error(
             `%c[CJS|PluginManager] Error in post-hook for ${functionPath}:`,
-            "color: #4caf50",
+            `color: ${this.logColor}`,
             error
           );
         }
@@ -1381,7 +1416,7 @@ class PluginManager {
 
     console.log(
       `%c[CJS|PluginManager] ✓ Wrapped function: ${functionPath}`,
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
     return true;
   }
@@ -1445,7 +1480,7 @@ class PluginManager {
       showError(msg) {
         console.error(
           `%c[CJS|${this.context}]%c ${msg}`,
-          "color: #4caf50",
+          `color: ${this.logColor}`,
           "color: inherit"
         );
       }
@@ -1473,7 +1508,7 @@ class PluginManager {
 
     console.log(
       "%c[CJS|PluginManager] ✓ Fallback Logger class registered",
-      "color: #4caf50"
+      `color: ${this.logColor}`
     );
   }
 
@@ -1520,16 +1555,16 @@ class PluginManager {
     // Ensure Logger exists (provide fallback if loading failed)
     if (!window.customjs.Logger) {
       console.warn(
-        "[CJS|PluginManager] Logger failed to load, using fallback console logger"
+        "%c[CJS|PluginManager] Logger failed to load, using fallback console logger",
+        `color: ${this.logColor}`
       );
       this.setupFallbackLogger();
     }
 
     // Phase 1: Initialize core modules
     console.log(
-      `%c[CJS|PluginManager] %cInitializing core modules...`,
-      "font-weight: bold; color: #4caf50",
-      "color: #888"
+      `%c[CJS|PluginManager] Initializing core modules...`,
+      `color: ${this.logColor}`
     );
 
     // Initialize each core module in order
@@ -1543,13 +1578,13 @@ class PluginManager {
             await module.start();
           }
           console.log(
-            `%c[CJS|PluginManager]%c ✓ Initialized core module: ${id}`,
-            "color: #4caf50",
-            "color: inherit"
+            `%c[CJS|PluginManager] ✓ Initialized core module: ${id}`,
+            `color: ${this.logColor}`
           );
         } catch (error) {
           console.error(
-            `[CJS|PluginManager] ✗ Error initializing ${id}:`,
+            `%c[CJS|PluginManager] ✗ Error initializing ${id}:`,
+            `color: ${this.logColor}`,
             error
           );
         }
@@ -1563,9 +1598,8 @@ class PluginManager {
       .map(([url]) => url);
 
     console.log(
-      `%c[CJS|PluginManager] %cLoading ${enabledPlugins.length} plugins from config...`,
-      "font-weight: bold; color: #4caf50",
-      "color: #888"
+      `%c[CJS|PluginManager] Loading ${enabledPlugins.length} plugins from config...`,
+      `color: ${this.logColor}`
     );
 
     // Phase 3: Load enabled plugins using PluginLoader
@@ -1582,28 +1616,28 @@ class PluginManager {
       }
 
       console.log(
-        `%c[CJS|PluginManager] %cPlugin code loading complete. Loaded: ${this.loadedUrls.size}, Failed: ${this.failedUrls.size}`,
-        "font-weight: bold; color: #4caf50",
-        "color: #888"
+        `%c[CJS|PluginManager] Plugin code loading complete. Loaded: ${this.loadedUrls.size}, Failed: ${this.failedUrls.size}`,
+        `color: ${this.logColor}`
       );
     } else {
       console.error(
-        "[CJS|PluginManager] PluginLoader not available - cannot load plugins"
+        "%c[CJS|PluginManager] PluginLoader not available - cannot load plugins",
+        `color: ${this.logColor}`
       );
     }
 
     // Phase 4: Call load() on all plugins
     console.log(
-      `%c[CJS|PluginManager] %cCalling load() on ${window.customjs.plugins.length} plugins...`,
-      "font-weight: bold; color: #4caf50",
-      "color: #888"
+      `%c[CJS|PluginManager] Calling load() on ${window.customjs.plugins.length} plugins...`,
+      `color: ${this.logColor}`
     );
     for (const plugin of window.customjs.plugins) {
       try {
         await plugin.load();
       } catch (error) {
         console.error(
-          `[CJS|PluginManager] ✗ Error loading ${plugin.metadata.name}:`,
+          `%c[CJS|PluginManager] ✗ Error loading ${plugin.metadata.name}:`,
+          `color: ${this.logColor}`,
           error
         );
       }
@@ -1619,18 +1653,16 @@ class PluginManager {
     this.savePluginConfig(pluginConfig);
 
     console.log(
-      `%c[CJS|PluginManager] %c✓ Plugin system ready! Loaded ${enabledPlugins.length} plugins`,
-      "font-weight: bold; color: #4caf50",
-      "color: #0f0"
+      `%c[CJS|PluginManager] ✓ Plugin system ready! Loaded ${enabledPlugins.length} plugins`,
+      `color: ${this.logColor}`
     );
   }
 
   async addPlugin(url) {
     if (this.loadedUrls.has(url)) {
       console.warn(
-        `%c[CJS|PluginManager]%c Already loaded: ${url}`,
-        "color: #4caf50",
-        "color: inherit"
+        `%c[CJS|PluginManager] Already loaded: ${url}`,
+        `color: ${this.logColor}`
       );
       return { success: false, message: "Already loaded" };
     }
@@ -1659,11 +1691,13 @@ class PluginManager {
         await plugin.start();
 
         console.log(
-          `[CJS|PluginManager] ✓ Successfully loaded and started: ${plugin.metadata.name}`
+          `%c[CJS|PluginManager] ✓ Successfully loaded and started: ${plugin.metadata.name}`,
+          `color: ${this.logColor}`
         );
       } else {
         console.warn(
-          `[CJS|PluginManager] ⚠ Plugin loaded but not found: ${url}`
+          `%c[CJS|PluginManager] ⚠ Plugin loaded but not found: ${url}`,
+          `color: ${this.logColor}`
         );
       }
 
@@ -1675,9 +1709,8 @@ class PluginManager {
       return { success: true, message: "Loaded successfully" };
     } catch (error) {
       console.error(
-        `%c[CJS|PluginManager]%c ✗ Failed to load: ${url}`,
-        "color: #4caf50",
-        "color: inherit",
+        `%c[CJS|PluginManager] ✗ Failed to load: ${url}`,
+        `color: ${this.logColor}`,
         error
       );
       return { success: false, message: error.message };
@@ -1688,9 +1721,8 @@ class PluginManager {
     const plugin = this.findPluginByUrl(url);
     if (!plugin) {
       console.warn(
-        `%c[CJS|PluginManager]%c Plugin not found for URL: ${url}`,
-        "color: #4caf50",
-        "color: inherit"
+        `%c[CJS|PluginManager] Plugin not found for URL: ${url}`,
+        `color: ${this.logColor}`
       );
       return { success: false, message: "Not found" };
     }
@@ -1705,14 +1737,12 @@ class PluginManager {
     this.savePluginConfig(config);
 
     console.log(
-      `%c[CJS|PluginManager]%c ✓ Removed: ${plugin.metadata.name}`,
-      "color: #4caf50",
-      "color: inherit"
+      `%c[CJS|PluginManager] ✓ Removed: ${plugin.metadata.name}`,
+      `color: ${this.logColor}`
     );
     console.warn(
-      `%c[CJS|PluginManager]%c Note: Code remains in memory. Refresh VRCX for full removal.`,
-      "color: #4caf50",
-      "color: inherit"
+      `%c[CJS|PluginManager] Note: Code remains in memory. Refresh VRCX for full removal.`,
+      `color: ${this.logColor}`
     );
     return {
       success: true,
@@ -1722,9 +1752,8 @@ class PluginManager {
 
   async reloadPlugin(url) {
     console.log(
-      `%c[CJS|PluginManager]%c Reloading: ${url}`,
-      "color: #4caf50",
-      "color: inherit"
+      `%c[CJS|PluginManager] Reloading: ${url}`,
+      `color: ${this.logColor}`
     );
     await this.removePlugin(url);
     return await this.addPlugin(url);
@@ -1732,7 +1761,8 @@ class PluginManager {
 
   async reloadAllPlugins() {
     console.log(
-      `[CJS|PluginManager] Reloading all ${this.loadedUrls.size} plugins...`
+      `%c[CJS|PluginManager] Reloading all ${this.loadedUrls.size} plugins...`,
+      `color: ${this.logColor}`
     );
 
     const urls = Array.from(this.loadedUrls);
@@ -1751,7 +1781,8 @@ class PluginManager {
     }
 
     console.log(
-      `[CJS|PluginManager] Reload complete. Success: ${results.success.length}, Failed: ${results.failed.length}`
+      `%c[CJS|PluginManager] Reload complete. Success: ${results.success.length}, Failed: ${results.failed.length}`,
+      `color: ${this.logColor}`
     );
     return results;
   }
