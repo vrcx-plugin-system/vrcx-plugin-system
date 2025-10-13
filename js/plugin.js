@@ -221,6 +221,41 @@ class Plugin extends Module {
   }
 
   /**
+   * Subscribe to VRCX system events (Pinia stores)
+   * Automatically sets up Pinia subscriptions and handles cleanup
+   * @param {string} eventType - Event type: "LOCATION", "USER", "GAME", "GAMELOG", "FRIENDS", "UI"
+   * @param {function} callback - Callback(data) with event-specific data
+   * @returns {function|null} Unsubscribe function or null if failed
+   * @example
+   * // Location changes
+   * this.subscribe("LOCATION", ({ location, lastLocation }) => {
+   *   console.log("Location changed:", location.location);
+   * });
+   *
+   * // User changes
+   * this.subscribe("USER", ({ currentUser }) => {
+   *   console.log("User changed:", currentUser?.displayName);
+   * });
+   *
+   * // Game state changes
+   * this.subscribe("GAME", ({ isGameRunning, isGameNoVR }) => {
+   *   console.log("Game running:", isGameRunning);
+   * });
+   */
+  subscribe(eventType, callback) {
+    if (!window.customjs?.pluginManager) {
+      this.error("Plugin manager not available for subscriptions");
+      return null;
+    }
+
+    return window.customjs.pluginManager.subscribeToEvent(
+      eventType,
+      callback,
+      this
+    );
+  }
+
+  /**
    * Register a pre-hook to run before a function
    * @param {string} functionPath - Dot-notation path to function (e.g., "AppApi.SendIpc")
    * @param {function} callback - Callback(args) called before original function
@@ -835,6 +870,155 @@ class PluginManager {
     console.log(
       `[CJS|PluginManager] Unregistered ${count} subscriptions for ${pluginId}`
     );
+  }
+
+  /**
+   * Subscribe to VRCX system events via Pinia stores
+   * @param {string} eventType - Event type (LOCATION, USER, GAME, GAMELOG, FRIENDS, UI)
+   * @param {function} callback - Callback function
+   * @param {Plugin} plugin - Plugin instance
+   * @returns {function|null} Unsubscribe function
+   */
+  subscribeToEvent(eventType, callback, plugin) {
+    const setupSubscription = () => {
+      let storeSubscription = null;
+      let unsubscribe = null;
+
+      switch (eventType.toUpperCase()) {
+        case "LOCATION":
+          if (window.$pinia?.location?.$subscribe) {
+            storeSubscription = window.$pinia.location.$subscribe(
+              (mutation, state) => {
+                try {
+                  callback({
+                    location: state.location,
+                    lastLocation: state.lastLocation,
+                    lastLocationDestination: state.lastLocationDestination,
+                  });
+                } catch (error) {
+                  plugin.error(`Error in LOCATION subscription:`, error);
+                }
+              }
+            );
+          }
+          break;
+
+        case "USER":
+          if (window.$pinia?.user?.$subscribe) {
+            storeSubscription = window.$pinia.user.$subscribe(
+              (mutation, state) => {
+                try {
+                  callback({
+                    currentUser: state.currentUser,
+                    isLogin: state.isLogin,
+                  });
+                } catch (error) {
+                  plugin.error(`Error in USER subscription:`, error);
+                }
+              }
+            );
+          }
+          break;
+
+        case "GAME":
+          if (window.$pinia?.game?.$subscribe) {
+            storeSubscription = window.$pinia.game.$subscribe(
+              (mutation, state) => {
+                try {
+                  callback({
+                    isGameRunning: state.isGameRunning,
+                    isGameNoVR: state.isGameNoVR,
+                  });
+                } catch (error) {
+                  plugin.error(`Error in GAME subscription:`, error);
+                }
+              }
+            );
+          }
+          break;
+
+        case "GAMELOG":
+          if (window.$pinia?.gameLog?.$subscribe) {
+            storeSubscription = window.$pinia.gameLog.$subscribe(
+              (mutation, state) => {
+                try {
+                  callback({
+                    gameLogSessionTable: state.gameLogSessionTable,
+                    gameLogTable: state.gameLogTable,
+                  });
+                } catch (error) {
+                  plugin.error(`Error in GAMELOG subscription:`, error);
+                }
+              }
+            );
+          }
+          break;
+
+        case "FRIENDS":
+          if (window.$pinia?.friends?.$subscribe) {
+            storeSubscription = window.$pinia.friends.$subscribe(
+              (mutation, state) => {
+                try {
+                  callback({
+                    friends: state.friends,
+                    offlineFriends: state.offlineFriends,
+                  });
+                } catch (error) {
+                  plugin.error(`Error in FRIENDS subscription:`, error);
+                }
+              }
+            );
+          }
+          break;
+
+        case "UI":
+          if (window.$pinia?.ui?.$subscribe) {
+            storeSubscription = window.$pinia.ui.$subscribe(
+              (mutation, state) => {
+                try {
+                  callback({
+                    menuActiveIndex: state.menuActiveIndex,
+                  });
+                } catch (error) {
+                  plugin.error(`Error in UI subscription:`, error);
+                }
+              }
+            );
+          }
+          break;
+
+        default:
+          plugin.error(`Unknown event type: ${eventType}`);
+          return null;
+      }
+
+      if (storeSubscription) {
+        // Wrap the Pinia unsubscribe to also remove from tracking
+        unsubscribe = () => {
+          if (storeSubscription && typeof storeSubscription === "function") {
+            storeSubscription();
+          }
+        };
+
+        // Register with plugin for automatic cleanup
+        plugin.registerSubscription(unsubscribe);
+
+        return unsubscribe;
+      } else {
+        // Store not available yet, retry
+        setTimeout(() => {
+          const result = setupSubscription();
+          if (result) {
+            plugin.logger?.log?.(
+              `Successfully subscribed to ${eventType} after retry`
+            );
+          }
+        }, 500);
+        return null;
+      }
+    };
+
+    return setupSubscription();
   }
 
   unregisterPlugin(pluginId) {

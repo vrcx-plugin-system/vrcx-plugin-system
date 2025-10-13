@@ -5,8 +5,8 @@ class PluginManagerUIPlugin extends Plugin {
       description:
         "Visual UI for managing VRCX custom plugins - Equicord inspired",
       author: "Bluscream",
-      version: "6.7.0",
-      build: "1760227200",
+      version: "6.8.0",
+      build: "1760363253",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -83,22 +83,14 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   setupMenuWatcher() {
-    const setupWatch = () => {
-      if (window.$pinia?.ui?.$subscribe) {
-        const unsubscribe = window.$pinia.ui.$subscribe(() => {
-          if (window.$pinia.ui.menuActiveIndex === "plugins") {
-            this.refreshPluginGrid();
-          }
-        });
-
-        this.registerSubscription(unsubscribe);
-        this.logger.log("Menu watcher ready");
-      } else {
-        setTimeout(setupWatch, 500);
-      }
-    };
-
-    setTimeout(setupWatch, 2000);
+    setTimeout(() => {
+      this.subscribe("UI", ({ menuActiveIndex }) => {
+        if (menuActiveIndex === "plugins") {
+          this.refreshPluginGrid();
+        }
+      });
+      this.logger.log("Menu watcher ready");
+    }, 2000);
   }
 
   createPanelContent() {

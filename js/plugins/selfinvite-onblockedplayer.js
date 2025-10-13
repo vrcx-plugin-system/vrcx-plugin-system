@@ -18,8 +18,8 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       description:
         "Automatically creates a self-invite to a new instance when a blocked player joins your current instance",
       author: "Bluscream",
-      version: "3.0.1",
-      build: "1728935100",
+      version: "3.0.2",
+      build: "1760363253",
       dependencies: [],
     });
 
@@ -102,50 +102,20 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
   // ============================================================================
 
   setupGameLogMonitoring() {
-    // Wait for gameLog store to be available
-    const checkInterval = setInterval(() => {
-      const gameLogStore = window.$pinia?.gameLog;
+    // Subscribe to gameLog store changes
+    this.subscribe("GAMELOG", ({ gameLogSessionTable }) => {
+      if (gameLogSessionTable?.length > 0) {
+        // Get the latest entry
+        const latestEntry = gameLogSessionTable[gameLogSessionTable.length - 1];
 
-      if (gameLogStore) {
-        clearInterval(checkInterval);
-
-        // Subscribe to gameLog store state changes using Pinia's $subscribe
-        const unsubscribe = gameLogStore.$subscribe(
-          (mutation, state) => {
-            // Watch for new entries in gameLogSessionTable
-            if (
-              mutation.type === "direct" &&
-              state.gameLogSessionTable?.length > 0
-            ) {
-              // Get the latest entry
-              const latestEntry =
-                state.gameLogSessionTable[state.gameLogSessionTable.length - 1];
-
-              // Check if it's a player join event
-              if (latestEntry?.type === "OnPlayerJoined") {
-                this.handlePlayerJoin(latestEntry);
-              }
-            }
-          },
-          { flush: "sync" } // Process immediately, not batched
-        );
-
-        // Store unsubscribe function for cleanup
-        this.registerSubscription(unsubscribe);
-
-        this.logger.log(
-          "GameLog store subscription registered (using Pinia $subscribe)"
-        );
+        // Check if it's a player join event
+        if (latestEntry?.type === "OnPlayerJoined") {
+          this.handlePlayerJoin(latestEntry);
+        }
       }
-    }, 100);
+    });
 
-    // Register the interval for cleanup
-    this.registerTimer(checkInterval);
-
-    // Clear interval after 10 seconds if store not found
-    setTimeout(() => {
-      clearInterval(checkInterval);
-    }, 10000);
+    this.logger.log("GameLog store subscription registered");
   }
 
   async handlePlayerJoin(entry) {

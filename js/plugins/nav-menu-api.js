@@ -4,8 +4,8 @@ class NavMenuApiPlugin extends Plugin {
       name: "Navigation Menu API",
       description: "API for adding custom navigation menu items to VRCX",
       author: "Bluscream",
-      version: "{VERSION}",
-      build: "{BUILD}",
+      version: "1.0.0",
+      build: "1760363253",
       dependencies: [],
     });
 
@@ -120,33 +120,17 @@ class NavMenuApiPlugin extends Plugin {
   }
 
   watchMenuChanges() {
-    const setupWatch = () => {
-      if (window.$pinia?.ui?.$subscribe) {
-        try {
-          // Subscribe to UI store changes
-          const unsubscribe = window.$pinia.ui.$subscribe((mutation, state) => {
-            // Read directly from the store
-            const activeIndex = window.$pinia.ui.menuActiveIndex;
-            this.updateContentVisibility(activeIndex);
-          });
+    // Subscribe to UI store changes
+    this.subscribe("UI", ({ menuActiveIndex }) => {
+      this.updateContentVisibility(menuActiveIndex);
+    });
 
-          // Register subscription for automatic cleanup
-          this.registerSubscription(unsubscribe);
+    // Call immediately with current value if available
+    if (window.$pinia?.ui?.menuActiveIndex) {
+      this.updateContentVisibility(window.$pinia.ui.menuActiveIndex);
+    }
 
-          // Call immediately with current value
-          const currentIndex = window.$pinia.ui.menuActiveIndex;
-          this.updateContentVisibility(currentIndex);
-
-          this.logger.log("Pinia menu watcher setup complete");
-        } catch (error) {
-          this.logger.error("Error setting up menu watcher:", error);
-        }
-      } else {
-        setTimeout(setupWatch, 500);
-      }
-    };
-
-    setupWatch();
+    this.logger.log("Menu watcher setup complete");
   }
 
   updateContentVisibility(activeIndex) {

@@ -387,15 +387,10 @@ class TemplatePlugin extends Plugin {
     }
 
     // Example: Subscribe to Pinia store with auto-cleanup
-    if (window.$pinia?.user?.$subscribe) {
-      const unsubscribe = window.$pinia.user.$subscribe((mutation, state) => {
-        this.logger.log(
-          `📊 User store changed: ${state.currentUser?.displayName}`
-        );
-      });
-      this.registerSubscription(unsubscribe);
-      this.logger.log("📊 Subscribed to user store changes");
-    }
+    this.subscribe("USER", ({ currentUser }) => {
+      this.logger.log(`📊 User store changed: ${currentUser?.displayName}`);
+    });
+    this.logger.log("📊 Subscribed to user store changes");
 
     this.logger.log("✅ UI setup complete");
   }

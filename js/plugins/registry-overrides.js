@@ -5,8 +5,8 @@ class RegistryOverridesPlugin extends Plugin {
       description:
         "VRChat registry settings management with event-based triggers (disabled by default)",
       author: "Bluscream",
-      version: "3.1.0",
-      build: "1760362225",
+      version: "3.2.0",
+      build: "1760363253",
       dependencies: [],
     });
 
@@ -107,50 +107,17 @@ class RegistryOverridesPlugin extends Plugin {
   }
 
   setupGameStateMonitoring() {
-    // Wait for game store to be available
-    const checkInterval = setInterval(() => {
-      const gameStore = window.$pinia?.game;
-
-      if (gameStore) {
-        clearInterval(checkInterval);
-
-        // Subscribe to game store state changes using Pinia's $subscribe
-        const unsubscribe = gameStore.$subscribe(
-          (mutation, state) => {
-            // Watch for isGameRunning changes
-            if (mutation.type === "direct") {
-              // Check if isGameRunning changed to true (game started)
-              if (state.isGameRunning && !this._lastGameRunning) {
-                this.logger.log("Game started detected via game store");
-                this.triggerEvent("GAME_START");
-              }
-
-              // Track previous state
-              this._lastGameRunning = state.isGameRunning;
-            }
-          },
-          { flush: "sync" } // Process immediately
-        );
-
-        // Initialize tracking with current state
-        this._lastGameRunning = gameStore.isGameRunning;
-
-        // Store unsubscribe function for cleanup
-        this.registerSubscription(unsubscribe);
-
-        this.logger.log(
-          "Game store subscription registered (using Pinia $subscribe)"
-        );
+    // Subscribe to game state changes
+    this.subscribe("GAME", ({ isGameRunning }) => {
+      // Check if game started (changed to true)
+      if (isGameRunning && !this._lastGameRunning) {
+        this.logger.log("Game started detected");
+        this.triggerEvent("GAME_START");
       }
-    }, 100);
 
-    // Register the interval for cleanup
-    this.registerTimer(checkInterval);
-
-    // Clear interval after 10 seconds if store not found
-    setTimeout(() => {
-      clearInterval(checkInterval);
-    }, 10000);
+      // Track previous state
+      this._lastGameRunning = isGameRunning;
+    });
   }
 
   /**
