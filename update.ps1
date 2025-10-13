@@ -1,271 +1,251 @@
-# VRCX Custom Update Script
-# This script switches to main branch, adds, commits, and pushes changes to GitHub, then copies custom files to AppData
-
-# No parameters needed - script runs automatically
+# VRCX Plugin System Update Script
+# This script builds the TypeScript project and copies the bundled file to VRCX
 
 # Set error action preference
 $ErrorActionPreference = "Stop"
 
-# Define paths
-$SourceDir = "P:\Visual Studio\source\repos\VRCX\vrcx-custom"
+# Define paths - update these to match your setup
+$ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $TargetDir = "$env:APPDATA\VRCX"
-$CustomJs = "custom.js"
-$CustomCss = "custom.css"
-
-# Function to process environment variable placeholders in file content
-function Convert-EnvironmentVariables {
-    param($Content)
-    
-    # Find all {env:VARIABLE_NAME} patterns and replace them
-    $pattern = '\{env:([^}]+)\}'
-    $envMatches = [regex]::Matches($Content, $pattern)
-    
-    foreach ($match in $envMatches) {
-        $fullMatch = $match.Value  # e.g., "{env:STEAM_ID64}"
-        $varName = $match.Groups[1].Value  # e.g., "STEAM_ID64"
-        
-        # Get the environment variable value
-        $envValue = [Environment]::GetEnvironmentVariable($varName)
-        
-        if ($envValue) {
-            $Content = $Content -replace [regex]::Escape($fullMatch), $envValue
-            Write-Host "Replaced $fullMatch with actual value" -ForegroundColor Green
-        }
-        else {
-            Write-Host "Warning: Environment variable $varName not set" -ForegroundColor Yellow
-        }
-    }
-    
-    return $Content
-}
-
-# Function to get git commit count for version
-function Get-GitCommitCount {
-    try {
-        $commitCount = git rev-list --count HEAD 2>$null
-        if ($LASTEXITCODE -eq 0 -and $commitCount) {
-            return $commitCount.Trim()
-        }
-    }
-    catch {
-        # Ignore errors
-    }
-    return "unknown"
-}
-
-# Function to process build timestamp placeholders
-function Convert-BuildTimestamps {
-    param(
-        [string]$Content,
-        [string]$FilePath
-    )
-    
-    # Extract filename from FilePath for determining git path
-    $fileName = Split-Path $FilePath -Leaf
-    $isInJsDir = $FilePath -match '[\\/]js[\\/]'
-    
-    # Determine the relative git path for this file
-    $gitPath = if ($isInJsDir) { "js/$fileName" } else { $fileName }
-    
-    # Replace {VERSION} with commit count for this specific file
-    if ($Content -match '\{VERSION\}') {
-        try {
-            $commitCount = git rev-list --count HEAD -- $gitPath 2>$null
-            if ($LASTEXITCODE -eq 0 -and $commitCount) {
-                $commitCount = $commitCount.Trim()
-                $Content = $Content -replace '\{VERSION\}', $commitCount
-                Write-Host "  Replaced {VERSION} with $commitCount commits for $gitPath" -ForegroundColor Cyan
-            }
-            else {
-                Write-Host "  Warning: Could not get commit count for $gitPath" -ForegroundColor Yellow
-                $Content = $Content -replace '\{VERSION\}', "0"
-            }
-        }
-        catch {
-            Write-Host "  Warning: Error getting commit count for $gitPath" -ForegroundColor Yellow
-            $Content = $Content -replace '\{VERSION\}', "0"
-        }
-    }
-    
-    # Replace {BUILD} with file's last modification timestamp
-    if ($Content -match '\{BUILD\}') {
-        $lastWrite = (Get-Item $FilePath).LastWriteTime
-        $unixEpoch = [DateTime]::new(1970, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)
-        $unixTimestamp = [Math]::Floor(($lastWrite.ToUniversalTime() - $unixEpoch).TotalSeconds)
-        
-        $Content = $Content -replace '\{BUILD\}', $unixTimestamp
-        Write-Host "  Replaced {BUILD} with $unixTimestamp ($lastWrite)" -ForegroundColor Cyan
-    }
-    
-    return $Content
-}
+$BundledFile = "custom.js"
+$Branch = "main"
 
 function Get-UnixTime {
     return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds)
 }
 
-# Function to check JavaScript syntax
-function Test-JavaScriptSyntax {
+function Commit-AndPushChanges {
     param(
-        [string]$Directory
+        [string]$RepositoryPath,
+        [string]$CommitMessage,
+        [string]$BranchName = $Branch
     )
     
-    Write-Host "=== JavaScript Syntax Check ===" -ForegroundColor Cyan
+    # Save current location
+    $originalLocation = Get-Location
     
-    # Check if Node.js is available
-    $nodeAvailable = $false
-    try {
-        $null = node --version 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            $nodeAvailable = $true
-            Write-Host "Node.js detected - performing syntax validation" -ForegroundColor Green
-        }
-    }
-    catch {
-        # Node.js not available
-    }
+    # Navigate to the repository
+    Write-Host "Navigating to repository: $RepositoryPath" -ForegroundColor Gray
+    Set-Location $RepositoryPath
     
-    if (-not $nodeAvailable) {
-        Write-Host "Node.js not found - skipping syntax validation" -ForegroundColor Yellow
-        Write-Host "Install Node.js to enable JavaScript syntax checking" -ForegroundColor Gray
-        return $true
-    }
-    
-    # Find all .js files
-    $jsFiles = Get-ChildItem -Path $Directory -Filter "*.js" -Recurse | Where-Object { $_.FullName -notmatch '[\\/]node_modules[\\/]' }
-    
-    if ($jsFiles.Count -eq 0) {
-        Write-Host "No JavaScript files found" -ForegroundColor Yellow
-        return $true
-    }
-    
-    Write-Host "Checking $($jsFiles.Count) JavaScript file(s)..." -ForegroundColor Yellow
-    
-    $hasErrors = $false
-    $errorCount = 0
-    
-    foreach ($file in $jsFiles) {
-        $relativePath = $file.FullName.Replace("$Directory\", "")
-        
-        # Convert path to use forward slashes for Node.js
-        $nodePath = $file.FullName -replace '\\', '/'
-        
-        # Use Node.js to check syntax
-        $syntaxCheck = "try { const vm = require('vm'); const code = require('fs').readFileSync('$nodePath', 'utf8'); new vm.Script(code); console.log('OK'); } catch(e) { console.error('ERROR: ' + e.message); process.exit(1); }"
-        
-        $output = node -e $syntaxCheck 2>&1
-        
-        if ($LASTEXITCODE -ne 0) {
-            $hasErrors = $true
-            $errorCount++
-            Write-Host "  ✗ $relativePath" -ForegroundColor Red
-            Write-Host "    $output" -ForegroundColor Red
-        }
-        else {
-            Write-Host "  ✓ $relativePath" -ForegroundColor Green
-        }
-    }
-    
-    if ($hasErrors) {
-        Write-Host ""
-        Write-Host "⚠ Found $errorCount JavaScript syntax error(s)" -ForegroundColor Red
-        Write-Host "Please fix the errors before continuing" -ForegroundColor Yellow
+    # Check if we're in a git repository
+    if (-not (Test-Path ".git")) {
+        Write-Host "⚠ Not a git repository at: $RepositoryPath" -ForegroundColor Yellow
+        Set-Location $originalLocation
         return $false
     }
+    
+    # Get or create the target branch
+    Write-Host "Setting up '$BranchName' branch..." -ForegroundColor Yellow
+    $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+    
+    if ($currentBranch -ne $BranchName) {
+        # Check if branch exists
+        $branchExists = git rev-parse --verify $BranchName 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "Switching to existing '$BranchName' branch..." -ForegroundColor Yellow
+            git checkout $BranchName 2>&1 | Out-Null
+        }
+        else {
+            Write-Host "Creating new '$BranchName' branch..." -ForegroundColor Yellow
+            git checkout -b $BranchName 2>&1 | Out-Null
+        }
+        
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "⚠ Failed to switch to '$BranchName' branch" -ForegroundColor Red
+            Set-Location $originalLocation
+            return $false
+        }
+        Write-Host "✓ On '$BranchName' branch" -ForegroundColor Green
+    }
     else {
-        Write-Host "✓ All JavaScript files passed syntax check" -ForegroundColor Green
+        Write-Host "✓ Already on '$BranchName' branch" -ForegroundColor Green
     }
     
-    Write-Host ""
-    return $true
-}
-
-Write-Host "=== VRCX Custom Update Script ===" -ForegroundColor Cyan
-Write-Host "Unix Time: $(Get-UnixTime)" -ForegroundColor Gray
-Write-Host "Source Directory: $SourceDir" -ForegroundColor Gray
-Write-Host "Target Directory: $TargetDir" -ForegroundColor Gray
-
-# Change to source directory
-Write-Host "Changing to source directory..." -ForegroundColor Yellow
-Set-Location $SourceDir
-
-# Check JavaScript syntax before proceeding
-$syntaxOk = Test-JavaScriptSyntax -Directory $SourceDir
-if (-not $syntaxOk) {
-    Write-Host "Aborting due to JavaScript syntax errors" -ForegroundColor Red
-    exit 1
-}
-
-# Git operations
-Write-Host "=== Git Operations ===" -ForegroundColor Cyan
-
-# Check if we're in a git repository
-try {
-    git status --porcelain 2>$null | Out-Null
+    # Check for changes
+    Write-Host "Checking for changes..." -ForegroundColor Yellow
+    $status = git status --porcelain 2>$null
+    
+    if ([string]::IsNullOrWhiteSpace($status)) {
+        Write-Host "✓ No changes to commit" -ForegroundColor Green
+        Set-Location $originalLocation
+        return $false
+    }
+    
+    Write-Host "✓ Changes detected" -ForegroundColor Green
+    
+    # Stage all changes
+    Write-Host "Staging changes..." -ForegroundColor Yellow
+    $stageOutput = git add -A 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw "Not a git repository or git not available"
+        Write-Host "⚠ Failed to stage changes" -ForegroundColor Red
+        Write-Host "Error: $stageOutput" -ForegroundColor Red
+        Set-Location $originalLocation
+        return $false
     }
-}
-catch {
-    Write-Host "Error: Not in a git repository or git is not available" -ForegroundColor Red
-    Write-Host "Exiting..." -ForegroundColor Yellow
-    exit 1
-}
-
-# Switch to main branch
-Write-Host "Switching to main branch..." -ForegroundColor Yellow
-git checkout main
-
-# Check for changes
-$changes = git status --porcelain
-if ([string]::IsNullOrWhiteSpace($changes)) {
-    Write-Host "No changes detected. Nothing to commit." -ForegroundColor Yellow
-}
-else {
-    # Write-Host "Changes detected:" -ForegroundColor Green
-    # git status --short
-    
-    # Add all changes
-    Write-Host "Adding all changes..." -ForegroundColor Yellow
-    git add .
-    
-    # Generate commit message
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $CommitMessage = "Update at $timestamp"
+    Write-Host "✓ Changes staged" -ForegroundColor Green
     
     # Commit changes
     Write-Host "Committing changes..." -ForegroundColor Yellow
-    git commit -m $CommitMessage
+    $commitOutput = git commit -m $CommitMessage 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Commit failed. Stashing changes..." -ForegroundColor Red
-        git stash push -m "Auto-stash after failed commit at $timestamp"
-        Write-Host "Changes stashed successfully." -ForegroundColor Yellow
-        
-        
-        exit 1
+        Write-Host "⚠ Failed to commit changes" -ForegroundColor Red
+        Write-Host "Error: $commitOutput" -ForegroundColor Red
+        Set-Location $originalLocation
+        return $false
     }
+    Write-Host "✓ Changes committed" -ForegroundColor Green
     
-    # Push to GitHub
-    Write-Host "Pushing to GitHub..." -ForegroundColor Yellow
-    git push origin main
+    # Push to remote
+    Write-Host "Pushing to remote '$BranchName' branch..." -ForegroundColor Yellow
+    $pushOutput = git push origin $BranchName 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "Push failed. Stashing changes..." -ForegroundColor Red
-        git stash push -m "Auto-stash after failed push at $timestamp"
-        Write-Host "Changes stashed successfully." -ForegroundColor Yellow
-        
-        
-        exit 1
+        Write-Host "⚠ Failed to push changes" -ForegroundColor Yellow
+        Write-Host "Error: $pushOutput" -ForegroundColor Yellow
+        Write-Host "You may need to set up the remote or push manually" -ForegroundColor Yellow
+        Set-Location $originalLocation
+        return $false
     }
+    Write-Host "✓ Changes pushed to GitHub" -ForegroundColor Green
     
-    Write-Host "Git operations completed successfully!" -ForegroundColor Green
-    
+    # Return to original location
+    Set-Location $originalLocation
+    return $true
 }
 
-# File copying operations
+Write-Host "=== VRCX Plugin System Build & Update Script ===" -ForegroundColor Cyan
+Write-Host "Unix Time: $(Get-UnixTime)" -ForegroundColor Gray
+Write-Host "Project Directory: $ProjectDir" -ForegroundColor Gray
+Write-Host "Target Directory: $TargetDir" -ForegroundColor Gray
 Write-Host ""
-Write-Host "=== File Copy Operations ===" -ForegroundColor Cyan
 
-# Clear logs directory
+# Change to project directory
+Write-Host "Changing to project directory..." -ForegroundColor Yellow
+Set-Location $ProjectDir
+
+# Check if Node.js is available
+Write-Host "Checking for Node.js..." -ForegroundColor Yellow
+try {
+    $nodeVersion = node --version 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Node.js not found"
+    }
+    Write-Host "✓ Node.js version: $nodeVersion" -ForegroundColor Green
+}
+catch {
+    Write-Host "✗ Node.js is not installed or not in PATH" -ForegroundColor Red
+    Write-Host "Please install Node.js from https://nodejs.org/" -ForegroundColor Yellow
+    exit 1
+}
+
+# Check if npm is available
+Write-Host "Checking for npm..." -ForegroundColor Yellow
+try {
+    $npmVersion = npm --version 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        throw "npm not found"
+    }
+    Write-Host "✓ npm version: $npmVersion" -ForegroundColor Green
+}
+catch {
+    Write-Host "✗ npm is not installed or not in PATH" -ForegroundColor Red
+    exit 1
+}
+
+# Check if node_modules exists, install dependencies if needed
+Write-Host ""
+Write-Host "=== Dependency Check ===" -ForegroundColor Cyan
+if (-not (Test-Path "node_modules")) {
+    Write-Host "node_modules not found, installing dependencies..." -ForegroundColor Yellow
+    npm install
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "✗ npm install failed" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "✓ Dependencies installed successfully" -ForegroundColor Green
+}
+else {
+    Write-Host "✓ node_modules exists" -ForegroundColor Green
+    
+    # Optional: Check if package.json changed and reinstall if needed
+    $packageJsonTime = (Get-Item "package.json").LastWriteTime
+    $nodeModulesTime = (Get-Item "node_modules").LastWriteTime
+    
+    if ($packageJsonTime -gt $nodeModulesTime) {
+        Write-Host "package.json is newer than node_modules, reinstalling..." -ForegroundColor Yellow
+        npm install
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "✗ npm install failed" -ForegroundColor Red
+            exit 1
+        }
+        Write-Host "✓ Dependencies reinstalled successfully" -ForegroundColor Green
+    }
+}
+
+# Build the project
+Write-Host ""
+Write-Host "=== Build ===" -ForegroundColor Cyan
+Write-Host "Building TypeScript project..." -ForegroundColor Yellow
+npm run build
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "✗ Build failed" -ForegroundColor Red
+    exit 1
+}
+Write-Host "✓ Build completed successfully" -ForegroundColor Green
+
+# Verify build output exists
+$distFile = Join-Path $ProjectDir "dist\$BundledFile"
+if (-not (Test-Path $distFile)) {
+    Write-Host "✗ Build output not found: $distFile" -ForegroundColor Red
+    exit 1
+}
+
+$fileSize = (Get-Item $distFile).Length
+Write-Host "✓ Build output size: $([math]::Round($fileSize / 1KB, 2)) KB" -ForegroundColor Green
+
+# Copy to VRCX directory
+Write-Host ""
+Write-Host "=== Deploy ===" -ForegroundColor Cyan
+
+# Check if target directory exists
+if (-not (Test-Path $TargetDir)) {
+    Write-Host "✗ Target directory does not exist: $TargetDir" -ForegroundColor Red
+    Write-Host "Please ensure VRCX is installed" -ForegroundColor Yellow
+    exit 1
+}
+
+$targetFile = Join-Path $TargetDir $BundledFile
+Write-Host "Copying $BundledFile to VRCX directory..." -ForegroundColor Yellow
+
+# Try to write to target file with error handling
+try {
+    Copy-Item $distFile $targetFile -Force
+    Write-Host "✓ $BundledFile deployed successfully" -ForegroundColor Green
+}
+catch {
+    Write-Host "⚠ Failed to copy $BundledFile directly: $($_.Exception.Message)" -ForegroundColor Yellow
+    Write-Host "The file may be in use by VRCX. Trying alternative approach..." -ForegroundColor Yellow
+    
+    # Try using a temporary file and then moving it
+    $tempFile = "$targetFile.tmp"
+    try {
+        Copy-Item $distFile $tempFile -Force
+        Move-Item $tempFile $targetFile -Force
+        Write-Host "✓ $BundledFile deployed successfully (via temp file)" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "⚠ Still unable to update $BundledFile. Please close VRCX and try again." -ForegroundColor Red
+        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+        
+        # Clean up temp file if it exists
+        if (Test-Path $tempFile) {
+            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+        }
+        exit 1
+    }
+}
+
+# Clear logs directory (optional)
 $logsDir = Join-Path $TargetDir "logs"
 if (Test-Path $logsDir) {
     Write-Host "Clearing logs directory..." -ForegroundColor Yellow
@@ -278,101 +258,113 @@ if (Test-Path $logsDir) {
     }
 }
 
-# Check if source files exist
-$sourceJs = Join-Path $SourceDir $CustomJs
-$sourceCss = Join-Path $SourceDir $CustomCss
+Write-Host ""
+Write-Host "=== Git Commit & Push ===" -ForegroundColor Cyan
 
-if (-not (Test-Path $sourceJs)) {
-    Write-Host "Warning: $CustomJs not found in source directory" -ForegroundColor Yellow
-}
+# Navigate to the parent directory (vrcx-plugin-system)
+$PluginSystemRoot = Split-Path -Parent $ProjectDir
 
-if (-not (Test-Path $sourceCss)) {
-    Write-Host "Warning: $CustomCss not found in source directory" -ForegroundColor Yellow
-}
-
-# Check if target directory exists
-if (-not (Test-Path $TargetDir)) {
-    Write-Host "Error: Target directory $TargetDir does not exist" -ForegroundColor Red
-    exit 1
-}
-
-# Copy custom.js
-if (Test-Path $sourceJs) {
-    $targetJs = Join-Path $TargetDir $CustomJs
-    Write-Host "Copying $CustomJs..." -ForegroundColor Yellow
-    
-    # Read source file content
-    $content = Get-Content $sourceJs -Raw
-    
-    # Process build timestamps
-    $content = Convert-BuildTimestamps $content $sourceJs
-    
-    # Process environment variables
-    $content = Convert-EnvironmentVariables $content
-    
-    # Try to write to target file with error handling
-    try {
-        Set-Content $targetJs $content -NoNewline
-        Write-Host "✓ $CustomJs copied and processed successfully" -ForegroundColor Green
+# Check if git is available
+Write-Host "Checking for Git..." -ForegroundColor Yellow
+try {
+    $gitVersion = git --version 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Git not found"
     }
-    catch {
-        Write-Host "⚠ Failed to write $CustomJs directly: $($_.Exception.Message)" -ForegroundColor Yellow
-        Write-Host "The file may be in use by VRCX. Trying alternative approach..." -ForegroundColor Yellow
+    Write-Host "✓ Git version: $gitVersion" -ForegroundColor Green
+}
+catch {
+    Write-Host "⚠ Git is not installed or not in PATH, skipping commit/push" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "=== Script Completed ===" -ForegroundColor Cyan
+    Write-Host "✓ Build and deployment finished successfully!" -ForegroundColor Green
+    Write-Host ""
+    Write-Host "You can now restart VRCX to load the updated plugin system." -ForegroundColor Yellow
+    Write-Host ""
+    Set-Location $ProjectDir
+    exit 0
+}
+
+# Check if gh CLI is available
+Write-Host "Checking for GitHub CLI..." -ForegroundColor Yellow
+$ghAvailable = $false
+try {
+    $ghVersion = gh --version 2>$null
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✓ GitHub CLI version: $($ghVersion.Split("`n")[0])" -ForegroundColor Green
+        $ghAvailable = $true
+    }
+}
+catch {
+    Write-Host "⚠ GitHub CLI not installed, releases will be skipped" -ForegroundColor Yellow
+}
+
+# Commit changes from within the vrcx-plugin-system submodule
+Write-Host ""
+Write-Host "--- Plugin System Core (Submodule) ---" -ForegroundColor Cyan
+
+# Create commit message with timestamp
+$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$commitMessage = @"
+Update VRCX Plugin System - $timestamp
+
+- Built and bundled plugin system
+- Updated custom.js distribution file
+- Automated update via build script
+"@
+
+# Commit and push from the project directory
+$hasChanges = Commit-AndPushChanges -RepositoryPath $ProjectDir -CommitMessage $commitMessage -BranchName $Branch
+
+# Create GitHub Release if gh CLI is available and there were changes
+if ($ghAvailable -and $hasChanges) {
+    Write-Host ""
+    Write-Host "=== GitHub Release ===" -ForegroundColor Cyan
+    
+    # Generate release tag based on timestamp
+    $releaseTag = "v$(Get-Date -Format 'yyyy.MM.dd.HHmmss')"
+    $releaseTitle = "VRCX Plugin System Build - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    $releaseNotes = @"
+Automated build and release of VRCX Plugin System
+
+## Installation
+Download \`custom.js\` and place it in your VRCX AppData folder.
+"@
+    
+    Write-Host "Creating release '$releaseTag'..." -ForegroundColor Yellow
+    Write-Host "Asset: $(Join-Path $ProjectDir 'dist\custom.js')" -ForegroundColor Gray
+    
+    # Create release with the built file as asset
+    $assetPath = Join-Path $ProjectDir "dist\custom.js"
+    if (Test-Path $assetPath) {
+        gh release create $releaseTag $assetPath `
+            --title $releaseTitle `
+            --notes $releaseNotes `
+            --target $Branch `
+            2>&1 | Out-Host
         
-        # Try using a temporary file and then moving it
-        $tempFile = "$targetJs.tmp"
-        try {
-            Set-Content $tempFile $content -NoNewline
-            Move-Item $tempFile $targetJs -Force
-            Write-Host "✓ $CustomJs copied and processed successfully (via temp file)" -ForegroundColor Green
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "✓ GitHub release created successfully!" -ForegroundColor Green
         }
-        catch {
-            Write-Host "⚠ Still unable to update $CustomJs. Please close VRCX and try again." -ForegroundColor Red
-            Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
-            
-            # Clean up temp file if it exists
-            if (Test-Path $tempFile) {
-                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-            }
+        else {
+            Write-Host "⚠ Failed to create GitHub release" -ForegroundColor Yellow
         }
     }
+    else {
+        Write-Host "⚠ Asset file not found: $assetPath" -ForegroundColor Yellow
+    }
 }
-
-# Copy custom.css
-if (Test-Path $sourceCss) {
-    $targetCss = Join-Path $TargetDir $CustomCss
-    Write-Host "Copying $CustomCss..." -ForegroundColor Yellow
-    Copy-Item $sourceCss $targetCss -Force
-    Write-Host "✓ $CustomCss copied successfully" -ForegroundColor Green
+elseif (-not $hasChanges) {
+    Write-Host ""
+    Write-Host "✓ No changes to commit or release" -ForegroundColor Green
 }
-
-
-Write-Host "File copy operations completed successfully!" -ForegroundColor Green
-
-# # Verify GitHub deployment
-# Write-Host ""
-# Write-Host "=== Verifying GitHub Deployment ===" -ForegroundColor Cyan
-# try {
-#     $githubUrl = "https://raw.githubusercontent.com/Bluscream/vrcx-custom/main/custom.js"
-#     Write-Host "Fetching from GitHub: $githubUrl" -ForegroundColor Yellow
-#     $response = Invoke-WebRequest -Uri $githubUrl -UseBasicParsing -ErrorAction Stop
-#     $lines = $response.Content -split "`n"
-#     if ($lines.Length -ge 2) {
-#         Write-Host "✓ GitHub custom.js second line:" -ForegroundColor Green
-#         Write-Host "  $($lines[1])" -ForegroundColor Cyan
-#     }
-#     else {
-#         Write-Host "⚠ File has fewer than 2 lines" -ForegroundColor Yellow
-#     }
-# }
-# catch {
-#     Write-Host "✗ Failed to fetch from GitHub: $($_.Exception.Message)" -ForegroundColor Red
-# }
 
 Write-Host ""
 Write-Host "=== Script Completed ===" -ForegroundColor Cyan
-Write-Host "All operations finished successfully!" -ForegroundColor Green
+Write-Host "✓ Build, deployment, and version control finished successfully!" -ForegroundColor Green
+Write-Host ""
+Write-Host "You can now restart VRCX to load the updated plugin system." -ForegroundColor Yellow
 Write-Host ""
 
 # Return to original directory
-Set-Location $SourceDir
+Set-Location $ProjectDir
