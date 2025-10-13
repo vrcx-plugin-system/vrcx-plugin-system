@@ -229,7 +229,7 @@ https://github.com/vrcx-plugin-system/plugins
 Default plugins are loaded from:
 
 ```
-https://raw.githubusercontent.com/vrcx-plugin-system/plugins/main/{plugin-name}.js
+https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/{plugin-name}.js
 ```
 
 ## GitHub Actions

@@ -500,7 +500,7 @@ async start() {
 5. Follow the contribution guidelines
 6. Your plugin will be available at:
    ```
-   https://raw.githubusercontent.com/vrcx-plugin-system/plugins/main/my-plugin.js
+   https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/my-plugin.js
    ```
 
 ## Template
