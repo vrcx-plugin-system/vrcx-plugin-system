@@ -668,11 +668,11 @@ class PluginLoader extends ModuleLoader {
           try {
             const PluginClass = window.customjs.__LAST_PLUGIN_CLASS__ ;
             const pluginInstance = new PluginClass();
-            console.log(\`[CJS|PluginLoader] ✓ Instantiated plugin: \${pluginInstance.metadata.name}\`);
+            console.log(\`%c[CJS|PluginLoader] ✓ Instantiated plugin: \${pluginInstance.metadata.name}\`, "color: #2196f3");
             delete window.customjs.__LAST_PLUGIN_CLASS__ ;
             delete window.customjs.__currentPluginUrl;
           } catch (e) {
-            console.error('%c[CJS|PluginLoader]%c Error instantiating plugin:', "color: #2196f3", "color: inherit", e);
+            console.error('%c[CJS|PluginLoader] Error instantiating plugin:', "color: #2196f3", e);
             delete window.customjs.__currentPluginUrl;
           }
         }
@@ -736,20 +736,15 @@ class PluginLoader extends ModuleLoader {
   }
 
   log(message, ...args) {
-    console.log(`[CJS|PluginLoader] ${message}`, ...args);
+    console.log(`%c[CJS|PluginLoader] ${message}`, "color: #2196f3", ...args);
   }
 
   warn(message, ...args) {
-    console.warn(`[CJS|PluginLoader] ${message}`, ...args);
+    console.warn(`%c[CJS|PluginLoader] ${message}`, "color: #2196f3", ...args);
   }
 
   error(message, ...args) {
-    console.error(
-      `%c[CJS|PluginLoader]%c ${message}`,
-      "color: #2196f3",
-      "color: inherit",
-      ...args
-    );
+    console.error(`%c[CJS|PluginLoader] ${message}`, "color: #2196f3", ...args);
   }
 }
 
@@ -797,9 +792,8 @@ class PluginManager {
   registerPlugin(plugin) {
     if (!plugin || !plugin.metadata) {
       console.error(
-        "%c[CJS|PluginManager]%c Invalid plugin registration",
-        "color: #4caf50",
-        "color: inherit"
+        "%c[CJS|PluginManager] Invalid plugin registration",
+        "color: #4caf50"
       );
       return false;
     }
@@ -810,7 +804,8 @@ class PluginManager {
     );
     if (existing) {
       console.warn(
-        `[CJS|PluginManager] Plugin already registered: ${plugin.metadata.id}`
+        `%c[CJS|PluginManager] Plugin already registered: ${plugin.metadata.id}`,
+        "color: #4caf50"
       );
       return false;
     }
@@ -823,7 +818,8 @@ class PluginManager {
     }
 
     console.log(
-      `[CJS|PluginManager] Registered plugin: ${plugin.metadata.name} v${plugin.metadata.version}`
+      `%c[CJS|PluginManager] Registered plugin: ${plugin.metadata.name} v${plugin.metadata.version}`,
+      "color: #4caf50"
     );
     return true;
   }
@@ -859,7 +855,8 @@ class PluginManager {
           count++;
         } catch (error) {
           console.error(
-            `[CJS|PluginManager] Error unsubscribing for ${pluginId}:`,
+            `%c[CJS|PluginManager] Error unsubscribing for ${pluginId}:`,
+            "color: #4caf50",
             error
           );
         }
@@ -868,7 +865,8 @@ class PluginManager {
 
     subscriptions.clear();
     console.log(
-      `[CJS|PluginManager] Unregistered ${count} subscriptions for ${pluginId}`
+      `%c[CJS|PluginManager] Unregistered ${count} subscriptions for ${pluginId}`,
+      "color: #4caf50"
     );
   }
 
@@ -1080,12 +1078,14 @@ class PluginManager {
         if (!plugin.started) {
           await plugin.start();
           console.log(
-            `[CJS|PluginManager] ✓ Started ${plugin.metadata.name} v${plugin.metadata.version}`
+            `%c[CJS|PluginManager] ✓ Started ${plugin.metadata.name} v${plugin.metadata.version}`,
+            "color: #4caf50"
           );
         }
       } catch (error) {
         console.error(
-          `[CJS|PluginManager] ✗ Error starting ${plugin.metadata.name}:`,
+          `%c[CJS|PluginManager] ✗ Error starting ${plugin.metadata.name}:`,
+          "color: #4caf50",
           error
         );
       }

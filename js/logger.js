@@ -29,7 +29,7 @@ class Logger {
    * Format message with context and optional timestamp
    * @param {string} msg - Message to format
    * @param {boolean} includeTimestamp - Whether to include timestamp
-   * @returns {string} Formatted message
+   * @returns {object|string} Formatted message with optional styles
    * @private
    */
   _formatMessage(msg, includeTimestamp = false) {
@@ -46,7 +46,12 @@ class Logger {
     }
 
     parts.push(msg);
-    return parts.join(" ");
+
+    // Return styled message with gray color for all plugin messages
+    return {
+      message: `%c${parts.join(" ")}`,
+      styles: ["color: #888888"],
+    };
   }
 
   /**
@@ -469,8 +474,8 @@ class LoggerModule extends CoreModule {
       name: "Logger",
       description: "Centralized logging system for VRCX Custom",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1728778800",
+      version: "2.2.0",
+      build: "1728840000",
     });
   }
 

@@ -5,8 +5,8 @@ class PluginManagerUIPlugin extends Plugin {
       description:
         "Visual UI for managing VRCX custom plugins - Equicord inspired",
       author: "Bluscream",
-      version: "6.8.2",
-      build: "1760443892",
+      version: "6.8.3",
+      build: "1760444125",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -17,6 +17,7 @@ class PluginManagerUIPlugin extends Plugin {
     this.searchValue = { value: "", filter: "all" }; // all, enabled, disabled, core, failed, new
     this.visibleCount = 12;
     this.pluginsPerPage = 12;
+    this.contentRendered = false;
   }
 
   async load() {
@@ -83,14 +84,21 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   setupMenuWatcher() {
-    setTimeout(() => {
-      this.subscribe("UI", ({ menuActiveIndex }) => {
-        if (menuActiveIndex === "plugins") {
-          this.refreshPluginGrid();
+    // Subscribe immediately without delay
+    this.subscribe("UI", ({ menuActiveIndex }) => {
+      if (menuActiveIndex === "plugins") {
+        // Ensure content is rendered when tab becomes active
+        if (!this.contentRendered && this.contentContainer) {
+          this.renderContent(this.contentContainer);
+          this.contentRendered = true;
         }
-      });
-      this.logger.log("Menu watcher ready");
-    }, 2000);
+        // Also refresh grid when switching to this tab
+        setTimeout(() => {
+          this.refreshPluginGrid();
+        }, 100);
+      }
+    });
+    this.logger.log("Menu watcher ready");
   }
 
   createPanelContent() {
@@ -102,7 +110,19 @@ class PluginManagerUIPlugin extends Plugin {
     `;
 
     this.contentContainer = container;
-    this.renderContent(container);
+    
+    // Check if we're already on the plugins tab
+    const isPluginsActive = window.$pinia?.ui?.menuActiveIndex === "plugins";
+    
+    if (isPluginsActive) {
+      // If already active, render immediately
+      this.renderContent(container);
+      this.contentRendered = true;
+    } else {
+      // Otherwise wait for menu watcher to trigger render
+      this.logger.log("Content container created, waiting for tab activation");
+    }
+    
     return container;
   }
 
@@ -132,8 +152,8 @@ class PluginManagerUIPlugin extends Plugin {
       pluginGrid.className = "vc-plugins-grid";
       container.appendChild(pluginGrid);
 
-      // Defer refresh to ensure container is in DOM
-      setTimeout(() => this.refreshPluginGrid(), 0);
+      // Refresh grid immediately since we know container is in DOM and visible
+      setTimeout(() => this.refreshPluginGrid(), 50);
     } catch (error) {
       this.logger.error("Error rendering plugin manager content:", error);
       const errorDiv = document.createElement("div");
