@@ -26,10 +26,13 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   async start() {
+    this.logger.log("🚀 Starting Plugin Manager UI...");
+    
     // Setup utils shortcut
     this.utils = window.customjs.utils;
 
     // Wait for dependencies
+    this.logger.log("Waiting for nav-menu-api plugin...");
     this.navMenuApi = await window.customjs.pluginManager.waitForPlugin(
       "nav-menu-api"
     );
@@ -38,13 +41,17 @@ class PluginManagerUIPlugin extends Plugin {
       this.logger.error("Nav Menu API plugin not found after waiting");
       return;
     }
+    this.logger.log("nav-menu-api plugin found!");
 
+    this.logger.log("Setting up nav menu item...");
     this.setupNavMenuItem();
+    
+    this.logger.log("Setting up menu watcher...");
     this.setupMenuWatcher();
 
     this.enabled = true;
     this.started = true;
-    this.logger.log("Plugin Manager UI started");
+    this.logger.log("✅ Plugin Manager UI started successfully");
   }
 
   async onLogin(user) {
