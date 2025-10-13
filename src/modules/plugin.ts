@@ -452,10 +452,13 @@ export class PluginLoader {
       const pluginCode = await response.text();
       const pluginCountBefore = window.customjs.plugins.length;
 
-      // Wrap in IIFE to isolate scope
+      // Wrap in IIFE to isolate scope and inject common classes
       const wrappedCode = `(function() { 
         window.customjs = window.customjs || {};
         window.customjs.__currentPluginUrl = "${pluginUrl}";
+        
+        // Destructure commonly used classes from window.customjs for plugin use
+        const { Plugin, Logger, SettingType, definePluginSettings, utils } = window.customjs;
         
         ${pluginCode}
         
