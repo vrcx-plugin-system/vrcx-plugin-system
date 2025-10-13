@@ -5,8 +5,8 @@ class AutoInvitePlugin extends Plugin {
       description:
         "Automatic user invitation system with location tracking and custom messages",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1728778800",
+      version: "3.0.0",
+      build: "1728847200",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
       ],
@@ -18,28 +18,41 @@ class AutoInvitePlugin extends Plugin {
     this.lastJoined = null;
     this.lastDestinationCheck = null;
 
-    // Default config
-    this.defaultConfig = {
-      customInviteMessage: "Auto-invite from VRCX",
-    };
-
     // Tracking
     this.gameLogHookRetries = 0;
   }
 
   async load() {
-    // Define settings with metadata
-    this.config.customInviteMessage = this.createSetting({
-      key: "customInviteMessage",
-      category: "messages",
-      name: "Custom Invite Message",
-      description: "Message to send when inviting users automatically",
-      type: "string",
-      defaultValue: "Auto-invite from VRCX",
+    // Define settings using new Equicord-style system
+    const SettingType = window.customjs.SettingType;
+
+    this.settings = this.defineSettings({
+      customInviteMessage: {
+        type: SettingType.STRING,
+        description: "Message to send when inviting users automatically",
+        placeholder: "Auto-invite from VRCX",
+        default: "Auto-invite from VRCX",
+        variables: {
+          "{userId}": "Target user ID being invited",
+          "{userName}": "Target user display name",
+          "{userDisplayName}": "Target user display name",
+          "{worldName}": "Current world name",
+          "{worldId}": "Current world ID",
+          "{instanceId}": "Current instance ID",
+          "{myUserId}": "Your user ID",
+          "{myUserName}": "Your display name",
+          "{myDisplayName}": "Your display name",
+          "{now}": "Formatted date/time",
+          "{date}": "Current date",
+          "{time}": "Current time",
+          "{timestamp}": "Unix timestamp",
+          "{iso}": "ISO 8601 date/time",
+        },
+      },
     });
 
     this.logger.log(
-      `⚙️ Custom invite message: "${this.config.customInviteMessage.get()}"`
+      `⚙️ Custom invite message: "${this.settings.store.customInviteMessage}"`
     );
 
     this.logger.log("Auto Invite plugin ready");
@@ -308,9 +321,9 @@ class AutoInvitePlugin extends Plugin {
           }
 
           // Fallback to default config if null
-          if (!customMessage && this.config.customInviteMessage.get()) {
+          if (!customMessage && this.settings.store.customInviteMessage) {
             customMessage = this.processInviteMessageTemplate(
-              this.config.customInviteMessage.get(),
+              this.settings.store.customInviteMessage,
               user,
               worldName,
               instanceId
@@ -495,7 +508,7 @@ class AutoInvitePlugin extends Plugin {
    * @returns {string|null} Current message template or null if disabled
    */
   getCustomInviteMessage() {
-    return this.config.customInviteMessage.get();
+    return this.settings.store.customInviteMessage;
   }
 
   /**
@@ -520,7 +533,8 @@ class AutoInvitePlugin extends Plugin {
    * Set to null to omit custom messages (will use default config or no message)
    */
   async setCustomInviteMessage(message) {
-    this.config.customInviteMessage.set(message);
+    this.settings.store.customInviteMessage =
+      message || "Auto-invite from VRCX";
     // Settings are now auto-saved!
     if (message === null) {
       this.logger.log("Custom invite message disabled");

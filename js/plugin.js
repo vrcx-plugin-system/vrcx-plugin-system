@@ -345,6 +345,7 @@ class Plugin extends Module {
    * Create a PluginSetting instance (automatically adds plugin reference)
    * @param {object} options - Setting options
    * @returns {PluginSetting} Setting instance
+   * @deprecated Use defineSettings() instead for Equicord-style settings
    * @example
    * this.config.myMessage = this.createSetting({
    *   key: "message",
@@ -365,6 +366,38 @@ class Plugin extends Module {
       ...options,
       plugin: this,
     });
+  }
+
+  /**
+   * Define plugin settings using Equicord-style settings system
+   * @param {object} definition - Settings definition
+   * @returns {object} Settings object with store, plain, def, and helper methods
+   * @example
+   * const settings = this.defineSettings({
+   *   enabled: {
+   *     type: window.customjs.SettingType.BOOLEAN,
+   *     description: "Enable the plugin",
+   *     default: true
+   *   },
+   *   apiKey: {
+   *     type: window.customjs.SettingType.STRING,
+   *     description: "API Key",
+   *     placeholder: "Enter your key...",
+   *     default: ""
+   *   }
+   * });
+   *
+   * // Access settings
+   * const enabled = settings.store.enabled;
+   * settings.store.apiKey = "new-key"; // auto-saves
+   */
+  defineSettings(definition) {
+    if (!window.customjs?.definePluginSettings) {
+      this.warn("definePluginSettings function not available");
+      return null;
+    }
+
+    return window.customjs.definePluginSettings(definition, this);
   }
 
   /**

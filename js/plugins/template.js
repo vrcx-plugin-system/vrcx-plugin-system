@@ -7,8 +7,8 @@ class TemplatePlugin extends Plugin {
       description:
         "Example plugin demonstrating all available features and lifecycle events",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1728778800",
+      version: "3.0.0",
+      build: "1728847200",
       dependencies: [
         // Always include plugin.js as first dependency
         // List URLs of other plugins this depends on (optional)
@@ -45,69 +45,106 @@ class TemplatePlugin extends Plugin {
     // window.customjs.templateMethod = () => this.doSomething();
 
     // ===================================================================
-    // SETTINGS: Two ways to define settings
+    // SETTINGS: Three ways to define settings
     // ===================================================================
 
-    // METHOD 1: Simple get/set (recommended for basic usage)
+    // METHOD 1: Simple get/set (good for basic/ad-hoc settings)
     // Just use this.get() and this.set() with defaults inline
     const quickSetting = this.get("quick.value", "default");
     this.logger.log(`Quick setting: ${quickSetting}`);
 
-    // METHOD 2: PluginSetting instances (recommended when you need metadata)
-    // Define settings in this.config for documentation and type info
+    // METHOD 2 (DEPRECATED): PluginSetting instances - old way
+    // Only use if you need legacy compatibility
+    // @deprecated Use METHOD 3 (defineSettings) instead
 
-    this.config.enableFeature = this.createSetting({
-      key: "enableFeature",
-      category: "general",
-      name: "Enable Feature",
-      description: "Enable the main feature of this plugin",
-      type: "boolean",
-      defaultValue: true,
+    // METHOD 3 (RECOMMENDED): Equicord-style settings - new way
+    // Define all settings in one object with metadata and type safety
+    const SettingType = window.customjs.SettingType;
+
+    this.settings = this.defineSettings({
+      enableFeature: {
+        type: SettingType.BOOLEAN,
+        description: "Enable the main feature of this plugin",
+        default: true,
+      },
+      updateInterval: {
+        type: SettingType.NUMBER,
+        description: "How often to update in milliseconds",
+        default: 60000,
+      },
+      username: {
+        type: SettingType.STRING,
+        description: "Your username",
+        placeholder: "Enter username...",
+        default: "Guest",
+      },
+      showDesktop: {
+        type: SettingType.BOOLEAN,
+        description: "Show desktop notifications",
+        default: false,
+      },
+      soundEnabled: {
+        type: SettingType.BOOLEAN,
+        description: "Play sound for notifications",
+        default: true,
+      },
+      volume: {
+        type: SettingType.SLIDER,
+        description: "Notification volume",
+        default: 0.5,
+        markers: [0, 0.25, 0.5, 0.75, 1],
+      },
+      mode: {
+        type: SettingType.SELECT,
+        description: "Operating mode",
+        options: [
+          { label: "Auto", value: "auto", default: true },
+          { label: "Manual", value: "manual" },
+          { label: "Advanced", value: "advanced" },
+        ],
+      },
+      message: {
+        type: SettingType.STRING,
+        description: "Custom message template with variables",
+        placeholder: "Hello {userName}!",
+        default: "Welcome {userName}!",
+        variables: {
+          "{userName}": "User's display name",
+          "{userId}": "User's ID",
+          "{now}": "Current date/time",
+          "{count}": "Timer count",
+        },
+      },
+      // Hidden stats (not shown in UI but stored and accessible)
+      totalRuns: {
+        type: SettingType.NUMBER,
+        description: "Total times plugin ran (hidden stat)",
+        default: 0,
+        hidden: true,
+      },
+      lastRunTime: {
+        type: SettingType.NUMBER,
+        description: "Last run timestamp (hidden stat)",
+        default: 0,
+        hidden: true,
+      },
     });
 
-    this.config.updateInterval = this.createSetting({
-      key: "updateInterval",
-      category: "general",
-      name: "Update Interval (ms)",
-      description: "How often to update in milliseconds",
-      type: "number",
-      defaultValue: 60000,
-    });
-
-    this.config.username = this.createSetting({
-      key: "username",
-      category: "general",
-      name: "Username",
-      description: "Your username",
-      type: "string",
-      defaultValue: "Guest",
-    });
-
-    this.config.showDesktop = this.createSetting({
-      key: "showDesktop",
-      category: "notifications",
-      name: "Desktop Notifications",
-      description: "Show desktop notifications",
-      type: "boolean",
-      defaultValue: false,
-    });
-
-    this.config.soundEnabled = this.createSetting({
-      key: "soundEnabled",
-      category: "notifications",
-      name: "Sound Enabled",
-      description: "Play sound for notifications",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    // Access via PluginSetting
-    this.logger.log(`⚙️ Feature enabled: ${this.config.enableFeature.get()}`);
+    // Access settings (reactive)
+    this.logger.log(`⚙️ Feature enabled: ${this.settings.store.enableFeature}`);
     this.logger.log(
-      `⚙️ Update interval: ${this.config.updateInterval.get()}ms`
+      `⚙️ Update interval: ${this.settings.store.updateInterval}ms`
     );
-    this.logger.log(`⚙️ Username: ${this.config.username.get()}`);
-    this.logger.log(`⚙️ Is modified? ${this.config.username.isModified()}`);
+    this.logger.log(`⚙️ Username: ${this.settings.store.username}`);
+    this.logger.log(`⚙️ Volume: ${this.settings.store.volume}`);
+    this.logger.log(`⚙️ Mode: ${this.settings.store.mode}`);
+    this.logger.log(`⚙️ Message: ${this.settings.store.message}`);
+    this.logger.log(`⚙️ Total runs (hidden): ${this.settings.store.totalRuns}`);
+
+    // Listen for changes
+    this.settings.onChange("enableFeature", (newValue) => {
+      this.logger.log(`⚙️ Feature enabled changed to: ${newValue}`);
+    });
 
     // You can also use simple get() for ad-hoc settings
     const adhocValue = this.get("adhoc.setting", "default");
@@ -176,14 +213,19 @@ class TemplatePlugin extends Plugin {
     this.setupUI();
 
     // Example: Use settings to control behavior
-    const interval = this.get("general.updateInterval", 60000);
+    const interval = this.settings.store.updateInterval;
 
     // Example: Register a timer with auto-cleanup when plugin stops
     this.timerInterval = this.registerTimer(
       setInterval(() => {
         // Only run if feature is enabled
-        if (this.get("general.enableFeature", true)) {
+        if (this.settings.store.enableFeature) {
           this.counter++;
+
+          // Increment hidden stat
+          this.settings.store.totalRuns++;
+          this.settings.store.lastRunTime = Date.now();
+
           this.logger.log(`⏱️ Timer tick #${this.counter}`);
 
           // Example: Emit an event for other plugins
@@ -257,9 +299,8 @@ class TemplatePlugin extends Plugin {
     this.setConfig("template.lastLogin", Date.now());
 
     // Example: Update plugin settings (instantly saved)
-    this.config.username.set(displayName || "Unknown");
-    this.logger.log(`⚙️ Updated username to: ${this.config.username.get()}`);
-    this.logger.log(`⚙️ Is modified? ${this.config.username.isModified()}`);
+    this.settings.store.username = displayName || "Unknown";
+    this.logger.log(`⚙️ Updated username to: ${this.settings.store.username}`);
     // Settings are now instantly saved to localStorage!
     this.logger.log("💾 Setting automatically saved to localStorage");
 
@@ -372,16 +413,27 @@ class TemplatePlugin extends Plugin {
       <p><strong>Counter:</strong> <span id="template-counter">0</span></p>
       <p><strong>Events Received:</strong> <span id="template-events">0</span></p>
       <hr>
-      <h3>⚙️ Settings</h3>
-      <p><strong>Feature Enabled:</strong> ${this.config.enableFeature.get()} (default: ${
-      this.config.enableFeature.defaultValue
-    })</p>
-      <p><strong>Update Interval:</strong> ${this.config.updateInterval.get()}ms</p>
-      <p><strong>Username:</strong> ${this.config.username.get()} ${
-      this.config.username.isModified() ? "(modified)" : "(default)"
-    }</p>
-      <p><strong>Desktop Notifications:</strong> ${this.config.showDesktop.get()}</p>
-      <p><strong>Sound Enabled:</strong> ${this.config.soundEnabled.get()}</p>
+      <h3>⚙️ Settings (Equicord-style)</h3>
+      <p><strong>Feature Enabled:</strong> ${
+        this.settings.store.enableFeature
+      }</p>
+      <p><strong>Update Interval:</strong> ${
+        this.settings.store.updateInterval
+      }ms</p>
+      <p><strong>Username:</strong> ${this.settings.store.username}</p>
+      <p><strong>Desktop Notifications:</strong> ${
+        this.settings.store.showDesktop
+      }</p>
+      <p><strong>Sound Enabled:</strong> ${this.settings.store.soundEnabled}</p>
+      <p><strong>Volume:</strong> ${this.settings.store.volume}</p>
+      <p><strong>Mode:</strong> ${this.settings.store.mode}</p>
+      <p><strong>Message:</strong> ${this.settings.store.message}</p>
+      <hr>
+      <h3>📊 Hidden Stats</h3>
+      <p><strong>Total Runs:</strong> ${this.settings.store.totalRuns}</p>
+      <p><strong>Last Run:</strong> ${new Date(
+        this.settings.store.lastRunTime
+      ).toLocaleString()}</p>
       <hr>
       <button id="template-test-btn" class="el-button el-button--primary">
         🧪 Test Button
@@ -425,8 +477,8 @@ class TemplatePlugin extends Plugin {
       const toggleBtn = container.querySelector("#template-toggle-btn");
       if (toggleBtn) {
         this.registerListener(toggleBtn, "click", () => {
-          const newValue = !this.config.enableFeature.get();
-          this.config.enableFeature.set(newValue);
+          const newValue = !this.settings.store.enableFeature;
+          this.settings.store.enableFeature = newValue;
           this.logger.log(`🔄 Feature toggled: ${newValue}`);
           if (this.utils) {
             this.logger.showSuccess(

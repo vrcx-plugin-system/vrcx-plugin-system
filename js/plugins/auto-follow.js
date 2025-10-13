@@ -30,8 +30,8 @@ class AutoFollowPlugin extends Plugin {
       description:
         "Automatic location tracking system that follows selected users",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1728778800",
+      version: "3.0.0",
+      build: "1728847200",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/context-menu-api.js",
       ],
@@ -41,26 +41,40 @@ class AutoFollowPlugin extends Plugin {
     this.autoFollowUsers = new Map(); // Map<userId, {user, lastLocation}>
     this.lastRequestedFrom = new Map(); // Map<userId, lastRequestedLocation>
     this.checkInterval = 10000; // Check every 10 seconds
-
-    // Default config
-    this.defaultConfig = {
-      customInviteMessage: "Can I join you?",
-    };
   }
 
   async load() {
-    // Define settings with metadata
-    this.config.customInviteMessage = this.createSetting({
-      key: "customInviteMessage",
-      category: "messages",
-      name: "Custom Invite Message",
-      description: "Message template for invite requests when following users",
-      type: "string",
-      defaultValue: "Can I join you?",
+    // Define settings using new Equicord-style system
+    const SettingType = window.customjs.SettingType;
+
+    this.settings = this.defineSettings({
+      customInviteMessage: {
+        type: SettingType.STRING,
+        description:
+          "Message template for invite requests when following users",
+        placeholder: "Can I join you?",
+        default: "Can I join you?",
+        variables: {
+          "{userId}": "Target user ID being followed",
+          "{userName}": "Target user display name",
+          "{userDisplayName}": "Target user display name",
+          "{worldName}": "World name they traveled to",
+          "{worldId}": "World ID",
+          "{instanceId}": "Full instance ID",
+          "{myUserId}": "Your user ID",
+          "{myUserName}": "Your display name",
+          "{myDisplayName}": "Your display name",
+          "{now}": "Formatted date/time",
+          "{date}": "Current date",
+          "{time}": "Current time",
+          "{timestamp}": "Unix timestamp",
+          "{iso}": "ISO 8601 date/time",
+        },
+      },
     });
 
     this.logger.log(
-      `⚙️ Custom invite message: "${this.config.customInviteMessage.get()}"`
+      `⚙️ Custom invite message: "${this.settings.store.customInviteMessage}"`
     );
 
     this.logger.log("Auto Follow plugin ready");
@@ -482,7 +496,7 @@ class AutoFollowPlugin extends Plugin {
    * @returns {string|null} Current message template or null if disabled
    */
   getCustomInviteMessage() {
-    return this.config.customInviteMessage.get();
+    return this.settings.store.customInviteMessage;
   }
 
   /**
@@ -507,8 +521,7 @@ class AutoFollowPlugin extends Plugin {
    * Set to null to omit custom messages (will use default config or no message)
    */
   async setCustomInviteMessage(message) {
-    this.set("messages.customInviteMessage", message);
-    await this.saveSettings();
+    this.settings.store.customInviteMessage = message || "Can I join you?";
     if (message === null) {
       this.logger.log("Custom invite message disabled");
     } else {

@@ -2,10 +2,11 @@ class PluginManagerUIPlugin extends Plugin {
   constructor() {
     super({
       name: "Plugin Manager UI",
-      description: "Visual UI for managing VRCX custom plugins",
+      description:
+        "Visual UI for managing VRCX custom plugins - Equicord inspired",
       author: "Bluscream",
-      version: "5.3.0",
-      build: "1728778800",
+      version: "6.0.0",
+      build: "1734091200",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -13,6 +14,9 @@ class PluginManagerUIPlugin extends Plugin {
 
     this.contentContainer = null;
     this.settingsModal = null;
+    this.searchValue = { value: "", filter: "all" }; // all, enabled, disabled, core, failed, new
+    this.visibleCount = 12;
+    this.pluginsPerPage = 12;
   }
 
   async load() {
@@ -83,7 +87,7 @@ class PluginManagerUIPlugin extends Plugin {
       if (window.$pinia?.ui?.$subscribe) {
         const unsubscribe = window.$pinia.ui.$subscribe(() => {
           if (window.$pinia.ui.menuActiveIndex === "plugins") {
-            this.refreshPluginList();
+            this.refreshPluginGrid();
           }
         });
 
@@ -114,84 +118,193 @@ class PluginManagerUIPlugin extends Plugin {
     try {
       container.innerHTML = "";
 
-      const header = this.createHeader();
-      container.appendChild(header);
+      // Stats cards section
+      const statsSection = this.createStatsSection();
+      container.appendChild(statsSection);
 
+      // Load plugin section
       const loadSection = this.createLoadPluginSection();
       container.appendChild(loadSection);
 
-      const pluginList = document.createElement("div");
-      pluginList.id = "plugin-list-container";
-      container.appendChild(pluginList);
+      // Filter section
+      const filterSection = this.createFilterSection();
+      container.appendChild(filterSection);
 
-      // Defer refreshPluginList to ensure container is in DOM
-      setTimeout(() => this.refreshPluginList(), 0);
+      // Plugin grid container
+      const pluginGrid = document.createElement("div");
+      pluginGrid.id = "plugin-grid-container";
+      pluginGrid.className = "vc-plugins-grid";
+      container.appendChild(pluginGrid);
+
+      // Defer refresh to ensure container is in DOM
+      setTimeout(() => this.refreshPluginGrid(), 0);
     } catch (error) {
       this.logger.error("Error rendering plugin manager content:", error);
-      container.innerHTML = `
-        <div style="padding: 20px; text-align: center; color: #dc3545;">
-          <h3>❌ Error Loading Plugin Manager</h3>
-          <p>${error.message}</p>
-          <button class="el-button el-button--primary" onclick="location.reload()">
-            <i class="ri-restart-line"></i> Reload VRCX
-          </button>
-        </div>
-      `;
+      const errorDiv = document.createElement("div");
+      errorDiv.style.cssText =
+        "padding: 20px; text-align: center; color: #dc3545;";
+
+      const errorTitle = document.createElement("h3");
+      errorTitle.textContent = "❌ Error Loading Plugin Manager";
+
+      const errorMsg = document.createElement("p");
+      errorMsg.textContent = error.message;
+
+      const reloadBtn = document.createElement("button");
+      reloadBtn.className = "el-button el-button--primary";
+      reloadBtn.innerHTML = '<i class="ri-restart-line"></i> Reload VRCX';
+      this.registerListener(reloadBtn, "click", () => location.reload());
+
+      errorDiv.appendChild(errorTitle);
+      errorDiv.appendChild(errorMsg);
+      errorDiv.appendChild(reloadBtn);
+      container.appendChild(errorDiv);
     }
   }
 
-  createHeader() {
-    const header = document.createElement("div");
-    header.style.cssText = "margin-bottom: 30px;";
+  createStatsSection() {
+    const section = document.createElement("div");
+    section.style.cssText = "margin-bottom: 20px;";
 
-    const pluginInfo = window.customjs.pluginManager?.getPluginList() || {
-      loaded: [],
-      failed: [],
-      plugins: [],
-    };
+    // Title
+    const title = document.createElement("h2");
+    title.style.cssText =
+      "margin: 0 0 16px 0; font-size: 24px; font-weight: 600;";
+    title.textContent = "🔌 Plugin Management";
+    section.appendChild(title);
 
-    const coreModules = window.customjs.core_modules || [];
-    const allPlugins = pluginInfo.plugins || [];
-    const pluginCount = allPlugins.length;
-    const activeCount = allPlugins.filter((p) => p.enabled).length;
+    // Stats container
+    const statsContainer = document.createElement("div");
+    statsContainer.style.cssText =
+      "display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 16px;";
+
+    // Get plugin data
+    const allPlugins = window.customjs?.plugins || [];
+    const coreModules = window.customjs?.core_modules || [];
+    const failedUrls = window.customjs?.pluginManager?.failedUrls || new Set();
+
+    const enabledCount = allPlugins.filter((p) => p.enabled).length;
     const startedCount = allPlugins.filter((p) => p.started).length;
-    const failedCount = pluginInfo.failed?.length || 0;
-    const subscriptionCount = window.customjs.subscriptions?.size || 0;
 
-    header.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <div>
-          <h2 style="margin: 0; font-size: 28px; font-weight: 600;">
-            🔌 Plugins
-          </h2>
-          <p style="margin: 5px 0 0 0; color: #888; font-size: 14px;"></p>
-        </div>
-        <div style="display: flex; gap: 10px;">
-          <div style="text-align: center; padding: 10px 20px; background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(23,162,184,0.3);">
-            <div style="font-size: 24px; font-weight: bold;">${coreModules.length}</div>
-            <div style="font-size: 12px; opacity: 0.9;">Core</div>
-          </div>
-          <div style="text-align: center; padding: 10px 20px; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(40,167,69,0.3);">
-            <div style="font-size: 24px; font-weight: bold;">${pluginCount}</div>
-            <div style="font-size: 12px; opacity: 0.9;">Plugins</div>
-          </div>
-          <div style="text-align: center; padding: 10px 20px; background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(0,123,255,0.3);">
-            <div style="font-size: 24px; font-weight: bold;">${activeCount}</div>
-            <div style="font-size: 12px; opacity: 0.9;">Enabled</div>
-          </div>
-          <div style="text-align: center; padding: 10px 20px; background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(111,66,193,0.3);">
-            <div style="font-size: 24px; font-weight: bold;">${startedCount}</div>
-            <div style="font-size: 12px; opacity: 0.9;">Started</div>
-          </div>
-          <div style="text-align: center; padding: 10px 20px; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); border-radius: 8px; color: white; box-shadow: 0 2px 8px rgba(220,53,69,0.3);">
-            <div style="font-size: 24px; font-weight: bold;">${failedCount}</div>
-            <div style="font-size: 12px; opacity: 0.9;">Failed</div>
-          </div>
-        </div>
-      </div>
+    // Create stat cards
+    const stats = [
+      { label: "Core Modules", value: coreModules.length, color: "#17a2b8" },
+      { label: "Total Plugins", value: allPlugins.length, color: "#28a745" },
+      { label: "Enabled", value: enabledCount, color: "#007bff" },
+      { label: "Started", value: startedCount, color: "#6f42c1" },
+      { label: "Failed", value: failedUrls.size, color: "#dc3545" },
+    ];
+
+    stats.forEach((stat) => {
+      const card = this.createStatCard(stat.label, stat.value, stat.color);
+      statsContainer.appendChild(card);
+    });
+
+    section.appendChild(statsContainer);
+    return section;
+  }
+
+  createStatCard(label, value, color) {
+    const card = document.createElement("div");
+    card.style.cssText = `
+      text-align: center;
+      padding: 16px;
+      background: linear-gradient(135deg, ${color} 0%, ${window.customjs.utils.darkenColor(
+      color,
+      20
+    )} 100%);
+      border-radius: 8px;
+      color: white;
+      box-shadow: 0 2px 8px ${window.customjs.utils.hexToRgba(color, 0.3)};
+      transition: transform 0.2s;
     `;
 
-    return header;
+    const valueEl = document.createElement("div");
+    valueEl.style.cssText = "font-size: 28px; font-weight: bold;";
+    valueEl.textContent = value;
+
+    const labelEl = document.createElement("div");
+    labelEl.style.cssText = "font-size: 12px; opacity: 0.9; margin-top: 4px;";
+    labelEl.textContent = label;
+
+    card.appendChild(valueEl);
+    card.appendChild(labelEl);
+
+    // Hover effect
+    this.registerListener(card, "mouseenter", () => {
+      card.style.transform = "translateY(-2px)";
+    });
+    this.registerListener(card, "mouseleave", () => {
+      card.style.transform = "translateY(0)";
+    });
+
+    return card;
+  }
+
+  createFilterSection() {
+    const section = document.createElement("div");
+    section.style.cssText = "margin-bottom: 20px;";
+
+    // Title
+    const title = document.createElement("h5");
+    title.style.cssText =
+      "margin: 0 0 12px 0; font-size: 16px; font-weight: 600;";
+    title.textContent = "Filters";
+    section.appendChild(title);
+
+    // Filter controls container
+    const controlsContainer = document.createElement("div");
+    controlsContainer.style.cssText =
+      "display: flex; gap: 12px; margin-bottom: 16px;";
+
+    // Search input
+    const searchInput = document.createElement("input");
+    searchInput.type = "text";
+    searchInput.placeholder = "Search for a plugin...";
+    searchInput.className = "el-input__inner";
+    searchInput.style.cssText =
+      "flex: 1; padding: 8px 12px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 14px;";
+    searchInput.value = this.searchValue.value;
+
+    this.registerListener(searchInput, "input", (e) => {
+      this.searchValue.value = e.target.value.toLowerCase();
+      this.refreshPluginGrid();
+    });
+
+    // Filter dropdown
+    const filterSelect = document.createElement("select");
+    filterSelect.className = "el-select";
+    filterSelect.style.cssText =
+      "padding: 8px 32px 8px 12px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 14px; min-width: 150px; background: white; cursor: pointer;";
+
+    const filters = [
+      { value: "all", label: "Show All" },
+      { value: "enabled", label: "Show Enabled" },
+      { value: "disabled", label: "Show Disabled" },
+      { value: "core", label: "Show Core" },
+      { value: "failed", label: "Show Failed" },
+    ];
+
+    filters.forEach((filter) => {
+      const option = document.createElement("option");
+      option.value = filter.value;
+      option.textContent = filter.label;
+      if (filter.value === this.searchValue.filter) {
+        option.selected = true;
+      }
+      filterSelect.appendChild(option);
+    });
+
+    this.registerListener(filterSelect, "change", (e) => {
+      this.searchValue.filter = e.target.value;
+      this.refreshPluginGrid();
+    });
+
+    controlsContainer.appendChild(searchInput);
+    controlsContainer.appendChild(filterSelect);
+    section.appendChild(controlsContainer);
+
+    return section;
   }
 
   createLoadPluginSection() {
@@ -201,42 +314,97 @@ class PluginManagerUIPlugin extends Plugin {
       border: 2px dashed #dee2e6;
       border-radius: 12px;
       padding: 20px;
-      margin-bottom: 30px;
+      margin-bottom: 20px;
     `;
 
-    section.innerHTML = `
-      <h3 style="margin: 0 0 15px 0; font-size: 18px; font-weight: 600; display: flex; align-items: center;">
-        <i class="ri-download-cloud-line" style="color: #007bff; margin-right: 8px; font-size: 20px;"></i>
-        Load Plugin from URL
-      </h3>
-      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-        <input 
-          type="text" 
-          id="plugin-url-input" 
-          placeholder="https://github.com/USER/REPO/raw/refs/heads/main/js/plugins/my-plugin.js"
-          style="flex: 1; padding: 10px 15px; border: 2px solid #ced4da; border-radius: 6px; font-size: 14px; font-family: 'Consolas', monospace;"
-        />
-        <button 
-          id="load-plugin-btn"
-          class="el-button el-button--primary"
-          style="padding: 10px 20px;"
-        >
-          <i class="ri-download-line"></i> Load
-        </button>
-      </div>
-      <div id="load-plugin-status" style="margin-top: 10px; font-size: 13px; color: #6c757d;"></div>
-      <div style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 6px; border: 1px solid #dee2e6;">
-        <div style="font-size: 12px; color: #666; line-height: 1.6;">
-          <strong>Quick Access:</strong><br>
-          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.core_modules</code> - Core module URLs<br>
-          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.plugins</code> - Plugin instances<br>
-          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.subscriptions</code> - Pinia subscriptions<br>
-          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.config</code> - Configuration<br>
-          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.pluginManager</code> - Plugin manager<br>
-          <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">customjs.configManager</code> - Config manager
-        </div>
-      </div>
-    `;
+    // Title with icon
+    const titleContainer = document.createElement("h3");
+    titleContainer.style.cssText =
+      "margin: 0 0 15px 0; font-size: 18px; font-weight: 600; display: flex; align-items: center;";
+
+    const icon = document.createElement("i");
+    icon.className = "ri-download-cloud-line";
+    icon.style.cssText = "color: #007bff; margin-right: 8px; font-size: 20px;";
+
+    const titleText = document.createTextNode("Load Plugin from URL");
+
+    titleContainer.appendChild(icon);
+    titleContainer.appendChild(titleText);
+    section.appendChild(titleContainer);
+
+    // Input container
+    const inputContainer = document.createElement("div");
+    inputContainer.style.cssText =
+      "display: flex; gap: 10px; margin-bottom: 10px;";
+
+    const urlInput = document.createElement("input");
+    urlInput.type = "text";
+    urlInput.id = "plugin-url-input";
+    urlInput.placeholder =
+      "https://github.com/USER/REPO/raw/refs/heads/main/js/plugins/my-plugin.js";
+    urlInput.className = "el-input__inner";
+    urlInput.style.cssText =
+      "flex: 1; padding: 10px 15px; border: 2px solid #ced4da; border-radius: 6px; font-size: 14px; font-family: 'Consolas', monospace;";
+
+    const loadButton = document.createElement("button");
+    loadButton.id = "load-plugin-btn";
+    loadButton.className = "el-button el-button--primary";
+    loadButton.style.cssText = "padding: 10px 20px;";
+    loadButton.innerHTML = '<i class="ri-download-line"></i> Load';
+
+    inputContainer.appendChild(urlInput);
+    inputContainer.appendChild(loadButton);
+    section.appendChild(inputContainer);
+
+    // Status message
+    const statusDiv = document.createElement("div");
+    statusDiv.id = "load-plugin-status";
+    statusDiv.style.cssText =
+      "margin-top: 10px; font-size: 13px; color: #6c757d;";
+    section.appendChild(statusDiv);
+
+    // Quick access info
+    const infoDiv = document.createElement("div");
+    infoDiv.style.cssText =
+      "margin-top: 15px; padding: 10px; background: #fff; border-radius: 6px; border: 1px solid #dee2e6;";
+
+    const infoContent = document.createElement("div");
+    infoContent.style.cssText =
+      "font-size: 12px; color: #666; line-height: 1.6;";
+
+    const createCodeTag = (text) => {
+      const code = document.createElement("code");
+      code.style.cssText =
+        "background: #f8f9fa; padding: 2px 6px; border-radius: 3px;";
+      code.textContent = text;
+      return code;
+    };
+
+    const infoTitle = document.createElement("strong");
+    infoTitle.textContent = "Quick Access:";
+    infoContent.appendChild(infoTitle);
+    infoContent.appendChild(document.createElement("br"));
+
+    const quickAccessItems = [
+      "customjs.core_modules - Core module URLs",
+      "customjs.plugins - Plugin instances",
+      "customjs.subscriptions - Pinia subscriptions",
+      "customjs.config - Configuration",
+      "customjs.pluginManager - Plugin manager",
+      "customjs.configManager - Config manager",
+    ];
+
+    quickAccessItems.forEach((item, idx) => {
+      const parts = item.split(" - ");
+      infoContent.appendChild(createCodeTag(parts[0]));
+      infoContent.appendChild(document.createTextNode(" - " + parts[1]));
+      if (idx < quickAccessItems.length - 1) {
+        infoContent.appendChild(document.createElement("br"));
+      }
+    });
+
+    infoDiv.appendChild(infoContent);
+    section.appendChild(infoDiv);
 
     setTimeout(() => {
       const input = section.querySelector("#plugin-url-input");
@@ -280,7 +448,7 @@ class PluginManagerUIPlugin extends Plugin {
         status.textContent = `✅ Plugin loaded successfully!`;
         status.style.color = "#28a745";
         input.value = "";
-        setTimeout(() => this.refreshPluginList(), 500);
+        setTimeout(() => this.refreshPluginGrid(), 500);
       } else {
         status.textContent = `❌ Failed to load: ${result.message}`;
         status.style.color = "#dc3545";
@@ -291,387 +459,299 @@ class PluginManagerUIPlugin extends Plugin {
     }
   }
 
-  refreshPluginList() {
+  refreshPluginGrid() {
     try {
-      const container = this.contentContainer?.querySelector(
-        "#plugin-list-container"
+      const gridContainer = this.contentContainer?.querySelector(
+        "#plugin-grid-container"
       );
-      if (!container) {
-        this.logger.warn("Plugin list container not found");
+      if (!gridContainer) {
+        this.logger.warn("Plugin grid container not found");
         return;
       }
 
-      container.innerHTML = "";
+      gridContainer.innerHTML = "";
 
-      // Get core modules and plugins
-      const coreModules = window.customjs?.core_modules || [];
+      // Get all plugins and apply filters
       const allPlugins = window.customjs?.plugins || [];
+      const coreModules = window.customjs?.core_modules || [];
       const failedUrls =
         window.customjs?.pluginManager?.failedUrls || new Set();
 
-      // Core modules section
-      if (coreModules.length > 0) {
-        const coreSection = this.createCoreModulesSection(coreModules);
-        container.appendChild(coreSection);
+      // Filter plugins
+      const filteredPlugins = this.filterPlugins(
+        allPlugins,
+        coreModules,
+        failedUrls
+      );
+
+      // Reset visible count when filter changes
+      this.visibleCount = Math.min(this.pluginsPerPage, filteredPlugins.length);
+
+      // Create title for plugins section
+      const pluginsTitle = document.createElement("h5");
+      pluginsTitle.style.cssText =
+        "margin: 0 0 16px 0; font-size: 16px; font-weight: 600;";
+      pluginsTitle.textContent = `Plugins (${filteredPlugins.length})`;
+      gridContainer.appendChild(pluginsTitle);
+
+      // Create grid
+      const grid = document.createElement("div");
+      grid.style.cssText =
+        "display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 16px; margin-bottom: 20px;";
+
+      if (filteredPlugins.length === 0) {
+        const noResults = document.createElement("div");
+        noResults.style.cssText =
+          "padding: 40px; text-align: center; color: #6c757d;";
+        noResults.textContent = "No plugins meet the search criteria.";
+        gridContainer.appendChild(noResults);
+        return;
       }
 
-      // Loaded plugins section
-      if (allPlugins.length > 0) {
-        const loadedSection = this.createPluginCardsSection(allPlugins);
-        container.appendChild(loadedSection);
-      }
+      // Show only visible plugins
+      const visiblePlugins = filteredPlugins.slice(0, this.visibleCount);
+      visiblePlugins.forEach((plugin) => {
+        const card = this.createPluginCard(plugin);
+        grid.appendChild(card);
+      });
 
-      // Failed plugins section
-      if (failedUrls.size > 0) {
-        const failedSection = this.createFailedSection(Array.from(failedUrls));
-        container.appendChild(failedSection);
-      }
+      gridContainer.appendChild(grid);
 
-      // System info section
-      const systemSection = this.createSystemInfoSection();
-      container.appendChild(systemSection);
+      // Load more button if needed
+      if (this.visibleCount < filteredPlugins.length) {
+        const loadMoreBtn = document.createElement("button");
+        loadMoreBtn.className = "el-button el-button--default";
+        loadMoreBtn.style.cssText = "width: 100%; margin-top: 16px;";
+        loadMoreBtn.textContent = `Load More (${
+          filteredPlugins.length - this.visibleCount
+        } remaining)`;
+
+        this.registerListener(loadMoreBtn, "click", () => {
+          this.visibleCount = Math.min(
+            this.visibleCount + this.pluginsPerPage,
+            filteredPlugins.length
+          );
+          this.refreshPluginGrid();
+        });
+
+        gridContainer.appendChild(loadMoreBtn);
+      }
     } catch (error) {
-      this.logger.error("Error refreshing plugin list:", error);
+      this.logger.error("Error refreshing plugin grid:", error);
     }
   }
 
-  createCoreModulesSection(coreModules) {
-    const section = document.createElement("div");
-    section.style.cssText = "margin-bottom: 30px;";
+  filterPlugins(allPlugins, coreModules, failedUrls) {
+    const { value: search, filter } = this.searchValue;
 
-    const header = document.createElement("h3");
-    header.style.cssText = `
-      margin: 0 0 15px 0;
-      font-size: 20px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      color: #17a2b8;
-    `;
-    header.innerHTML = `<i class="ri-cpu-line" style="margin-right: 8px;"></i>Core Modules (${coreModules.length})`;
+    let plugins = [...allPlugins];
 
-    section.appendChild(header);
+    // Apply filter
+    if (filter === "enabled") {
+      plugins = plugins.filter((p) => p.enabled);
+    } else if (filter === "disabled") {
+      plugins = plugins.filter((p) => !p.enabled);
+    } else if (filter === "core") {
+      // Return empty for core since we show them separately if needed
+      plugins = [];
+    } else if (filter === "failed") {
+      plugins = [];
+    }
 
-    const list = document.createElement("div");
-    list.style.cssText = "display: flex; flex-direction: column; gap: 10px;";
+    // Apply search
+    if (search) {
+      plugins = plugins.filter(
+        (p) =>
+          p.metadata.name.toLowerCase().includes(search) ||
+          p.metadata.description.toLowerCase().includes(search) ||
+          p.metadata.id.toLowerCase().includes(search)
+      );
+    }
 
-    coreModules.forEach((moduleUrl) => {
-      const moduleName = moduleUrl.split("/").pop().replace(".js", "");
-      const item = document.createElement("div");
-      item.style.cssText = `
-        background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
-        border: 2px solid #17a2b8;
-        border-radius: 8px;
-        padding: 12px 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-family: 'Consolas', monospace;
-        font-size: 13px;
-        color: #0c5460;
-      `;
+    // Sort alphabetically
+    plugins.sort((a, b) => a.metadata.name.localeCompare(b.metadata.name));
 
-      item.innerHTML = `
-        <div>
-          <strong style="font-size: 14px;">${moduleName}</strong>
-          <div style="font-size: 11px; margin-top: 3px; opacity: 0.8;">${moduleUrl}</div>
-        </div>
-        <span style="background: #17a2b8; color: white; padding: 4px 12px; border-radius: 12px; font-size: 11px;">
-          ⚙️ System
-        </span>
-      `;
-
-      list.appendChild(item);
-    });
-
-    section.appendChild(list);
-    return section;
+    return plugins;
   }
 
-  createPluginCardsSection(plugins) {
-    const section = document.createElement("div");
-    section.style.cssText = "margin-bottom: 30px;";
-
-    const header = document.createElement("h3");
-    header.style.cssText = `
-      margin: 0 0 15px 0;
-      font-size: 20px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      color: #28a745;
-    `;
-    header.innerHTML = `<i class="ri-checkbox-circle-line" style="margin-right: 8px;"></i>Loaded Plugins (${plugins.length})`;
-
-    section.appendChild(header);
-
-    const grid = document.createElement("div");
-    grid.style.cssText = `
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
-      gap: 20px;
-    `;
-
-    // Sort plugins by name alphabetically
-    const sortedPlugins = [...plugins].sort((a, b) => {
-      const nameA = (a.metadata?.name || "Unknown").toLowerCase();
-      const nameB = (b.metadata?.name || "Unknown").toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
-
-    sortedPlugins.forEach((plugin) => {
-      try {
-        const card = this.createEnhancedPluginCard(plugin);
-        grid.appendChild(card);
-      } catch (error) {
-        this.logger.error(
-          `Error creating card for plugin: ${
-            plugin?.metadata?.name || "unknown"
-          }`,
-          error
-        );
-      }
-    });
-
-    section.appendChild(grid);
-    return section;
-  }
-
-  createEnhancedPluginCard(plugin) {
+  createPluginCard(plugin) {
     const card = document.createElement("div");
+    card.className = "vc-plugin-card";
     card.style.cssText = `
       background: white;
       border: 2px solid ${plugin.enabled ? "#28a745" : "#6c757d"};
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      transition: all 0.3s;
-      cursor: pointer;
-      position: relative;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
     `;
 
-    // Build dependency list
-    const deps = plugin.metadata.dependencies || [];
-    const depsHtml =
-      deps.length > 0
-        ? `<div style="font-size: 11px; color: #999; margin-top: 5px;">
-             <i class="ri-link"></i> ${deps.length} ${
-            deps.length === 1 ? "dependency" : "dependencies"
-          }
-           </div>`
-        : "";
+    // Header with name, switch, and info button
+    const header = document.createElement("div");
+    header.style.cssText =
+      "display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;";
+
+    // Name and author section
+    const nameSection = document.createElement("div");
+    nameSection.style.cssText = "flex: 1; min-width: 0;";
+
+    const name = document.createElement("div");
+    name.style.cssText =
+      "font-size: 16px; font-weight: 600; color: #212529; margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;";
+    name.textContent = plugin.metadata?.name || "Unknown Plugin";
+
+    const meta = document.createElement("div");
+    meta.style.cssText =
+      "font-size: 11px; color: #6c757d; font-family: monospace;";
+    meta.textContent = `v${plugin.metadata?.version || "0.0.0"}`;
+
+    nameSection.appendChild(name);
+    nameSection.appendChild(meta);
+
+    // Info button
+    const infoBtn = document.createElement("button");
+    infoBtn.className = "el-button el-button--small";
+    infoBtn.style.cssText = "margin: 0 8px;";
+    infoBtn.innerHTML = '<i class="ri-information-line"></i>';
+    this.registerListener(infoBtn, "click", (e) => {
+      e.stopPropagation();
+      this.handleShowDetails(plugin);
+    });
+
+    // Toggle switch
+    const switchContainer = document.createElement("label");
+    switchContainer.className = "el-switch";
+    switchContainer.style.cssText =
+      "cursor: pointer; display: flex; align-items: center;";
+
+    const switchInput = document.createElement("input");
+    switchInput.type = "checkbox";
+    switchInput.checked = plugin.enabled;
+    switchInput.style.display = "none";
+
+    const switchCore = document.createElement("span");
+    switchCore.style.cssText = `
+      display: inline-block;
+      position: relative;
+      width: 40px;
+      height: 20px;
+      border-radius: 10px;
+      background: ${plugin.enabled ? "#409eff" : "#dcdfe6"};
+      transition: background-color 0.3s;
+      cursor: pointer;
+    `;
+
+    const switchAction = document.createElement("span");
+    switchAction.style.cssText = `
+      position: absolute;
+      top: 1px;
+      left: ${plugin.enabled ? "21px" : "1px"};
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: white;
+      transition: all 0.3s;
+    `;
+
+    switchCore.appendChild(switchAction);
+    switchContainer.appendChild(switchInput);
+    switchContainer.appendChild(switchCore);
+
+    this.registerListener(switchContainer, "click", async (e) => {
+      e.stopPropagation();
+      await this.handleTogglePlugin(plugin.metadata.id);
+    });
+
+    header.appendChild(nameSection);
+    header.appendChild(infoBtn);
+    header.appendChild(switchContainer);
+
+    // Description
+    const description = document.createElement("div");
+    description.style.cssText =
+      "font-size: 13px; color: #666; line-height: 1.4; margin-bottom: 12px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;";
+    description.textContent =
+      plugin.metadata?.description || "No description available";
 
     // Status badges
-    const badges = [];
-    if (plugin.loaded)
-      badges.push(
-        '<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-right: 4px;">Loaded</span>'
-      );
-    if (plugin.started)
-      badges.push(
-        '<span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-right: 4px;">Started</span>'
-      );
-    if (plugin.enabled)
-      badges.push(
-        '<span style="background: #6f42c1; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; margin-right: 4px;">Enabled</span>'
-      );
+    const badgesContainer = document.createElement("div");
+    badgesContainer.style.cssText =
+      "display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px;";
 
-    // Resource counts
-    const resources = plugin.resources || {
-      timers: new Set(),
-      observers: new Set(),
-      listeners: new Map(),
-      hooks: new Set(),
-    };
+    if (plugin.loaded) {
+      const badge = this.createBadge("Loaded", "#28a745");
+      badgesContainer.appendChild(badge);
+    }
+    if (plugin.started) {
+      const badge = this.createBadge("Started", "#007bff");
+      badgesContainer.appendChild(badge);
+    }
+    if (plugin.enabled) {
+      const badge = this.createBadge("Enabled", "#6f42c1");
+      badgesContainer.appendChild(badge);
+    }
 
-    const timerCount = resources.timers?.size || 0;
-    const observerCount = resources.observers?.size || 0;
-    const listenerCount = resources.listeners?.size || 0;
-    const hookCount = resources.hooks?.size || 0;
+    // Action buttons
+    const actions = document.createElement("div");
+    actions.style.cssText =
+      "display: flex; gap: 8px; margin-top: auto; padding-top: 12px; border-top: 1px solid #e9ecef;";
 
-    // Get subscription count from global tracking
-    const globalSubscriptions = window.customjs.subscriptions?.get(
-      plugin.metadata.id
-    );
-    const subscriptionCount = globalSubscriptions?.size || 0;
+    const reloadBtn = document.createElement("button");
+    reloadBtn.className = "el-button el-button--small el-button--info";
+    reloadBtn.style.cssText = "flex: 1;";
+    reloadBtn.innerHTML = '<i class="ri-restart-line"></i> Reload';
+    this.registerListener(reloadBtn, "click", async (e) => {
+      e.stopPropagation();
+      await this.handleReloadPlugin(plugin.metadata.url);
+    });
 
-    const totalResources =
-      timerCount +
-      observerCount +
-      listenerCount +
-      hookCount +
-      subscriptionCount;
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "el-button el-button--small el-button--danger";
+    removeBtn.innerHTML = '<i class="ri-delete-bin-line"></i>';
+    this.registerListener(removeBtn, "click", async (e) => {
+      e.stopPropagation();
+      await this.handleRemovePlugin(plugin.metadata.url);
+    });
 
-    // Build resource display
-    const resourceItems = [];
-    if (timerCount > 0)
-      resourceItems.push(`⏱️ ${timerCount} timer${timerCount > 1 ? "s" : ""}`);
-    if (observerCount > 0)
-      resourceItems.push(
-        `👁️ ${observerCount} observer${observerCount > 1 ? "s" : ""}`
-      );
-    if (listenerCount > 0)
-      resourceItems.push(
-        `🎧 ${listenerCount} listener${listenerCount > 1 ? "s" : ""}`
-      );
-    if (hookCount > 0)
-      resourceItems.push(`🪝 ${hookCount} hook${hookCount > 1 ? "s" : ""}`);
-    if (subscriptionCount > 0)
-      resourceItems.push(
-        `📊 ${subscriptionCount} subscription${
-          subscriptionCount > 1 ? "s" : ""
-        }`
-      );
+    actions.appendChild(reloadBtn);
+    actions.appendChild(removeBtn);
 
-    const resourcesHtml =
-      totalResources > 0
-        ? `<div style="font-size: 11px; color: #555; margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #007bff;">
-           <div style="font-weight: 600; margin-bottom: 4px; color: #007bff;">
-             <i class="ri-cpu-line"></i> Resources (${totalResources})
-           </div>
-           <div style="line-height: 1.6;">
-             ${resourceItems.join(" • ")}
-           </div>
-         </div>`
-        : '<div style="font-size: 11px; color: #999; margin-top: 8px; font-style: italic;">No active resources</div>';
-
-    // Check if plugin has settings
-    const hasSettings =
-      window.customjs?.configManager?.settings?.get(plugin.metadata.id)?.size >
-      0;
-
-    card.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-        <div style="flex: 1;">
-          <h4 style="margin: 0 0 5px 0; font-size: 18px; font-weight: 600; color: #212529;">
-            ${plugin.metadata?.name || "Unknown Plugin"}
-          </h4>
-          <div style="font-size: 11px; color: #6c757d; font-family: monospace; margin-bottom: 8px;">
-            ID: ${plugin.metadata?.id || "unknown"} • v${
-      plugin.metadata?.version || "0.0.0"
-    } • Build: ${plugin.metadata?.build || "unknown"}
-          </div>
-          <div style="margin-bottom: 8px;">
-            ${badges.join("")}
-          </div>
-          ${
-            plugin.metadata?.description
-              ? `<p style="font-size: 13px; color: #666; margin: 8px 0 0 0; line-height: 1.4;">${plugin.metadata.description}</p>`
-              : ""
-          }
-          ${depsHtml}
-          ${resourcesHtml}
-        </div>
-      </div>
-      ${
-        hasSettings
-          ? `
-      <div class="settings-section" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e9ecef;">
-        <div class="settings-toggle" style="display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; cursor: pointer; margin-bottom: 10px;">
-          <span style="font-size: 14px; font-weight: 600; color: #212529;">
-            <i class="ri-settings-3-line"></i> Plugin Settings
-          </span>
-          <i class="ri-arrow-down-s-line toggle-icon" style="font-size: 20px; color: #6c757d; transition: transform 0.3s;"></i>
-        </div>
-        <div class="settings-content" style="display: block; max-height: 400px; overflow-y: auto; padding: 0 5px;"></div>
-      </div>
-      `
-          : ""
-      }
-      <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 15px; padding-top: 15px; border-top: 1px solid #e9ecef;">
-        <button class="toggle-btn el-button el-button--small ${
-          plugin.enabled ? "el-button--warning" : "el-button--success"
-        }" style="flex: 1;">
-          <i class="${
-            plugin.enabled ? "ri-pause-circle-line" : "ri-play-circle-line"
-          }"></i>
-          ${plugin.enabled ? "Disable" : "Enable"}
-        </button>
-        <button class="reload-btn el-button el-button--small el-button--info" style="flex: 1;">
-          <i class="ri-restart-line"></i> Reload
-        </button>
-        <button class="details-btn el-button el-button--small" style="flex: 1;">
-          <i class="ri-information-line"></i> Details
-        </button>
-        <button class="remove-btn el-button el-button--small el-button--danger">
-          <i class="ri-delete-bin-line"></i>
-        </button>
-      </div>
-    `;
+    // Assemble card
+    card.appendChild(header);
+    card.appendChild(description);
+    if (badgesContainer.children.length > 0) {
+      card.appendChild(badgesContainer);
+    }
+    card.appendChild(actions);
 
     // Hover effects
     this.registerListener(card, "mouseenter", () => {
-      card.style.boxShadow = "0 8px 16px rgba(0,0,0,0.15)";
-      card.style.transform = "translateY(-4px)";
+      card.style.boxShadow = "0 4px 12px rgba(0,0,0,0.15)";
+      card.style.transform = "translateY(-2px)";
     });
 
     this.registerListener(card, "mouseleave", () => {
-      card.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
+      card.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
       card.style.transform = "translateY(0)";
     });
 
-    // Button handlers
-    setTimeout(() => {
-      const toggleBtn = card.querySelector(".toggle-btn");
-      const reloadBtn = card.querySelector(".reload-btn");
-      const detailsBtn = card.querySelector(".details-btn");
-      const removeBtn = card.querySelector(".remove-btn");
-
-      if (toggleBtn) {
-        this.registerListener(toggleBtn, "click", async (e) => {
-          e.stopPropagation();
-          await this.handleTogglePlugin(plugin.metadata.id);
-        });
-      }
-
-      if (reloadBtn) {
-        this.registerListener(reloadBtn, "click", async (e) => {
-          e.stopPropagation();
-          await this.handleReloadPlugin(plugin.metadata.url);
-        });
-      }
-
-      if (detailsBtn) {
-        this.registerListener(detailsBtn, "click", (e) => {
-          e.stopPropagation();
-          this.handleShowDetails(plugin);
-        });
-      }
-
-      if (removeBtn) {
-        this.registerListener(removeBtn, "click", async (e) => {
-          e.stopPropagation();
-          await this.handleRemovePlugin(plugin.metadata.url);
-        });
-      }
-
-      // Settings section toggle
-      if (hasSettings) {
-        const settingsToggle = card.querySelector(".settings-toggle");
-        const settingsContent = card.querySelector(".settings-content");
-        const toggleIcon = card.querySelector(".toggle-icon");
-
-        if (settingsToggle && settingsContent) {
-          // Populate settings content
-          settingsContent.appendChild(this.buildSettingsUI(plugin));
-
-          // Add toggle functionality
-          let isExpanded = true; // Start expanded by default
-          this.registerListener(settingsToggle, "click", (e) => {
-            e.stopPropagation();
-            isExpanded = !isExpanded;
-            settingsContent.style.display = isExpanded ? "block" : "none";
-            if (toggleIcon) {
-              toggleIcon.style.transform = isExpanded
-                ? "rotate(0deg)"
-                : "rotate(-90deg)";
-            }
-          });
-        }
-      }
-    }, 0);
-
     return card;
+  }
+
+  createBadge(text, color) {
+    const badge = document.createElement("span");
+    badge.style.cssText = `
+      background: ${color};
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 500;
+    `;
+    badge.textContent = text;
+    return badge;
   }
 
   createFailedSection(failedUrls) {
@@ -748,129 +828,6 @@ class PluginManagerUIPlugin extends Plugin {
     return section;
   }
 
-  createSystemInfoSection() {
-    const section = document.createElement("div");
-    section.style.cssText = "margin-bottom: 30px;";
-
-    const header = document.createElement("h3");
-    header.style.cssText = `
-      margin: 0 0 15px 0;
-      font-size: 20px;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-    `;
-    header.innerHTML = `<i class="ri-information-line" style="margin-right: 8px;"></i>System Information`;
-
-    section.appendChild(header);
-
-    const info = document.createElement("div");
-    info.style.cssText = `
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 20px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(102,126,234,0.3);
-    `;
-
-    const eventCount = Object.keys(window.customjs.events || {}).length;
-    const preHookCount = Object.keys(window.customjs.hooks?.pre || {}).length;
-    const postHookCount = Object.keys(window.customjs.hooks?.post || {}).length;
-    const voidHookCount = Object.keys(window.customjs.hooks?.void || {}).length;
-    const replaceHookCount = Object.keys(
-      window.customjs.hooks?.replace || {}
-    ).length;
-    const backedUpFunctions = Object.keys(
-      window.customjs.functions || {}
-    ).length;
-    const totalSubscriptions = window.customjs.subscriptions?.size || 0;
-
-    // Get loader config
-    const loaderConfig = window.customjs.configManager?.getPluginConfig() || {};
-    const enabledInConfig = Object.values(loaderConfig).filter(
-      (v) => v === true
-    ).length;
-    const disabledInConfig = Object.values(loaderConfig).filter(
-      (v) => v === false
-    ).length;
-    const loadTimeout =
-      window.customjs.config?.loader?.loadTimeout?.value ??
-      window.customjs.config?.loader?.loadTimeout ??
-      10000;
-
-    info.innerHTML = `
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 15px;">
-        <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">System Version</div>
-          <div style="font-size: 20px; font-weight: 600;">${
-            window.customjs.version
-          }</div>
-        </div>
-        <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Build</div>
-          <div style="font-size: 20px; font-weight: 600;">${
-            window.customjs.build
-          }</div>
-        </div>
-        <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Load Timeout</div>
-          <div style="font-size: 20px; font-weight: 600;">${loadTimeout}ms</div>
-        </div>
-        <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Total Subscriptions</div>
-          <div style="font-size: 20px; font-weight: 600;">${totalSubscriptions}</div>
-        </div>
-        <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Events Registered</div>
-          <div style="font-size: 20px; font-weight: 600;">${eventCount}</div>
-        </div>
-        <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Function Hooks</div>
-          <div style="font-size: 20px; font-weight: 600;">${
-            preHookCount + postHookCount + voidHookCount + replaceHookCount
-          }</div>
-        </div>
-        <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Backed Up Functions</div>
-          <div style="font-size: 20px; font-weight: 600;">${backedUpFunctions}</div>
-        </div>
-        <div>
-          <div style="font-size: 12px; opacity: 0.9; margin-bottom: 3px;">Enabled in Config</div>
-          <div style="font-size: 20px; font-weight: 600;">${enabledInConfig}</div>
-        </div>
-      </div>
-      <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
-        <div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px;">Namespace Structure</div>
-        <div style="font-family: 'Consolas', monospace; font-size: 12px; line-height: 1.8;">
-          <code style="color: #fff;">customjs.core_modules</code> = [${
-            window.customjs.core_modules?.length || 0
-          } modules]<br>
-          <code style="color: #fff;">customjs.plugins</code> = [${
-            window.customjs.plugins.length
-          } instances]<br>
-          <code style="color: #fff;">customjs.subscriptions</code> = Map (${totalSubscriptions} plugins)<br>
-          <code style="color: #fff;">customjs.pluginManager</code> = PluginManager<br>
-          <code style="color: #fff;">customjs.configManager</code> = ConfigManager<br>
-          <code style="color: #fff;">customjs.config</code> = Configuration<br>
-          <code style="color: #fff;">customjs.events</code> = Events (${eventCount})<br>
-          <code style="color: #fff;">customjs.hooks</code> = Hooks (pre: ${preHookCount}, post: ${postHookCount}, void: ${voidHookCount}, replace: ${replaceHookCount})
-        </div>
-      </div>
-      <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
-        <div style="font-size: 12px; opacity: 0.9; margin-bottom: 8px;">Config Location</div>
-        <div style="font-family: 'Consolas', monospace; font-size: 11px; line-height: 1.6;">
-          <code style="color: #fff;">vrcx.customjs.loader.plugins</code> - Plugin enable/disable states<br>
-          <code style="color: #fff;">vrcx.customjs.loader.loadTimeout</code> - ${loadTimeout}ms<br>
-          <code style="color: #fff;">vrcx.customjs.settings</code> - Plugin settings<br>
-          <code style="color: #fff;">vrcx.customjs.logger</code> - Logger settings
-        </div>
-      </div>
-    `;
-
-    section.appendChild(info);
-    return section;
-  }
-
   async handleTogglePlugin(pluginId) {
     try {
       const plugin = window.customjs.pluginManager.getPlugin(pluginId);
@@ -890,10 +847,9 @@ class PluginManagerUIPlugin extends Plugin {
         const config = window.customjs.pluginManager.getPluginConfig();
         config[plugin.metadata.url] = plugin.enabled;
         window.customjs.pluginManager.savePluginConfig(config);
-        // Settings are now auto-saved to localStorage!
       }
 
-      setTimeout(() => this.refreshPluginList(), 100);
+      setTimeout(() => this.refreshPluginGrid(), 100);
 
       const statusMsg = plugin.enabled ? "enabled" : "disabled";
       this.logger.showSuccess(`${plugin.metadata.name} ${statusMsg}`);
@@ -921,7 +877,7 @@ class PluginManagerUIPlugin extends Plugin {
       if (result.success) {
         this.logger.log("Plugin reloaded successfully");
         this.logger.showSuccess("Plugin reloaded successfully");
-        setTimeout(() => this.refreshPluginList(), 500);
+        setTimeout(() => this.refreshPluginGrid(), 500);
       } else {
         this.logger.error(`Reload failed: ${result.message}`);
         this.logger.showError(`Reload failed: ${result.message}`);
@@ -933,11 +889,19 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   handleShowDetails(plugin) {
-    // Dump full plugin object to console
-    console.log(plugin); // eslint-disable-line no-console
-    // Open devtools for debugging
-    if (window.AppApi?.ShowDevTools) {
-      window.AppApi.ShowDevTools();
+    // Check if plugin has settings
+    const hasSettings =
+      plugin.settings?.def && Object.keys(plugin.settings.def).length > 0;
+
+    if (hasSettings) {
+      // Show settings modal
+      this.showSettingsModal(plugin);
+    } else {
+      // Just dump to console and open devtools
+      console.log(plugin); // eslint-disable-line no-console
+      if (window.AppApi?.ShowDevTools) {
+        window.AppApi.ShowDevTools();
+      }
     }
   }
 
@@ -968,7 +932,7 @@ class PluginManagerUIPlugin extends Plugin {
         this.logger.showSuccess(
           "Plugin removed (restart VRCX to fully unload)"
         );
-        setTimeout(() => this.refreshPluginList(), 500);
+        setTimeout(() => this.refreshPluginGrid(), 500);
       } else {
         this.logger.error(`Removal failed: ${result.message}`);
         this.logger.showError(`Removal failed: ${result.message}`);
@@ -992,7 +956,7 @@ class PluginManagerUIPlugin extends Plugin {
 
       if (result.success) {
         this.logger.showSuccess("Plugin loaded successfully!");
-        setTimeout(() => this.refreshPluginList(), 500);
+        setTimeout(() => this.refreshPluginGrid(), 500);
       } else {
         this.logger.showError(`Failed again: ${result.message}`);
       }
@@ -1000,22 +964,6 @@ class PluginManagerUIPlugin extends Plugin {
       this.logger.error("Error retrying plugin:", error);
       this.logger.showError(`Error: ${error.message}`);
     }
-  }
-
-  handleShowSettings(plugin) {
-    // Check if plugin has settings (either PluginSetting instances or raw localStorage)
-    const hasConfigDefinitions =
-      plugin.config && Object.keys(plugin.config).length > 0;
-    const storedSettings =
-      window.customjs?.configManager?.getPluginConfig(plugin.metadata.id) || {};
-    const hasStoredSettings = Object.keys(storedSettings).length > 0;
-
-    if (!hasConfigDefinitions && !hasStoredSettings) {
-      this.logger.showWarn("This plugin has no configurable settings");
-      return;
-    }
-
-    this.showSettingsModal(plugin);
   }
 
   showSettingsModal(plugin) {
@@ -1133,9 +1081,14 @@ class PluginManagerUIPlugin extends Plugin {
           `Reset all settings for "${plugin.metadata.name}" to their default values?`
         )
       ) {
-        // Clear all settings for this plugin
-        plugin.clearAllSettings();
-        this.logger.showSuccess("Settings cleared (will use defaults)");
+        // Reset settings using new API if available
+        if (plugin.settings?.resetAll) {
+          plugin.settings.resetAll();
+        } else {
+          // Legacy: clear all settings
+          plugin.clearAllSettings();
+        }
+        this.logger.showSuccess("Settings reset to defaults");
         // Refresh the modal
         content.innerHTML = "";
         content.appendChild(this.buildSettingsUI(plugin));
@@ -1156,173 +1109,108 @@ class PluginManagerUIPlugin extends Plugin {
 
   buildSettingsUI(plugin) {
     const container = document.createElement("div");
+    container.style.cssText = "padding: 12px 0;";
 
-    // Try to use PluginSetting definitions from plugin.config first (has metadata)
-    if (plugin.config && Object.keys(plugin.config).length > 0) {
-      // Group PluginSettings by category
-      const categorized = {};
+    // Check if plugin uses new definePluginSettings (has settings.def)
+    if (plugin.settings?.def && Object.keys(plugin.settings.def).length > 0) {
+      // New SettingsStore API
+      const settingsDef = plugin.settings.def;
+      const visibleSettings = {};
 
-      Object.entries(plugin.config).forEach(([configKey, settingInstance]) => {
-        if (settingInstance instanceof window.customjs.PluginSetting) {
-          const category = settingInstance.category || "general";
-          if (!categorized[category]) {
-            categorized[category] = [];
-          }
-          categorized[category].push(settingInstance);
+      // Filter out hidden settings
+      for (const key in settingsDef) {
+        if (!settingsDef[key].hidden) {
+          visibleSettings[key] = settingsDef[key];
         }
-      });
+      }
 
-      if (Object.keys(categorized).length > 0) {
-        // Render with metadata from PluginSetting instances
-        Object.entries(categorized).forEach(([categoryKey, settingsArray]) => {
-          this.renderCategoryWithMetadata(
-            container,
-            categoryKey,
-            settingsArray
-          );
-        });
+      if (Object.keys(visibleSettings).length === 0) {
+        const noSettings = document.createElement("div");
+        noSettings.style.cssText =
+          "text-align: center; padding: 20px; color: #6c757d;";
+
+        const icon = document.createElement("i");
+        icon.className = "ri-inbox-line";
+        icon.style.cssText =
+          "font-size: 32px; opacity: 0.5; display: block; margin-bottom: 8px;";
+
+        const text = document.createElement("p");
+        text.style.cssText = "margin: 0; font-size: 13px;";
+        text.textContent = "This plugin has no configurable settings";
+
+        noSettings.appendChild(icon);
+        noSettings.appendChild(text);
+        container.appendChild(noSettings);
         return container;
       }
-    }
 
-    // Fallback: Get all settings from localStorage as nested object (no metadata)
-    const allSettings =
-      window.customjs.configManager.getPluginConfig(plugin.metadata.id) || {};
+      // Render each setting
+      Object.entries(visibleSettings).forEach(([key, settingDef]) => {
+        const settingRow = this.createSettingRow(plugin, key, settingDef);
+        container.appendChild(settingRow);
+      });
 
-    if (Object.keys(allSettings).length === 0) {
-      container.innerHTML = `
-        <div style="text-align: center; padding: 40px; color: #6c757d;">
-          <i class="ri-inbox-line" style="font-size: 48px; opacity: 0.5;"></i>
-          <p style="margin-top: 15px; font-size: 14px;">This plugin has no configurable settings</p>
-        </div>
-      `;
       return container;
     }
 
-    // Render each category (top-level keys) - raw localStorage without metadata
-    Object.entries(allSettings).forEach(([categoryKey, categorySettings]) => {
-      // Category header
-      const categoryHeader = document.createElement("div");
-      categoryHeader.style.cssText = `
-        margin-bottom: 20px;
-        padding-bottom: 10px;
-        border-bottom: 2px solid #e9ecef;
-      `;
-      categoryHeader.innerHTML = `
-        <h4 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: #212529;">
-          ${this.formatCategoryName(categoryKey)}
-        </h4>
-      `;
-      container.appendChild(categoryHeader);
+    // No settings found
+    const noSettings = document.createElement("div");
+    noSettings.style.cssText =
+      "text-align: center; padding: 20px; color: #6c757d;";
 
-      // Settings in category
-      const settingsContainer = document.createElement("div");
-      settingsContainer.style.cssText =
-        "display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;";
+    const icon = document.createElement("i");
+    icon.className = "ri-inbox-line";
+    icon.style.cssText =
+      "font-size: 32px; opacity: 0.5; display: block; margin-bottom: 8px;";
 
-      // Render each setting in the category
-      if (
-        typeof categorySettings === "object" &&
-        !Array.isArray(categorySettings)
-      ) {
-        Object.entries(categorySettings).forEach(
-          ([settingKey, settingValue]) => {
-            const settingRow = this.createSettingInput(
-              plugin,
-              categoryKey,
-              settingKey,
-              settingValue
-            );
-            settingsContainer.appendChild(settingRow);
-          }
-        );
-      }
+    const text = document.createElement("p");
+    text.style.cssText = "margin: 0; font-size: 13px;";
+    text.textContent = "This plugin has no configurable settings";
 
-      container.appendChild(settingsContainer);
-    });
-
+    noSettings.appendChild(icon);
+    noSettings.appendChild(text);
+    container.appendChild(noSettings);
     return container;
   }
 
-  /**
-   * Render category with PluginSetting metadata
-   * @param {HTMLElement} container - Container to append to
-   * @param {string} categoryKey - Category key
-   * @param {PluginSetting[]} settingsArray - Array of PluginSetting instances
-   */
-  renderCategoryWithMetadata(container, categoryKey, settingsArray) {
-    // Category header
-    const categoryHeader = document.createElement("div");
-    categoryHeader.style.cssText = `
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      border-bottom: 2px solid #e9ecef;
-    `;
-    categoryHeader.innerHTML = `
-      <h4 style="margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: #212529;">
-        ${this.formatCategoryName(categoryKey)}
-      </h4>
-    `;
-    container.appendChild(categoryHeader);
-
-    // Settings in category
-    const settingsContainer = document.createElement("div");
-    settingsContainer.style.cssText =
-      "display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;";
-
-    settingsArray.forEach((setting) => {
-      const settingRow = this.createSettingInputWithMetadata(setting);
-      settingsContainer.appendChild(settingRow);
-    });
-
-    container.appendChild(settingsContainer);
-  }
-
-  /**
-   * Create setting input using PluginSetting metadata
-   * @param {PluginSetting} setting - PluginSetting instance
-   * @returns {HTMLElement} Setting row
-   */
-  createSettingInputWithMetadata(setting) {
+  createSettingRow(plugin, key, settingDef) {
     const row = document.createElement("div");
     row.style.cssText = `
       display: flex;
       align-items: center;
-      padding: 12px 15px;
+      justify-content: space-between;
+      padding: 10px 12px;
       background: #f8f9fa;
-      border-radius: 8px;
+      border-radius: 6px;
+      margin-bottom: 8px;
       border: 1px solid #dee2e6;
     `;
 
-    // Label section (with metadata)
+    // Label section
     const labelSection = document.createElement("div");
-    labelSection.style.cssText = "flex: 1; min-width: 0;";
+    labelSection.style.cssText = "flex: 1; min-width: 0; margin-right: 12px;";
 
     const label = document.createElement("div");
     label.style.cssText =
-      "font-size: 14px; font-weight: 500; color: #212529; margin-bottom: 3px;";
-    label.textContent = setting.name;
+      "font-size: 13px; font-weight: 500; color: #212529; margin-bottom: 2px;";
+    label.textContent = settingDef.description || key;
 
-    const description = document.createElement("div");
-    description.style.cssText = "font-size: 12px; color: #6c757d;";
-    description.textContent = setting.description || "";
-
-    const keyInfo = document.createElement("div");
-    keyInfo.style.cssText =
-      "font-size: 11px; color: #adb5bd; font-family: monospace; margin-top: 2px;";
-    keyInfo.textContent = setting.toKey();
-
-    labelSection.appendChild(label);
-    if (setting.description) {
-      labelSection.appendChild(description);
+    if (settingDef.placeholder) {
+      const placeholder = document.createElement("div");
+      placeholder.style.cssText = "font-size: 11px; color: #6c757d;";
+      placeholder.textContent = settingDef.placeholder;
+      labelSection.appendChild(label);
+      labelSection.appendChild(placeholder);
+    } else {
+      labelSection.appendChild(label);
     }
-    labelSection.appendChild(keyInfo);
 
     // Input section
     const inputSection = document.createElement("div");
-    inputSection.style.cssText = "margin-left: 15px; min-width: 200px;";
+    inputSection.style.cssText =
+      "min-width: 140px; display: flex; justify-content: flex-end;";
 
-    const input = this.createInputForType(setting);
+    const input = this.createInputForSetting(plugin, key, settingDef);
     inputSection.appendChild(input);
 
     row.appendChild(labelSection);
@@ -1331,41 +1219,60 @@ class PluginManagerUIPlugin extends Plugin {
     return row;
   }
 
-  /**
-   * Create input element for PluginSetting based on type
-   * @param {PluginSetting} setting - PluginSetting instance
-   * @returns {HTMLElement} Input element
-   */
-  createInputForType(setting) {
-    const currentValue = setting.get();
+  createInputForSetting(plugin, key, settingDef) {
+    const currentValue = plugin.settings.store[key];
+    const SettingType = window.customjs.SettingType;
 
-    switch (setting.type) {
-      case "boolean":
-        return this.createBooleanInputFor(setting, currentValue);
-      case "number":
-        return this.createNumberInputFor(setting, currentValue);
-      case "string":
-        return this.createStringInputFor(setting, currentValue);
-      case "array":
-      case "object":
-        return this.createJsonInputFor(setting, currentValue);
+    switch (settingDef.type) {
+      case SettingType.BOOLEAN:
+        return this.createBooleanInput(plugin, key, currentValue);
+
+      case SettingType.NUMBER:
+      case SettingType.BIGINT:
+        return this.createNumberInput(plugin, key, currentValue);
+
+      case SettingType.STRING:
+        return this.createStringInput(
+          plugin,
+          key,
+          currentValue,
+          settingDef.placeholder
+        );
+
+      case SettingType.SELECT:
+        return this.createSelectInput(
+          plugin,
+          key,
+          currentValue,
+          settingDef.options || []
+        );
+
+      case SettingType.SLIDER:
+        return this.createSliderInput(
+          plugin,
+          key,
+          currentValue,
+          settingDef.markers || []
+        );
+
       default:
         const span = document.createElement("span");
-        span.textContent = `Unsupported type: ${setting.type}`;
-        span.style.cssText = "color: #f56c6c; font-size: 13px;";
+        span.style.cssText = "color: #f56c6c; font-size: 12px;";
+        span.textContent = `Unsupported type: ${settingDef.type}`;
         return span;
     }
   }
 
-  createBooleanInputFor(setting, currentValue) {
+  createBooleanInput(plugin, key, currentValue) {
     const label = document.createElement("label");
     label.className = "el-switch";
-    label.style.cssText = "cursor: pointer;";
+    label.style.cssText =
+      "cursor: pointer; display: flex; align-items: center;";
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = currentValue;
-    checkbox.style.cssText = "display: none;";
+    checkbox.style.display = "none";
 
     const core = document.createElement("span");
     core.style.cssText = `
@@ -1376,7 +1283,6 @@ class PluginManagerUIPlugin extends Plugin {
       border-radius: 10px;
       background: ${currentValue ? "#409eff" : "#dcdfe6"};
       transition: background-color 0.3s;
-      cursor: pointer;
     `;
 
     const action = document.createElement("span");
@@ -1396,90 +1302,99 @@ class PluginManagerUIPlugin extends Plugin {
     label.appendChild(core);
 
     this.registerListener(label, "click", () => {
-      const newValue = !setting.get();
-      setting.set(newValue);
+      const newValue = !plugin.settings.store[key];
+      plugin.settings.store[key] = newValue;
       checkbox.checked = newValue;
       core.style.background = newValue ? "#409eff" : "#dcdfe6";
       action.style.left = newValue ? "21px" : "1px";
-      this.logger.log(`Updated ${setting.name} to ${newValue}`);
     });
 
     return label;
   }
 
-  createNumberInputFor(setting, currentValue) {
+  createNumberInput(plugin, key, currentValue) {
     const input = document.createElement("input");
     input.type = "number";
     input.className = "el-input__inner";
-    input.value = currentValue;
-    input.style.cssText = `
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #dcdfe6;
-      border-radius: 4px;
-      font-size: 14px;
-    `;
+    input.value = currentValue ?? "";
+    input.style.cssText =
+      "width: 100%; padding: 6px 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px;";
 
     this.registerListener(input, "change", () => {
       const newValue = parseFloat(input.value);
       if (!isNaN(newValue)) {
-        setting.set(newValue);
-        this.logger.log(`Updated ${setting.name} to ${newValue}`);
+        plugin.settings.store[key] = newValue;
       }
     });
 
     return input;
   }
 
-  createStringInputFor(setting, currentValue) {
+  createStringInput(plugin, key, currentValue, placeholder) {
     const input = document.createElement("input");
     input.type = "text";
     input.className = "el-input__inner";
     input.value = currentValue || "";
-    input.style.cssText = `
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #dcdfe6;
-      border-radius: 4px;
-      font-size: 14px;
-    `;
+    input.placeholder = placeholder || "";
+    input.style.cssText =
+      "width: 100%; padding: 6px 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px;";
 
     this.registerListener(input, "change", () => {
-      setting.set(input.value);
-      this.logger.log(`Updated ${setting.name} to ${input.value}`);
+      plugin.settings.store[key] = input.value;
     });
 
     return input;
   }
 
-  createJsonInputFor(setting, currentValue) {
-    const input = document.createElement("textarea");
-    input.className = "el-textarea__inner";
-    input.value = JSON.stringify(currentValue, null, 2);
-    input.rows = 4;
-    input.style.cssText = `
-      width: 100%;
-      padding: 8px 12px;
-      border: 1px solid #dcdfe6;
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: 'Consolas', monospace;
-      resize: vertical;
-    `;
+  createSelectInput(plugin, key, currentValue, options) {
+    const select = document.createElement("select");
+    select.className = "el-select";
+    select.style.cssText =
+      "padding: 6px 28px 6px 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px; background: white; cursor: pointer;";
 
-    this.registerListener(input, "change", () => {
-      try {
-        const newValue = JSON.parse(input.value);
-        setting.set(newValue);
-        input.style.borderColor = "#dcdfe6";
-        this.logger.log(`Updated ${setting.name}`);
-      } catch (error) {
-        input.style.borderColor = "#f56c6c";
-        this.logger.showError("Invalid JSON format");
+    options.forEach((opt) => {
+      const option = document.createElement("option");
+      option.value = opt.value;
+      option.textContent = opt.label || opt.value;
+      if (opt.value === currentValue || opt.default) {
+        option.selected = true;
       }
+      select.appendChild(option);
     });
 
-    return input;
+    this.registerListener(select, "change", () => {
+      plugin.settings.store[key] = select.value;
+    });
+
+    return select;
+  }
+
+  createSliderInput(plugin, key, currentValue, markers) {
+    const container = document.createElement("div");
+    container.style.cssText = "width: 100%; min-width: 120px;";
+
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = markers[0] ?? 0;
+    slider.max = markers[markers.length - 1] ?? 1;
+    slider.step = markers.length > 1 ? markers[1] - markers[0] : 0.1;
+    slider.value = currentValue ?? markers[0] ?? 0;
+    slider.style.cssText = "width: 100%; cursor: pointer;";
+
+    const valueDisplay = document.createElement("div");
+    valueDisplay.style.cssText =
+      "text-align: center; font-size: 12px; color: #606266; margin-top: 4px;";
+    valueDisplay.textContent = slider.value;
+
+    this.registerListener(slider, "input", () => {
+      valueDisplay.textContent = slider.value;
+      plugin.settings.store[key] = parseFloat(slider.value);
+    });
+
+    container.appendChild(slider);
+    container.appendChild(valueDisplay);
+
+    return container;
   }
 
   /**
@@ -1521,177 +1436,6 @@ class PluginManagerUIPlugin extends Plugin {
     if (Array.isArray(value)) return "array";
     if (typeof value === "object") return "object";
     return "string";
-  }
-
-  createSettingInput(plugin, categoryKey, settingKey, settingValue) {
-    const row = document.createElement("div");
-    row.style.cssText = `
-      display: flex;
-      align-items: center;
-      padding: 12px 15px;
-      background: #f8f9fa;
-      border-radius: 8px;
-      border: 1px solid #dee2e6;
-    `;
-
-    // Label section
-    const labelSection = document.createElement("div");
-    labelSection.style.cssText = "flex: 1; min-width: 0;";
-
-    const label = document.createElement("div");
-    label.style.cssText =
-      "font-size: 14px; font-weight: 500; color: #212529; margin-bottom: 3px;";
-    label.textContent = this.formatSettingName(settingKey);
-
-    const description = document.createElement("div");
-    description.style.cssText =
-      "font-size: 12px; color: #6c757d; font-family: monospace;";
-    description.textContent = `${categoryKey}.${settingKey}`;
-
-    labelSection.appendChild(label);
-    labelSection.appendChild(description);
-
-    // Input section
-    const inputSection = document.createElement("div");
-    inputSection.style.cssText = "margin-left: 15px; min-width: 200px;";
-
-    let input;
-    const settingType = this.inferType(settingValue);
-
-    switch (settingType) {
-      case "boolean":
-        input = document.createElement("label");
-        input.className = "el-switch";
-        input.style.cssText = "cursor: pointer;";
-
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.className = "el-switch__input";
-        checkbox.checked = settingValue;
-        checkbox.style.cssText = "display: none;";
-
-        const core = document.createElement("span");
-        core.className = "el-switch__core";
-        core.style.cssText = `
-          display: inline-block;
-          position: relative;
-          width: 40px;
-          height: 20px;
-          border-radius: 10px;
-          background: ${settingValue ? "#409eff" : "#dcdfe6"};
-          transition: background-color 0.3s;
-          cursor: pointer;
-        `;
-
-        const action = document.createElement("span");
-        action.className = "el-switch__action";
-        action.style.cssText = `
-          position: absolute;
-          top: 1px;
-          left: ${settingValue ? "21px" : "1px"};
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          background: white;
-          transition: all 0.3s;
-        `;
-
-        core.appendChild(action);
-        input.appendChild(checkbox);
-        input.appendChild(core);
-
-        this.registerListener(input, "click", async () => {
-          const newValue = !plugin.get(`${categoryKey}.${settingKey}`, false);
-          plugin.set(`${categoryKey}.${settingKey}`, newValue);
-          checkbox.checked = newValue;
-          core.style.background = newValue ? "#409eff" : "#dcdfe6";
-          action.style.left = newValue ? "21px" : "1px";
-          this.logger.log(`Updated ${settingKey} to ${newValue}`);
-        });
-        break;
-
-      case "number":
-        input = document.createElement("input");
-        input.type = "number";
-        input.className = "el-input__inner";
-        input.value = settingValue;
-        input.style.cssText = `
-          width: 100%;
-          padding: 8px 12px;
-          border: 1px solid #dcdfe6;
-          border-radius: 4px;
-          font-size: 14px;
-        `;
-
-        this.registerListener(input, "change", async () => {
-          const newValue = parseFloat(input.value);
-          if (!isNaN(newValue)) {
-            plugin.set(`${categoryKey}.${settingKey}`, newValue);
-            this.logger.log(`Updated ${settingKey} to ${newValue}`);
-          }
-        });
-        break;
-
-      case "string":
-        input = document.createElement("input");
-        input.type = "text";
-        input.className = "el-input__inner";
-        input.value = settingValue;
-        input.style.cssText = `
-          width: 100%;
-          padding: 8px 12px;
-          border: 1px solid #dcdfe6;
-          border-radius: 4px;
-          font-size: 14px;
-        `;
-
-        this.registerListener(input, "change", async () => {
-          plugin.set(`${categoryKey}.${settingKey}`, input.value);
-          this.logger.log(`Updated ${settingKey} to ${input.value}`);
-        });
-        break;
-
-      case "array":
-      case "object":
-        input = document.createElement("textarea");
-        input.className = "el-textarea__inner";
-        input.value = JSON.stringify(settingValue, null, 2);
-        input.rows = 4;
-        input.style.cssText = `
-          width: 100%;
-          padding: 8px 12px;
-          border: 1px solid #dcdfe6;
-          border-radius: 4px;
-          font-size: 13px;
-          font-family: 'Consolas', monospace;
-          resize: vertical;
-        `;
-
-        this.registerListener(input, "change", async () => {
-          try {
-            const newValue = JSON.parse(input.value);
-            plugin.set(`${categoryKey}.${settingKey}`, newValue);
-            input.style.borderColor = "#dcdfe6";
-            this.logger.log(`Updated ${settingKey}`);
-          } catch (error) {
-            input.style.borderColor = "#f56c6c";
-            this.logger.showError("Invalid JSON format");
-          }
-        });
-        break;
-
-      default:
-        input = document.createElement("span");
-        input.textContent = `Unsupported type: ${settingType}`;
-        input.style.cssText = "color: #f56c6c; font-size: 13px;";
-    }
-
-    inputSection.appendChild(input);
-
-    row.appendChild(labelSection);
-    row.appendChild(inputSection);
-
-    return row;
   }
 }
 

@@ -1,46 +1,368 @@
 /**
  * ConfigManager System
  *
- * A simplified localStorage wrapper for VRCX custom plugins.
+ * Equicord-inspired settings system adapted for VRCX
  *
  * Storage Structure:
- * - Each setting is stored as individual localStorage key/value pair
- * - Plugin settings: "customjs.pluginId.key" → value
- * - General settings: "customjs.category.key" → value
- * - Plugin config: "customjs.plugins" → {url: enabled}
+ * - Uses localStorage with "customjs" prefix
+ * - Settings organized per plugin: "customjs.pluginId.settingKey"
+ * - Supports structured settings definitions with metadata
+ * - Change listeners for reactive updates
  *
  * Usage in plugins:
  *
- * // Simple usage (auto-prepends plugin ID):
- * const message = this.get("message", "default value");
- * this.set("message", "new value");
+ * // Define settings (Equicord-style)
+ * const settings = definePluginSettings({
+ *   enabled: {
+ *     type: SettingType.BOOLEAN,
+ *     description: "Enable the plugin",
+ *     default: true
+ *   },
+ *   apiKey: {
+ *     type: SettingType.STRING,
+ *     description: "API Key",
+ *     placeholder: "Enter your key...",
+ *     default: ""
+ *   },
+ *   volume: {
+ *     type: SettingType.SLIDER,
+ *     description: "Volume",
+ *     default: 0.5,
+ *     markers: [0, 0.25, 0.5, 0.75, 1]
+ *   },
+ *   mode: {
+ *     type: SettingType.SELECT,
+ *     description: "Mode",
+ *     options: [
+ *       { label: "Auto", value: "auto", default: true },
+ *       { label: "Manual", value: "manual" }
+ *     ]
+ *   },
+ *   messageTemplate: {
+ *     type: SettingType.STRING,
+ *     description: "Message template",
+ *     default: "Hello {userName}!",
+ *     variables: {
+ *       "{userName}": "User's name",
+ *       "{now}": "Current time"
+ *     }
+ *   },
+ *   totalRuns: {
+ *     type: SettingType.NUMBER,
+ *     description: "Run counter (hidden)",
+ *     default: 0,
+ *     hidden: true
+ *   }
+ * }, this); // pass plugin instance
  *
- * // With PluginSetting for metadata:
- * this.config.myMessage = new PluginSetting({
- *   key: "message",
- *   category: "general",
- *   name: "Custom Message",
- *   description: "Message to display",
- *   type: "string",
- *   defaultValue: "Hello"
+ * // Access settings
+ * const enabled = settings.store.enabled; // reactive access
+ * const volume = settings.plain.volume;   // non-reactive access
+ *
+ * // Listen to changes
+ * settings.onChange("enabled", (newValue) => {
+ *   console.log("enabled changed to:", newValue);
  * });
- * const message = this.config.myMessage.get();
- * this.config.myMessage.set("New value");
+ *
+ * // Filter visible/hidden settings
+ * const visible = settings.getVisibleSettings(); // Exclude hidden: true
+ * const hidden = settings.getHiddenSettings();   // Only hidden: true
  *
  * Global API:
  * - window.customjs.configManager.get(key, defaultValue) - Get value from localStorage
  * - window.customjs.configManager.set(key, value) - Set value in localStorage
- * - window.customjs.configManager.delete(key) - Delete value from localStorage
- * - window.customjs.configManager.clear(prefix) - Clear all keys with prefix
+ * - window.customjs.SettingType - Enum of setting types
+ * - window.customjs.definePluginSettings(def, plugin) - Create settings object
+ * - window.customjs.SettingsStore - Settings store class with change tracking
  */
 
 // ============================================================================
-// PLUGIN SETTING CLASS
+// SETTING TYPE ENUM (like Equicord's OptionType)
 // ============================================================================
 
 /**
- * PluginSetting - Metadata wrapper for plugin settings
+ * Setting type enum - similar to Equicord's OptionType
+ */
+const SettingType = Object.freeze({
+  STRING: "string",
+  NUMBER: "number",
+  BIGINT: "bigint",
+  BOOLEAN: "boolean",
+  SELECT: "select",
+  SLIDER: "slider",
+  COMPONENT: "component", // For future custom UI components
+  CUSTOM: "custom", // For arbitrary objects/arrays
+});
+
+// ============================================================================
+// SETTINGS STORE (Simplified version of Equicord's SettingsStore)
+// ============================================================================
+
+/**
+ * SettingsStore - Provides proxy-based access to settings with change listeners
+ * Simplified version without React - just change notification
+ */
+class SettingsStore {
+  constructor(plain, options = {}) {
+    this.plain = plain || {};
+    this.options = options;
+    this.pathListeners = new Map(); // path -> Set of callbacks
+    this.globalListeners = new Set(); // Set of global callbacks
+
+    // Create proxy for reactive access
+    this.store = this._makeProxy(this.plain);
+  }
+
+  _makeProxy(target, path = "") {
+    const self = this;
+
+    return new Proxy(target, {
+      get(obj, key) {
+        const value = obj[key];
+        const fullPath = path ? `${path}.${key}` : key;
+
+        // Check for default value
+        if (value === undefined && self.options.getDefaultValue) {
+          const defaultValue = self.options.getDefaultValue({
+            target: obj,
+            key,
+            path: fullPath,
+          });
+          if (defaultValue !== undefined) {
+            obj[key] = defaultValue;
+            return defaultValue;
+          }
+        }
+
+        // Recursively proxy nested objects
+        if (value && typeof value === "object" && !Array.isArray(value)) {
+          return self._makeProxy(value, fullPath);
+        }
+
+        return value;
+      },
+
+      set(obj, key, value) {
+        const oldValue = obj[key];
+        if (oldValue === value) return true;
+
+        obj[key] = value;
+        const fullPath = path ? `${path}.${key}` : key;
+
+        // Notify listeners
+        self._notifyListeners(fullPath, value);
+
+        return true;
+      },
+    });
+  }
+
+  _notifyListeners(path, value) {
+    // Notify global listeners
+    this.globalListeners.forEach((callback) => {
+      try {
+        callback(this.plain, path);
+      } catch (error) {
+        console.error("[SettingsStore] Error in global listener:", error);
+      }
+    });
+
+    // Notify path-specific listeners
+    const listeners = this.pathListeners.get(path);
+    if (listeners) {
+      listeners.forEach((callback) => {
+        try {
+          callback(value);
+        } catch (error) {
+          console.error(
+            `[SettingsStore] Error in listener for ${path}:`,
+            error
+          );
+        }
+      });
+    }
+  }
+
+  addChangeListener(path, callback) {
+    if (!this.pathListeners.has(path)) {
+      this.pathListeners.set(path, new Set());
+    }
+    this.pathListeners.get(path).add(callback);
+  }
+
+  removeChangeListener(path, callback) {
+    const listeners = this.pathListeners.get(path);
+    if (listeners) {
+      listeners.delete(callback);
+      if (listeners.size === 0) {
+        this.pathListeners.delete(path);
+      }
+    }
+  }
+
+  addGlobalChangeListener(callback) {
+    this.globalListeners.add(callback);
+  }
+
+  removeGlobalChangeListener(callback) {
+    this.globalListeners.delete(callback);
+  }
+
+  markAsChanged() {
+    this.globalListeners.forEach((cb) => cb(this.plain, ""));
+  }
+}
+
+// ============================================================================
+// DEFINED SETTINGS (like Equicord's definePluginSettings)
+// ============================================================================
+
+/**
+ * definePluginSettings - Create a settings object with metadata and reactive access
+ * @param {object} definition - Settings definition (key -> { type, description, default, hidden, variables, ... })
+ * @param {Plugin} plugin - Plugin instance
+ * @returns {object} Settings object with store, plain, def, and helper methods
+ *
+ * Setting Definition Properties:
+ * - type: SettingType - Required setting type
+ * - description: string - Required description
+ * - default: any - Default value
+ * - placeholder: string - Placeholder text (STRING only)
+ * - markers: number[] - Slider markers (SLIDER only)
+ * - options: array - Dropdown options (SELECT only)
+ * - hidden: boolean - Hide from UI (still stored)
+ * - variables: object - Template variables dict (for STRING templates)
+ *   Example: { "{userId}": "The user's ID", "{userName}": "The user's display name" }
+ */
+function definePluginSettings(definition, plugin) {
+  if (!plugin) {
+    throw new Error("definePluginSettings requires a plugin instance");
+  }
+
+  const pluginId = plugin.metadata?.id || "unknown";
+
+  // Get default values from definition
+  const getDefaultValue = ({ key }) => {
+    const setting = definition[key];
+    if (!setting) return undefined;
+
+    // Check for explicit default
+    if ("default" in setting) {
+      return setting.default;
+    }
+
+    // Check for SELECT type with default option
+    if (setting.type === SettingType.SELECT && setting.options) {
+      const defaultOption = setting.options.find((opt) => opt.default);
+      return defaultOption?.value;
+    }
+
+    return undefined;
+  };
+
+  // Load existing settings from localStorage
+  const loadSettings = () => {
+    const settings = {};
+    for (const key in definition) {
+      const defaultValue = getDefaultValue({ key });
+      const storedValue = plugin.get(key, defaultValue);
+      settings[key] = storedValue;
+    }
+    return settings;
+  };
+
+  const plainSettings = loadSettings();
+
+  // Create settings store with change listener that saves to localStorage
+  const settingsStore = new SettingsStore(plainSettings, {
+    getDefaultValue,
+  });
+
+  // Auto-save to localStorage on any change
+  settingsStore.addGlobalChangeListener((data, path) => {
+    // Extract the setting key from the path
+    const key = path.split(".")[0];
+    if (key && definition[key]) {
+      plugin.set(key, data[key]);
+    }
+  });
+
+  const definedSettings = {
+    // Reactive store access
+    get store() {
+      return settingsStore.store;
+    },
+
+    // Non-reactive plain access
+    get plain() {
+      return settingsStore.plain;
+    },
+
+    // Definition metadata
+    def: definition,
+
+    // Plugin reference
+    pluginName: pluginId,
+
+    // Add change listener
+    onChange(key, callback) {
+      settingsStore.addChangeListener(key, callback);
+    },
+
+    // Remove change listener
+    offChange(key, callback) {
+      settingsStore.removeChangeListener(key, callback);
+    },
+
+    // Reset a setting to default
+    reset(key) {
+      const defaultValue = getDefaultValue({ key });
+      if (defaultValue !== undefined) {
+        settingsStore.store[key] = defaultValue;
+      }
+    },
+
+    // Reset all settings to defaults
+    resetAll() {
+      for (const key in definition) {
+        this.reset(key);
+      }
+    },
+
+    // Get visible settings (exclude hidden ones)
+    getVisibleSettings() {
+      const visible = {};
+      for (const key in definition) {
+        if (!definition[key].hidden) {
+          visible[key] = definition[key];
+        }
+      }
+      return visible;
+    },
+
+    // Get hidden settings
+    getHiddenSettings() {
+      const hidden = {};
+      for (const key in definition) {
+        if (definition[key].hidden) {
+          hidden[key] = definition[key];
+        }
+      }
+      return hidden;
+    },
+  };
+
+  return definedSettings;
+}
+
+// ============================================================================
+// LEGACY PLUGIN SETTING CLASS (for backward compatibility)
+// ============================================================================
+
+/**
+ * PluginSetting - Legacy class for backward compatibility
  * Stores metadata and provides get/set methods that use ConfigManager
+ * @deprecated Use definePluginSettings instead
  */
 class PluginSetting {
   /**
@@ -155,14 +477,14 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "3.2.0";
-    this.build = "1728778800";
+    this.version = "4.0.0";
+    this.build = "1728847200";
 
     // localStorage key prefix
     this.keyPrefix = "customjs";
 
     console.log(
-      `[CJS|ConfigManager] ConfigManager v${this.version} (${this.build}) initialized (localStorage wrapper)`
+      `[CJS|ConfigManager] ConfigManager v${this.version} (${this.build}) initialized - Equicord-inspired settings system`
     );
   }
 
@@ -453,26 +775,32 @@ class ConfigModule extends window.customjs.CoreModule {
     super({
       id: "config",
       name: "ConfigManager",
-      description: "Configuration management system for VRCX Custom",
+      description:
+        "Equicord-inspired configuration management system for VRCX Custom",
       author: "Bluscream",
-      version: "3.2.0",
-      build: "1728778800",
+      version: "4.0.0",
+      build: "1728847200",
     });
   }
 
   async load() {
     this.log("Loading ConfigManager module...");
 
-    // Export classes globally
+    // Export classes and functions globally
     window.customjs = window.customjs || {};
+
+    // New Equicord-style API
+    window.customjs.SettingType = SettingType;
+    window.customjs.SettingsStore = SettingsStore;
+    window.customjs.definePluginSettings = definePluginSettings;
+
+    // Legacy API (backward compatibility)
     window.customjs.PluginSetting = PluginSetting;
     window.customjs.ConfigManager = ConfigManager;
     window.customjs.configManager = new ConfigManager();
 
     this.loaded = true;
-    this.log(
-      "✓ ConfigManager and PluginSetting classes loaded and instance created"
-    );
+    this.log("✓ ConfigManager v4.0 loaded with Equicord-style settings system");
   }
 
   async start() {

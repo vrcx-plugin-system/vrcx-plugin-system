@@ -5,8 +5,8 @@ class YoinkerDetectorPlugin extends Plugin {
       description:
         "Automatically checks users against yoinker detection database and applies tags + notifications",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1728778800",
+      version: "3.0.0",
+      build: "1728847200",
       dependencies: [],
     });
 
@@ -24,143 +24,128 @@ class YoinkerDetectorPlugin extends Plugin {
       minInterval: 1000, // 1 second between requests
     };
 
-    // Stats tracking
-    this.stats = {
-      totalChecked: 0,
-      totalYoinkers: 0,
-      cacheHits: 0,
-      errors: 0,
-    };
-
     this.logger.log("🔍 Yoinker Detector initialized");
   }
 
   async load() {
     this.logger.log("📦 Loading Yoinker Detector...");
 
-    // Define settings with metadata
-    this.config.enabled = this.createSetting({
-      key: "enabled",
-      category: "general",
-      name: "Enable Yoinker Detection",
-      description: "Enable or disable yoinker detection",
-      type: "boolean",
-      defaultValue: true,
+    // Define settings using new Equicord-style system
+    const SettingType = window.customjs.SettingType;
+
+    this.settings = this.defineSettings({
+      enabled: {
+        type: SettingType.BOOLEAN,
+        description: "Enable or disable yoinker detection",
+        default: true,
+      },
+      logToConsole: {
+        type: SettingType.BOOLEAN,
+        description: "Log detection results to browser console",
+        default: true,
+      },
+      checkOnDialogOpen: {
+        type: SettingType.BOOLEAN,
+        description: "Check users when their profile dialog is opened",
+        default: true,
+      },
+      checkOnPlayerJoin: {
+        type: SettingType.BOOLEAN,
+        description: "Check users when they join your instance",
+        default: true,
+      },
+      desktopNotification: {
+        type: SettingType.BOOLEAN,
+        description: "Show desktop notification for yoinker detection",
+        default: true,
+      },
+      vrNotification: {
+        type: SettingType.BOOLEAN,
+        description:
+          "Show VR notification (XSOverlay, OVR Toolkit) for yoinker detection",
+        default: true,
+      },
+      autoTag: {
+        type: SettingType.BOOLEAN,
+        description: "Automatically add tags to detected yoinkers",
+        default: true,
+      },
+      tagName: {
+        type: SettingType.STRING,
+        description: "Name of the tag to add to yoinkers",
+        placeholder: "Yoinker",
+        default: "Yoinker",
+      },
+      tagColor: {
+        type: SettingType.STRING,
+        description: "Color of the tag (hex format)",
+        placeholder: "#ff0000",
+        default: "#ff0000",
+      },
+      cacheExpiration: {
+        type: SettingType.NUMBER,
+        description: "How long to cache check results (minutes)",
+        default: 30,
+      },
+      skipExistingTags: {
+        type: SettingType.BOOLEAN,
+        description: "Don't check users who already have a custom tag",
+        default: true,
+      },
+      endpoint: {
+        type: SettingType.STRING,
+        description: "Yoinker detection API endpoint",
+        placeholder: "https://yd.just-h.party/",
+        default: "https://yd.just-h.party/",
+      },
+      // Hidden stats (stored but not visible in UI)
+      statsTotalChecked: {
+        type: SettingType.NUMBER,
+        description: "Total users checked (hidden stat)",
+        default: 0,
+        hidden: true,
+      },
+      statsTotalYoinkers: {
+        type: SettingType.NUMBER,
+        description: "Total yoinkers found (hidden stat)",
+        default: 0,
+        hidden: true,
+      },
+      statsCacheHits: {
+        type: SettingType.NUMBER,
+        description: "Cache hit count (hidden stat)",
+        default: 0,
+        hidden: true,
+      },
+      statsErrors: {
+        type: SettingType.NUMBER,
+        description: "Error count (hidden stat)",
+        default: 0,
+        hidden: true,
+      },
+      // Processed users storage
+      processedUsersData: {
+        type: SettingType.STRING,
+        description: "Processed users data (hidden)",
+        default: "[]",
+        hidden: true,
+      },
+      // Migration flag
+      migrationComplete: {
+        type: SettingType.BOOLEAN,
+        description: "Migration from localStorage complete (hidden)",
+        default: false,
+        hidden: true,
+      },
     });
 
-    this.config.logToConsole = this.createSetting({
-      key: "logToConsole",
-      category: "general",
-      name: "Log to Console",
-      description: "Log detection results to browser console",
-      type: "boolean",
-      defaultValue: true,
-    });
+    this.logger.log(`⚙️ Enabled: ${this.settings.store.enabled}`);
+    this.logger.log(`⚙️ Endpoint: ${this.settings.store.endpoint}`);
 
-    this.config.checkOnDialogOpen = this.createSetting({
-      key: "checkOnDialogOpen",
-      category: "general",
-      name: "Check on User Dialog Open",
-      description: "Check users when their profile dialog is opened",
-      type: "boolean",
-      defaultValue: true,
-    });
+    // Run one-time migration from localStorage
+    this.migrateFromLocalStorage();
 
-    this.config.checkOnPlayerJoin = this.createSetting({
-      key: "checkOnPlayerJoin",
-      category: "general",
-      name: "Check on Player Join",
-      description: "Check users when they join your instance",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.notifyOnDetection = this.createSetting({
-      key: "notifyOnDetection",
-      category: "notifications",
-      name: "Notify When Yoinker Detected",
-      description: "Show notification when a yoinker is detected",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.desktopNotification = this.createSetting({
-      key: "desktopNotification",
-      category: "notifications",
-      name: "Desktop Notification",
-      description: "Show desktop notification for yoinker detection",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.vrNotification = this.createSetting({
-      key: "vrNotification",
-      category: "notifications",
-      name: "VR Notification",
-      description:
-        "Show VR notification (XSOverlay, OVR Toolkit) for yoinker detection",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.autoTag = this.createSetting({
-      key: "autoTag",
-      category: "advanced",
-      name: "Auto-Tag Yoinkers",
-      description: "Automatically add tags to detected yoinkers",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.tagName = this.createSetting({
-      key: "tagName",
-      category: "advanced",
-      name: "Tag Name",
-      description: "Name of the tag to add to yoinkers",
-      type: "string",
-      defaultValue: "Yoinker",
-    });
-
-    this.config.tagColor = this.createSetting({
-      key: "tagColor",
-      category: "advanced",
-      name: "Tag Color",
-      description: "Color of the tag (hex format)",
-      type: "string",
-      defaultValue: "#ff0000",
-    });
-
-    this.config.cacheExpiration = this.createSetting({
-      key: "cacheExpiration",
-      category: "advanced",
-      name: "Cache Expiration (minutes)",
-      description: "How long to cache check results",
-      type: "number",
-      defaultValue: 30,
-    });
-
-    this.config.skipExistingTags = this.createSetting({
-      key: "skipExistingTags",
-      category: "advanced",
-      name: "Skip Users with Existing Tags",
-      description: "Don't check users who already have a custom tag",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.endpoint = this.createSetting({
-      key: "endpoint",
-      category: "advanced",
-      name: "Detection Endpoint",
-      description: "Yoinker detection API endpoint",
-      type: "string",
-      defaultValue: "https://yd.just-h.party/",
-    });
-
-    this.logger.log(`⚙️ Enabled: ${this.config.enabled.get()}`);
-    this.logger.log(`⚙️ Endpoint: ${this.config.endpoint.get()}`);
-
-    // Load cached data from storage
+    // Load cached data from settings store
     this.loadProcessedUsers();
 
     this.logger.log("✅ Yoinker Detector loaded");
@@ -185,7 +170,7 @@ class YoinkerDetectorPlugin extends Plugin {
   hookUserEvents() {
     try {
       // Hook into showUserDialog
-      if (this.config.checkOnDialogOpen.get()) {
+      if (this.settings.store.checkOnDialogOpen) {
         this.registerPostHook("$pinia.user.showUserDialog", (result, args) => {
           const userId = args[0];
           if (userId) {
@@ -196,7 +181,7 @@ class YoinkerDetectorPlugin extends Plugin {
       }
 
       // Hook into player join events
-      if (this.config.checkOnPlayerJoin.get()) {
+      if (this.settings.store.checkOnPlayerJoin) {
         this.registerPostHook("$pinia.gameLog.addGameLog", (result, args) => {
           const entry = args[0];
           if (entry?.type === "OnPlayerJoined" && entry.userId) {
@@ -217,7 +202,7 @@ class YoinkerDetectorPlugin extends Plugin {
     if (!userId || typeof userId !== "string") return;
 
     // Check if detection is enabled
-    if (!this.config.enabled.get()) return;
+    if (!this.settings.store.enabled) return;
 
     // Validate user ID format (usr_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
     if (
@@ -227,10 +212,10 @@ class YoinkerDetectorPlugin extends Plugin {
     }
 
     // Check if user already has a custom tag (if enabled)
-    if (this.config.skipExistingTags.get()) {
+    if (this.settings.store.skipExistingTags) {
       const existingTag = this.getUserTag(userId);
       if (existingTag) {
-        if (this.config.logToConsole.get()) {
+        if (this.settings.store.logToConsole) {
           this.logger.log(
             `⏭️ Skipping ${userId} - already has tag: ${existingTag.tag}`
           );
@@ -244,14 +229,14 @@ class YoinkerDetectorPlugin extends Plugin {
       return;
     }
 
-    if (this.config.logToConsole.get()) {
+    if (this.settings.store.logToConsole) {
       this.logger.log(`📋 Queuing user: ${userId} (from: ${source})`);
     }
 
     // Add to pending queue
     this.pendingQueue.add(userId);
     this.processedUsers.add(userId);
-    this.stats.totalChecked++;
+    this.settings.store.statsTotalChecked++;
 
     // Trigger queue processing
     this.processQueue();
@@ -296,12 +281,12 @@ class YoinkerDetectorPlugin extends Plugin {
     const cached = this.yoinkerCheckCache.get(userId);
     if (cached) {
       const cacheAge = (Date.now() - cached.timestamp) / 1000 / 60; // minutes
-      if (cacheAge < this.config.cacheExpiration.get() * 60000) {
-        this.stats.cacheHits++;
+      if (cacheAge < this.settings.store.cacheExpiration * 60000) {
+        this.settings.store.statsCacheHits++;
         if (cached.isYoinker) {
           this.handleYoinkerDetected(cached);
         } else {
-          if (this.config.logToConsole.get()) {
+          if (this.settings.store.logToConsole) {
             this.logger.log(`✅ User ${userId} not a yoinker (cached result)`);
           }
         }
@@ -319,10 +304,7 @@ class YoinkerDetectorPlugin extends Plugin {
       // Hash the userId like StandaloneNotifier does
       const hash = await this.hashUserId(userId);
 
-      const endpoint = this.get(
-        "advanced.endpoint",
-        "https://yd.just-h.party/"
-      );
+      const endpoint = this.settings.store.endpoint;
       const url = `${endpoint}${hash}`;
 
       const response = await fetch(url, {
@@ -341,7 +323,7 @@ class YoinkerDetectorPlugin extends Plugin {
         };
         this.yoinkerCheckCache.set(userId, result);
 
-        if (this.config.logToConsole.get()) {
+        if (this.settings.store.logToConsole) {
           this.logger.log(`✅ User ${userId} not found in yoinker database`);
         }
         return;
@@ -354,7 +336,7 @@ class YoinkerDetectorPlugin extends Plugin {
       }
 
       if (!response.ok) {
-        this.stats.errors++;
+        this.settings.store.statsErrors++;
         this.logger.error(`HTTP error ${response.status} for user ${userId}`);
         return;
       }
@@ -373,7 +355,7 @@ class YoinkerDetectorPlugin extends Plugin {
         };
 
         this.yoinkerCheckCache.set(userId, result);
-        this.stats.totalYoinkers++;
+        this.settings.store.statsTotalYoinkers++;
 
         this.handleYoinkerDetected(result);
       } else {
@@ -385,12 +367,12 @@ class YoinkerDetectorPlugin extends Plugin {
         };
         this.yoinkerCheckCache.set(userId, result);
 
-        if (this.config.logToConsole.get()) {
+        if (this.settings.store.logToConsole) {
           this.logger.log(`✅ User ${userId} checked - not a yoinker`);
         }
       }
     } catch (error) {
-      this.stats.errors++;
+      this.settings.store.statsErrors++;
       this.logger.error(`Error checking user ${userId}:`, error);
     }
   }
@@ -400,25 +382,19 @@ class YoinkerDetectorPlugin extends Plugin {
     const message = `User ${result.userName} has been found ${result.reason}. (detection year: ${result.year})`;
 
     // Apply custom tag if enabled
-    if (this.config.autoTag.get()) {
+    if (this.settings.store.autoTag) {
       this.applyYoinkerTag(result.userId);
     }
 
-    // Show notifications if enabled
-    if (this.config.notifyOnDetection.get()) {
-      const notifyOptions = {
-        console: this.config.logToConsole.get(),
-        desktop: this.config.desktopNotification.get(),
-        xsoverlay: this.config.vrNotification.get(),
-        ovrtoolkit: this.config.vrNotification.get(),
-      };
+    // Show notifications based on individual settings
+    const notifyOptions = {
+      console: this.settings.store.logToConsole,
+      desktop: this.settings.store.desktopNotification,
+      xsoverlay: this.settings.store.vrNotification,
+      ovrtoolkit: this.settings.store.vrNotification,
+    };
 
-      this.logger.log(message, notifyOptions, "warn");
-    } else {
-      if (this.config.logToConsole.get()) {
-        this.logger.log(`⚠️ ${message}`);
-      }
-    }
+    this.logger.log(message, notifyOptions, "warn");
   }
 
   // Apply yoinker tag to user
@@ -430,8 +406,8 @@ class YoinkerDetectorPlugin extends Plugin {
         return;
       }
 
-      const tagName = this.config.tagName.get();
-      const tagColor = this.config.tagColor.get();
+      const tagName = this.settings.store.tagName;
+      const tagColor = this.settings.store.tagColor;
 
       userStore.addCustomTag({
         UserId: userId,
@@ -439,7 +415,7 @@ class YoinkerDetectorPlugin extends Plugin {
         TagColour: tagColor,
       });
 
-      if (this.config.logToConsole.get()) {
+      if (this.settings.store.logToConsole) {
         this.logger.log(`🏷️ Applied tag "${tagName}" to user ${userId}`);
       }
     } catch (error) {
@@ -480,18 +456,35 @@ class YoinkerDetectorPlugin extends Plugin {
     return customTags.get(userId) || null;
   }
 
-  // Load processed users from localStorage
-  loadProcessedUsers() {
+  // One-time migration from localStorage to settings store
+  migrateFromLocalStorage() {
+    // Check if migration has already been done
+    if (this.settings.store.migrationComplete) {
+      return;
+    }
+
     try {
       const stored = localStorage.getItem("yoinkerdetector_processed");
       if (stored) {
         const data = JSON.parse(stored);
-        this.processedUsers = new Set(data.users || []);
-        this.stats = data.stats || this.stats;
 
-        // Load cache (with expiration check)
+        // Migrate processed users
+        if (data.users && Array.isArray(data.users)) {
+          this.settings.store.processedUsersData = JSON.stringify(data.users);
+        }
+
+        // Migrate stats
+        if (data.stats) {
+          this.settings.store.statsTotalChecked = data.stats.totalChecked || 0;
+          this.settings.store.statsTotalYoinkers =
+            data.stats.totalYoinkers || 0;
+          this.settings.store.statsCacheHits = data.stats.cacheHits || 0;
+          this.settings.store.statsErrors = data.stats.errors || 0;
+        }
+
+        // Load cache into memory for this session only (not persisted)
         if (data.cache) {
-          const cacheExpiration = this.config.cacheExpiration.get() * 60000;
+          const cacheExpiration = this.settings.store.cacheExpiration * 60000;
           for (const [userId, result] of Object.entries(data.cache)) {
             const cacheAge = (Date.now() - result.timestamp) / 1000 / 60;
             if (cacheAge < cacheExpiration) {
@@ -500,25 +493,46 @@ class YoinkerDetectorPlugin extends Plugin {
           }
         }
 
+        // Delete the old localStorage key
+        localStorage.removeItem("yoinkerdetector_processed");
+
         this.logger.log(
-          `📂 Loaded ${this.processedUsers.size} processed users and ${this.yoinkerCheckCache.size} cached results`
+          "✅ Successfully migrated data from localStorage to settings store"
         );
       }
+
+      // Mark migration as complete
+      this.settings.store.migrationComplete = true;
+    } catch (error) {
+      this.logger.error("Error during migration from localStorage:", error);
+      // Still mark as complete to avoid repeated failures
+      this.settings.store.migrationComplete = true;
+    }
+  }
+
+  // Load processed users from settings store
+  loadProcessedUsers() {
+    try {
+      // Load processed users
+      const usersData = JSON.parse(this.settings.store.processedUsersData);
+      this.processedUsers = new Set(usersData || []);
+
+      // Cache is session-only and starts empty
+      this.logger.log(
+        `📂 Loaded ${this.processedUsers.size} processed users (cache is session-only)`
+      );
     } catch (error) {
       this.logger.error("Error loading processed users:", error);
     }
   }
 
-  // Save processed users to localStorage
+  // Save processed users to settings store
   saveProcessedUsers() {
     try {
-      const data = {
-        users: Array.from(this.processedUsers),
-        stats: this.stats,
-        cache: Object.fromEntries(this.yoinkerCheckCache),
-        lastSaved: new Date().toISOString(),
-      };
-      localStorage.setItem("yoinkerdetector_processed", JSON.stringify(data));
+      // Save processed users only (cache is session-only, not persisted)
+      this.settings.store.processedUsersData = JSON.stringify(
+        Array.from(this.processedUsers)
+      );
     } catch (error) {
       this.logger.error("Error saving processed users:", error);
     }
@@ -527,7 +541,10 @@ class YoinkerDetectorPlugin extends Plugin {
   // Get statistics
   getStats() {
     return {
-      ...this.stats,
+      totalChecked: this.settings.store.statsTotalChecked,
+      totalYoinkers: this.settings.store.statsTotalYoinkers,
+      cacheHits: this.settings.store.statsCacheHits,
+      errors: this.settings.store.statsErrors,
       processedUsers: this.processedUsers.size,
       pendingQueue: this.pendingQueue.size,
       cachedResults: this.yoinkerCheckCache.size,
@@ -539,13 +556,19 @@ class YoinkerDetectorPlugin extends Plugin {
     this.processedUsers.clear();
     this.pendingQueue.clear();
     this.yoinkerCheckCache.clear();
-    this.stats = {
-      totalChecked: 0,
-      totalYoinkers: 0,
-      cacheHits: 0,
-      errors: 0,
-    };
+
+    // Reset stats
+    this.settings.store.statsTotalChecked = 0;
+    this.settings.store.statsTotalYoinkers = 0;
+    this.settings.store.statsCacheHits = 0;
+    this.settings.store.statsErrors = 0;
+
+    // Clear settings store data
+    this.settings.store.processedUsersData = "[]";
+
+    // Also clear old localStorage key if it exists
     localStorage.removeItem("yoinkerdetector_processed");
+
     this.logger.log("🗑️ Cleared all processed users and cache!");
   }
 

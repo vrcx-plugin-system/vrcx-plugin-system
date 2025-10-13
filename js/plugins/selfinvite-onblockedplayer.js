@@ -18,8 +18,8 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       description:
         "Automatically creates a self-invite to a new instance when a blocked player joins your current instance",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1728778800",
+      version: "3.0.0",
+      build: "1728847200",
       dependencies: [],
     });
 
@@ -29,55 +29,40 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
   }
 
   async load() {
-    // Define settings with metadata
-    this.config.enabled = this.createSetting({
-      key: "enabled",
-      category: "general",
-      name: "Enable Auto Self-Invite",
-      description: "Enable automatic self-invite when blocked player joins",
-      type: "boolean",
-      defaultValue: true,
-    });
+    // Define settings using new Equicord-style system
+    const SettingType = window.customjs.SettingType;
 
-    this.config.delayMs = this.createSetting({
-      key: "delayMs",
-      category: "general",
-      name: "Delay (milliseconds)",
-      description: "Delay before creating self-invite",
-      type: "number",
-      defaultValue: 1000,
-    });
-
-    this.config.cooldownMs = this.createSetting({
-      key: "cooldownMs",
-      category: "general",
-      name: "Cooldown (milliseconds)",
-      description: "Minimum time between self-invites",
-      type: "number",
-      defaultValue: 30000,
-    });
-
-    this.config.showNotification = this.createSetting({
-      key: "showNotification",
-      category: "notifications",
-      name: "Show Notification",
-      description: "Show notification when creating self-invite",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.showPlayerName = this.createSetting({
-      key: "showPlayerName",
-      category: "notifications",
-      name: "Show Player Name",
-      description:
-        "Include blocked player's name in notification (privacy consideration)",
-      type: "boolean",
-      defaultValue: false,
+    this.settings = this.defineSettings({
+      enabled: {
+        type: SettingType.BOOLEAN,
+        description: "Enable automatic self-invite when blocked player joins",
+        default: true,
+      },
+      delayMs: {
+        type: SettingType.NUMBER,
+        description: "Delay before creating self-invite (milliseconds)",
+        default: 1000,
+      },
+      cooldownMs: {
+        type: SettingType.NUMBER,
+        description: "Minimum time between self-invites (milliseconds)",
+        default: 30000,
+      },
+      showNotification: {
+        type: SettingType.BOOLEAN,
+        description: "Show notification when creating self-invite",
+        default: true,
+      },
+      showPlayerName: {
+        type: SettingType.BOOLEAN,
+        description:
+          "Include blocked player's name in notification (privacy consideration)",
+        default: false,
+      },
     });
 
     this.logger.log(
-      `⚙️ Enabled: ${this.config.enabled.get()}, Cooldown: ${this.config.cooldownMs.get()}ms`
+      `⚙️ Enabled: ${this.settings.store.enabled}, Cooldown: ${this.settings.store.cooldownMs}ms`
     );
 
     this.logger.log("Self Invite on Blocked Player plugin ready");
@@ -166,7 +151,7 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
   async handlePlayerJoin(entry) {
     try {
       // Check if feature is enabled
-      if (!this.config.enabled.get()) {
+      if (!this.settings.store.enabled) {
         return;
       }
 
@@ -196,7 +181,7 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
 
       // Check cooldown
       const now = Date.now();
-      const cooldown = this.config.cooldownMs.get();
+      const cooldown = this.settings.store.cooldownMs;
 
       if (
         this.lastBlockedPlayerJoin &&
@@ -235,7 +220,7 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       }
 
       // Create self-invite with delay
-      const delay = this.config.delayMs.get();
+      const delay = this.settings.store.delayMs;
       this.logger.log(`Creating self-invite to new instance in ${delay}ms...`);
 
       setTimeout(() => {
@@ -270,8 +255,8 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       this.logger.log(`✓ Self-invite created for world: ${worldId}`);
 
       // Show notification if enabled
-      if (this.config.showNotification.get()) {
-        const showName = this.config.showPlayerName.get();
+      if (this.settings.store.showNotification) {
+        const showName = this.settings.store.showPlayerName;
         const message = showName
           ? `Blocked player ${blockedPlayerName} joined. Self-invite created to new instance of ${worldName}`
           : `Blocked player joined. Self-invite created to new instance of ${worldName}`;
