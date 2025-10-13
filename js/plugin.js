@@ -577,7 +577,7 @@ class PluginLoader extends ModuleLoader {
       },
       {
         url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/plugin-manager-ui.js",
-        enabled: false,
+        enabled: true,
       },
       {
         url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/monitor-invisibleplayers.js",

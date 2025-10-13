@@ -64,18 +64,38 @@ Enable/disable each provider individually:
 
 ### Basic Usage
 
-1. Enable the plugin in `custom.js`:
+The plugin is **enabled by default**. If you need to enable/disable it:
 
-   ```javascript
-   {
-     url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/avatar-log.js",
-     enabled: true,  // Change this to true
-   },
-   ```
+**Method 1: Via Plugin Manager UI**
+1. Enable the `plugin-manager-ui` plugin
+2. Navigate to the "Plugins" tab in VRCX
+3. Use the toggle to enable/disable Avatar Logger
 
-2. (Optional) Set your Discord User ID in the plugin settings for attribution
+**Method 2: Via Config File**
+Edit `%LOCALAPPDATA%\VRChat\VRChat\config.json`:
+```json
+{
+  "customjs": {
+    "plugins": {
+      "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/avatar-log.js": true
+    }
+  }
+}
+```
 
-3. The plugin will automatically start capturing avatar IDs from VRCX
+**Method 3: Via Console**
+```javascript
+const config = customjs.configManager.getPluginConfig();
+config["https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/avatar-log.js"] = true;
+customjs.configManager.setPluginConfig(config);
+await customjs.configManager.save();
+```
+
+After enabling, the plugin will automatically start capturing avatar IDs from VRCX.
+
+### Configuration
+
+(Optional) Set your Discord User ID in the plugin settings for attribution
 
 ### Manual Commands
 

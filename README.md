@@ -4,7 +4,7 @@
 
 A modern JavaScript plugin system that extends VRCX with features like custom navigation tabs, context menus, user tagging, bio automation, protocol link handlers, and comprehensive plugin management UI. Built on a robust architecture with proper lifecycle management, centralized configuration, and automatic resource tracking.
 
-**🎯 Status:** Production Ready ✅ | **📦 Version:** 1.7.1 | **🔌 Plugins:** 14 Available | **⚙️ Core Modules:** 4
+**🎯 Status:** Production Ready ✅ | **📦 Version:** 2.1.0 | **🔌 Plugins:** 17 Available | **⚙️ Core Modules:** 4
 
 ---
 
@@ -136,9 +136,9 @@ await customjs.configManager.save();
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    custom.js (Entry Point)               │
-│  - PluginManager class                                   │
-│  - Core module definitions (window.customjs.core_modules)│
-│  - Default plugin list (window.customjs.default_plugins) │
+│  - Module/CoreModule/Plugin base classes                │
+│  - ModuleLoader for core module loading                 │
+│  - Bootstrap function to initialize plugin system       │
 └─────────────────────────────────────────────────────────┘
                             │
         ┌───────────────────┼───────────────────┐
@@ -167,12 +167,15 @@ await customjs.configManager.save();
 ```javascript
 window.customjs = {
   // System info
-  version: "1.7.1", // Plugin system version
-  build: "1760410000", // Build timestamp
+  version: "2.1.0", // Plugin system version
+  build: "1728778800", // Build timestamp
 
   // Core components
-  core_modules: [], // Array of core module URLs
-  default_plugins: [], // Array of {url, enabled} objects
+  Module: Module, // Base Module class
+  CoreModule: CoreModule, // Core module class
+  ModuleLoader: ModuleLoader, // Module loading class
+  PluginManager: PluginManager, // Plugin manager class
+  coreModules: Map, // Map of loaded core modules (id -> instance)
   plugins: [], // Array of loaded Plugin instances
 
   // Managers
@@ -485,6 +488,7 @@ class MyPlugin extends Plugin {
 
 | Plugin                | Description                              | Default     |
 | --------------------- | ---------------------------------------- | ----------- |
+| **config-proxy**      | Proxy config access for plugin settings  | ✅ Enabled  |
 | **context-menu-api**  | Add custom items to dialog context menus | ✅ Enabled  |
 | **nav-menu-api**      | Create custom navigation tabs            | ✅ Enabled  |
 | **plugin-manager-ui** | Visual plugin management dashboard       | ⚠️ Disabled |
@@ -498,6 +502,8 @@ class MyPlugin extends Plugin {
 | **registry-overrides** | Manage VRChat registry settings             | ✅ Enabled |
 | **auto-invite**        | Automatically invite users when traveling   | ✅ Enabled |
 | **auto-follow**        | Follow users and send invite requests       | ✅ Enabled |
+| **avatar-log**         | Log and submit avatar IDs to databases      | ✅ Enabled |
+| **yoinker-detector**   | Detect and log yoinker/avatar ripper users  | ✅ Enabled |
 
 ### Advanced Features
 
@@ -509,10 +515,11 @@ class MyPlugin extends Plugin {
 
 ### Development
 
-| Plugin       | Description                           | Default     |
-| ------------ | ------------------------------------- | ----------- |
-| **debug**    | Debug utilities and system inspection | ⚠️ Disabled |
-| **template** | Comprehensive plugin example/template | ⚠️ Disabled |
+| Plugin              | Description                           | Default     |
+| ------------------- | ------------------------------------- | ----------- |
+| **debug**           | Debug utilities and system inspection | ⚠️ Disabled |
+| **template**        | Comprehensive plugin example/template | ⚠️ Disabled |
+| **invite-message-api** | Legacy invite message API (deprecated) | ✅ Enabled |
 
 ---
 
@@ -532,20 +539,24 @@ vrcx-custom/
 │   └── plugin.js                # Plugin base class
 │
 └── js/plugins/                  # PLUGINS (Conditionally Loaded)
+    ├── config-proxy.js          # Config access proxy
     ├── context-menu-api.js      # Context menu management
     ├── nav-menu-api.js          # Navigation tab API
+    ├── invite-message-api.js    # Invite message API (legacy)
     ├── protocol-links.js        # VRCX protocol links
-    ├── tag-manager.js           # Custom user tags
     ├── registry-overrides.js    # VRChat registry settings
+    ├── tag-manager.js           # Custom user tags
+    ├── yoinker-detector.js      # Yoinker/ripper detection
     ├── auto-invite.js           # Auto invitation system
     ├── auto-follow.js           # Auto follow system
     ├── bio-updater.js           # Bio automation
+    ├── plugin-manager-ui.js     # Plugin management UI
     ├── monitor-invisibleplayers.js  # Invisible player monitor
     ├── selfinvite-onblockedplayer.js # Self-invite on block
-    ├── plugin-manager-ui.js     # Plugin management UI
+    ├── avatar-log.js            # Avatar ID logger
+    ├── avatar-log.README.md     # Avatar logger documentation
     ├── debug.js                 # Debug utilities
-    ├── template.js              # Plugin template/example
-    └── invite-message-api.js    # (Legacy)
+    └── template.js              # Plugin template/example
 ```
 
 ---
@@ -1328,7 +1339,7 @@ customjs.functions["AppApi.SendIpc"] = originalFunction;
 1. Fork the repository
 2. Create your plugin in `js/plugins/your-plugin.js`
 3. Extend the `Plugin` base class
-4. Add to `window.customjs.default_plugins` in `custom.js`
+4. Add to the default plugin list in `js/plugin.js` (PluginLoader.defaultPlugins)
 5. Test thoroughly
 6. Update this README
 7. Submit a pull request
@@ -1347,79 +1358,6 @@ See [LICENSE](LICENSE) file for details.
 
 - GitHub: [@Bluscream](https://github.com/Bluscream)
 - Repository: [vrcx-custom](https://github.com/Bluscream/vrcx-custom)
-
----
-
-## 🎉 Changelog
-
-### v1.7.1 (October 12, 2025) - Bug Fixes
-
-- 🐛 Fixed `loadTimeout` and `webhook` returning `[object Object]`
-- ✅ Added value extraction for PluginSetting objects
-- 🔧 Updated logger webhook access to use `.value` property
-
-### v1.7.0 (October 12, 2025) - Subscription System
-
-- ✨ **Centralized Subscription Tracking**
-  - New `window.customjs.subscriptions` Map for global tracking
-  - `pluginManager.registerSubscription()` for centralized management
-  - `pluginManager.unregisterSubscriptions()` for cleanup
-- 🧹 **Improved Cleanup**
-  - Subscriptions tracked globally and cleaned up centrally
-  - Prevents double-cleanup issues
-  - Better debugging visibility
-
-### v1.6.0 (October 12, 2025) - Loader Configuration
-
-- ⚙️ **New Loader Config Structure**
-  - Moved plugin config to `vrcx.customjs.loader.plugins`
-  - Added `loadTimeout` as configurable setting
-  - Cleaner organization under `loader` category
-- 🔄 **Dynamic Plugin Loading**
-  - Plugins loaded from config, not hardcoded list
-  - Enable/disable states persist to config
-  - Merge with defaults for new plugins
-
-### v1.5.0 (October 12, 2025) - Configuration Overhaul
-
-- 📦 **New Config Structure**
-  - `vrcx.customjs.loader` - Loader settings and plugin states
-  - `vrcx.customjs.settings` - Plugin settings (was `.plugins`)
-  - `vrcx.customjs.logger` - Logger settings
-  - General settings support for non-plugin config
-- 💾 **Save All Settings**
-  - Changed from saving only modified settings to saving all
-  - Easier debugging and user editing
-- 🔧 **ConfigManager Enhancements**
-  - `registerGeneralCategory()` and `registerGeneralSetting()`
-  - Support for settings not tied to specific plugins
-
-### v1.4.0 (October 12, 2025) - Core Modules
-
-- 🧩 **Core Module System**
-  - Separated core modules from plugins
-  - `window.customjs.core_modules` array with full URLs
-  - Always loaded before plugins
-- 🎯 **Improved Plugin Tracking**
-  - Only actual plugins tracked in config
-  - Core modules excluded from plugin lists
-- 🛡️ **Fallback Logger**
-  - System continues working if logger fails to load
-  - Minimal console-based logger as fallback
-
-### v1.3.0 (October 12, 2025) - Initial Refactoring
-
-- ✨ **Complete Plugin System Refactoring**
-  - All plugins extend unified `Plugin` base class
-  - Proper lifecycle management
-  - Automatic resource cleanup
-  - Event and hook systems
-- 📁 **File Structure Reorganization**
-  - Core modules in `js/`
-  - Plugins in `js/plugins/`
-- 🌐 **Unified Namespace**
-  - Everything under `window.customjs`
-  - No global namespace pollution
 
 ---
 
