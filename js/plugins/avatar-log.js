@@ -5,8 +5,8 @@ class AvatarLogPlugin extends Plugin {
       description:
         "Logs and submits avatar IDs to various avatar database providers (avtrDB, NSVR, PAW, VRCDB, VRCWB)",
       author: "Bluscream",
-      version: "2.1.0",
-      build: "1728778800",
+      version: "3.0.0",
+      build: "1729027200",
       dependencies: [],
     });
 
@@ -44,113 +44,73 @@ class AvatarLogPlugin extends Plugin {
   async load() {
     this.logger.log("📦 Loading Avatar Logger...");
 
-    // Define settings with metadata
-    this.config.attribution = this.createSetting({
-      key: "attribution",
-      category: "general",
-      name: "Discord User ID (Attribution)",
-      description:
-        "Your Discord User ID for attribution (leave empty for anonymous)",
-      type: "string",
-      defaultValue: "",
-    });
-
-    this.config.logToConsole = this.createSetting({
-      key: "logToConsole",
-      category: "general",
-      name: "Log to Console",
-      description: "Log avatar processing to browser console",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.enableAvtrDB = this.createSetting({
-      key: "enableAvtrDB",
-      category: "providers",
-      name: "Enable avtrDB",
-      description: "avtrDB - Avatar Search (api.avtrdb.com)",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.enableNSVR = this.createSetting({
-      key: "enableNSVR",
-      category: "providers",
-      name: "Enable NSVR",
-      description: "NSVR - NekoSune Community (avtr.nekosunevr.co.uk)",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.enablePAW = this.createSetting({
-      key: "enablePAW",
-      category: "providers",
-      name: "Enable PAW",
-      description: "PAW - Puppy's Avatar World (paw-api.amelia.fun)",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.enableVRCDB = this.createSetting({
-      key: "enableVRCDB",
-      category: "providers",
-      name: "Enable VRCDB",
-      description: "VRCDB - Avatar Search (search.bs002.de)",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.enableVRCWB = this.createSetting({
-      key: "enableVRCWB",
-      category: "providers",
-      name: "Enable VRCWB",
-      description: "VRCWB - World Balancer (avatar.worldbalancer.com)",
-      type: "boolean",
-      defaultValue: true,
-    });
-
-    this.config.batchSize = this.createSetting({
-      key: "batchSize",
-      category: "advanced",
-      name: "Batch Size",
-      description: "Number of avatars to process simultaneously",
-      type: "number",
-      defaultValue: 5,
-    });
-
-    this.config.queueDelay = this.createSetting({
-      key: "queueDelay",
-      category: "advanced",
-      name: "Queue Delay (ms)",
-      description: "Delay between processing batches",
-      type: "number",
-      defaultValue: 2000,
-    });
-
-    this.config.retryAttempts = this.createSetting({
-      key: "retryAttempts",
-      category: "advanced",
-      name: "Retry Attempts",
-      description: "Number of retry attempts for failed requests",
-      type: "number",
-      defaultValue: 3,
-    });
-
-    this.config.scanOnStartup = this.createSetting({
-      key: "scanOnStartup",
-      category: "advanced",
-      name: "Scan Stores on Startup",
-      description: "Scan avatar stores on login",
-      type: "boolean",
-      defaultValue: true,
+    // Define settings using new system
+    this.settings = this.defineSettings({
+      attribution: {
+        type: SettingType.STRING,
+        description:
+          "Your Discord User ID for attribution (leave empty for anonymous)",
+        default: "",
+        placeholder: "Discord User ID",
+      },
+      logToConsole: {
+        type: SettingType.BOOLEAN,
+        description: "Log avatar processing to browser console",
+        default: true,
+      },
+      enableAvtrDB: {
+        type: SettingType.BOOLEAN,
+        description: "avtrDB - Avatar Search (api.avtrdb.com)",
+        default: true,
+      },
+      enableNSVR: {
+        type: SettingType.BOOLEAN,
+        description: "NSVR - NekoSune Community (avtr.nekosunevr.co.uk)",
+        default: true,
+      },
+      enablePAW: {
+        type: SettingType.BOOLEAN,
+        description: "PAW - Puppy's Avatar World (paw-api.amelia.fun)",
+        default: true,
+      },
+      enableVRCDB: {
+        type: SettingType.BOOLEAN,
+        description: "VRCDB - Avatar Search (search.bs002.de)",
+        default: true,
+      },
+      enableVRCWB: {
+        type: SettingType.BOOLEAN,
+        description: "VRCWB - World Balancer (avatar.worldbalancer.com)",
+        default: true,
+      },
+      batchSize: {
+        type: SettingType.NUMBER,
+        description: "Number of avatars to process simultaneously",
+        default: 5,
+      },
+      queueDelay: {
+        type: SettingType.NUMBER,
+        description: "Delay between processing batches (milliseconds)",
+        default: 2000,
+      },
+      retryAttempts: {
+        type: SettingType.NUMBER,
+        description: "Number of retry attempts for failed requests",
+        default: 3,
+      },
+      scanOnStartup: {
+        type: SettingType.BOOLEAN,
+        description: "Scan avatar stores on login",
+        default: true,
+      },
     });
 
     const enabledProviders = [
-      this.config.enableAvtrDB.get() && "avtrDB",
-      this.config.enableNSVR.get() && "NSVR",
-      this.config.enablePAW.get() && "PAW",
-      this.config.enableVRCDB.get() && "VRCDB",
-      this.config.enableVRCWB.get() && "VRCWB",
+      this.settings.store.enableAvtrDB && "avtrDB",
+      this.settings.store.enableNSVR && "NSVR",
+      this.settings.store.enablePAW && "PAW",
+      this.settings.store.enableVRCDB && "VRCDB",
+      this.settings.store.enableVRCWB && "VRCWB",
     ].filter(Boolean);
 
     this.logger.log(`⚙️ Enabled providers: ${enabledProviders.join(", ")}`);
@@ -171,7 +131,7 @@ class AvatarLogPlugin extends Plugin {
   }
 
   async onLogin() {
-    if (!this.config.scanOnStartup.get()) return;
+    if (!this.settings.store.scanOnStartup) return;
 
     this.logger.log("👤 User logged in, scanning avatar stores...");
 
@@ -261,7 +221,7 @@ class AvatarLogPlugin extends Plugin {
       return;
     }
 
-    if (this.config.logToConsole.get()) {
+    if (this.settings.store.logToConsole) {
       this.logger.log(`📋 Queuing avatar: ${avatarId} (from: ${source})`);
     }
 
@@ -283,7 +243,7 @@ class AvatarLogPlugin extends Plugin {
     this.isProcessing = true;
 
     try {
-      const batchSize = this.config.batchSize.get();
+      const batchSize = this.settings.store.batchSize;
       const batch = Array.from(this.pendingQueue).slice(0, batchSize);
 
       // Process batch
@@ -295,7 +255,7 @@ class AvatarLogPlugin extends Plugin {
 
       // Continue processing if more in queue
       if (this.pendingQueue.size > 0) {
-        const delay = this.config.queueDelay.get();
+        const delay = this.settings.store.queueDelay;
         setTimeout(() => {
           this.isProcessing = false;
           this.processQueue();
@@ -312,7 +272,7 @@ class AvatarLogPlugin extends Plugin {
 
   // Send avatar ID to all enabled providers
   async sendToProviders(avatarId) {
-    const attribution = this.config.attribution.get();
+    const attribution = this.settings.store.attribution;
     const userId = attribution || "1007655277732651069"; // VRC-LOG Dev ID as default
 
     const results = {
@@ -321,23 +281,23 @@ class AvatarLogPlugin extends Plugin {
     };
 
     // Send to each enabled provider
-    if (this.config.enableAvtrDB.get()) {
+    if (this.settings.store.enableAvtrDB) {
       results.providers.avtrdb = await this.sendToAvtrDB(avatarId, userId);
     }
-    if (this.config.enableNSVR.get()) {
+    if (this.settings.store.enableNSVR) {
       results.providers.nsvr = await this.sendToNSVR(avatarId, userId);
     }
-    if (this.config.enablePAW.get()) {
+    if (this.settings.store.enablePAW) {
       results.providers.paw = await this.sendToPAW(avatarId);
     }
-    if (this.config.enableVRCDB.get()) {
+    if (this.settings.store.enableVRCDB) {
       results.providers.vrcdb = await this.sendToVRCDB(avatarId, userId);
     }
-    if (this.config.enableVRCWB.get()) {
+    if (this.settings.store.enableVRCWB) {
       results.providers.vrcwb = await this.sendToVRCWB(avatarId, userId);
     }
 
-    if (this.config.logToConsole.get()) {
+    if (this.settings.store.logToConsole) {
       this.logger.log(`✅ Processed ${avatarId}:`, results.providers);
     }
 
