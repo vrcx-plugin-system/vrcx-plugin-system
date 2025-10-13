@@ -410,7 +410,6 @@ export class PluginLoader {
 
   // Default plugins configuration - updated to new repo URL
   defaultPlugins: Array<{url: string; enabled: boolean}> = [
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/config-proxy.js", enabled: true },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/context-menu-api.js", enabled: true },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/nav-menu-api.js", enabled: true },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/invite-message-api.js", enabled: true },
