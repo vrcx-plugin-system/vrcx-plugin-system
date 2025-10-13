@@ -5,8 +5,8 @@ class PluginManagerUIPlugin extends Plugin {
       description:
         "Visual UI for managing VRCX custom plugins - Equicord inspired",
       author: "Bluscream",
-      version: "6.5.0",
-      build: "1729027200",
+      version: "6.7.0",
+      build: "1760227200",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -786,7 +786,10 @@ class PluginManagerUIPlugin extends Plugin {
     const author = plugin.metadata?.author
       ? ` • by ${plugin.metadata.author}`
       : "";
-    meta.textContent = version + author;
+    const buildDate = plugin.metadata?.build
+      ? ` • ${this.formatBuildDate(plugin.metadata.build)}`
+      : "";
+    meta.textContent = version + author + buildDate;
 
     nameSection.appendChild(name);
     nameSection.appendChild(meta);
@@ -1311,7 +1314,7 @@ class PluginManagerUIPlugin extends Plugin {
 
     // Check if plugin uses new definePluginSettings (has settings.def)
     if (plugin.settings?.def && Object.keys(plugin.settings.def).length > 0) {
-      // New SettingsStore API
+      // New SettingsStore API with category support
       const settingsDef = plugin.settings.def;
       const visibleSettings = {};
 
@@ -1342,10 +1345,67 @@ class PluginManagerUIPlugin extends Plugin {
         return container;
       }
 
-      // Render each setting
-      Object.entries(visibleSettings).forEach(([key, settingDef]) => {
-        const settingRow = this.createSettingRow(plugin, key, settingDef);
-        container.appendChild(settingRow);
+      // Group settings by category
+      const categorizedSettings = {};
+      for (const key in visibleSettings) {
+        const category = visibleSettings[key].category || "general";
+        if (!categorizedSettings[category]) {
+          categorizedSettings[category] = {};
+        }
+        categorizedSettings[category][key] = visibleSettings[key];
+      }
+
+      // Get category metadata if defined
+      const categoryMeta = plugin.categories || {};
+
+      // Render each category
+      Object.entries(categorizedSettings).forEach(([categoryKey, settings]) => {
+        // Create category section
+        const categorySection = document.createElement("div");
+        categorySection.style.cssText = "margin-bottom: 20px;";
+
+        // Category header
+        const categoryHeader = document.createElement("div");
+        categoryHeader.style.cssText = `
+          margin-bottom: 12px;
+          padding-bottom: 8px;
+          border-bottom: 2px solid #e9ecef;
+        `;
+
+        const categoryTitle = document.createElement("h4");
+        categoryTitle.style.cssText = `
+          margin: 0;
+          font-size: 15px;
+          font-weight: 600;
+          color: #495057;
+        `;
+        categoryTitle.textContent =
+          categoryMeta[categoryKey]?.name ||
+          this.formatCategoryName(categoryKey);
+
+        categoryHeader.appendChild(categoryTitle);
+
+        // Category description if available
+        if (categoryMeta[categoryKey]?.description) {
+          const categoryDesc = document.createElement("p");
+          categoryDesc.style.cssText = `
+            margin: 4px 0 0 0;
+            font-size: 12px;
+            color: #6c757d;
+          `;
+          categoryDesc.textContent = categoryMeta[categoryKey].description;
+          categoryHeader.appendChild(categoryDesc);
+        }
+
+        categorySection.appendChild(categoryHeader);
+
+        // Render settings in this category
+        Object.entries(settings).forEach(([key, settingDef]) => {
+          const settingRow = this.createSettingRow(plugin, key, settingDef);
+          categorySection.appendChild(settingRow);
+        });
+
+        container.appendChild(categorySection);
       });
 
       return container;
@@ -1452,6 +1512,9 @@ class PluginManagerUIPlugin extends Plugin {
           currentValue,
           settingDef.markers || []
         );
+
+      case SettingType.CUSTOM:
+        return this.createCustomInput(plugin, key, currentValue);
 
       default:
         const span = document.createElement("span");
@@ -1593,6 +1656,160 @@ class PluginManagerUIPlugin extends Plugin {
     container.appendChild(valueDisplay);
 
     return container;
+  }
+
+  createCustomInput(plugin, key, currentValue) {
+    const container = document.createElement("div");
+    container.style.cssText = "width: 100%;";
+
+    // Format JSON with indentation
+    const jsonString = JSON.stringify(currentValue, null, 2);
+    const lineCount = Math.min((jsonString.match(/\n/g) || []).length + 1, 50);
+
+    const textarea = document.createElement("textarea");
+    textarea.className = "el-textarea__inner";
+    textarea.value = jsonString;
+    textarea.rows = lineCount;
+    textarea.style.cssText = `
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #dcdfe6;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      resize: vertical;
+      min-height: 40px;
+      max-height: ${50 * 20}px;
+      line-height: 1.5;
+    `;
+
+    // Error message display
+    const errorMsg = document.createElement("div");
+    errorMsg.style.cssText = `
+      font-size: 11px;
+      color: #f56c6c;
+      margin-top: 4px;
+      display: none;
+    `;
+
+    // Success indicator
+    const successMsg = document.createElement("div");
+    successMsg.style.cssText = `
+      font-size: 11px;
+      color: #67c23a;
+      margin-top: 4px;
+      display: none;
+    `;
+
+    this.registerListener(textarea, "input", () => {
+      // Auto-adjust height based on content
+      const newLineCount = Math.min(
+        (textarea.value.match(/\n/g) || []).length + 1,
+        50
+      );
+      textarea.rows = Math.max(newLineCount, 2);
+
+      // Reset messages
+      errorMsg.style.display = "none";
+      successMsg.style.display = "none";
+    });
+
+    this.registerListener(textarea, "blur", () => {
+      try {
+        const parsed = JSON.parse(textarea.value);
+        plugin.settings.store[key] = parsed;
+
+        // Show success
+        successMsg.textContent = "✓ Valid JSON saved";
+        successMsg.style.display = "block";
+        errorMsg.style.display = "none";
+
+        // Re-format the JSON
+        const formatted = JSON.stringify(parsed, null, 2);
+        textarea.value = formatted;
+        const newLineCount = Math.min(
+          (formatted.match(/\n/g) || []).length + 1,
+          50
+        );
+        textarea.rows = Math.max(newLineCount, 2);
+
+        // Reset border color
+        textarea.style.borderColor = "#dcdfe6";
+
+        // Hide success message after 2 seconds
+        setTimeout(() => {
+          successMsg.style.display = "none";
+        }, 2000);
+      } catch (error) {
+        // Show error
+        errorMsg.textContent = `✗ Invalid JSON: ${error.message}`;
+        errorMsg.style.display = "block";
+        successMsg.style.display = "none";
+        textarea.style.borderColor = "#f56c6c";
+      }
+    });
+
+    this.registerListener(textarea, "focus", () => {
+      textarea.style.borderColor = "#409eff";
+    });
+
+    container.appendChild(textarea);
+    container.appendChild(errorMsg);
+    container.appendChild(successMsg);
+
+    return container;
+  }
+
+  /**
+   * Format build date from Unix timestamp
+   * @param {string|number} build - Build timestamp (Unix timestamp in seconds or milliseconds)
+   * @returns {string} Formatted date or unparsed value if parsing fails
+   */
+  formatBuildDate(build) {
+    if (!build) return "Unknown";
+
+    try {
+      // Convert to number if string
+      let timestamp = typeof build === "string" ? parseInt(build, 10) : build;
+
+      // Check if it's a valid number
+      if (isNaN(timestamp)) {
+        return build.toString();
+      }
+
+      // Convert to milliseconds if it's in seconds (Unix timestamp is usually in seconds)
+      // Timestamps in seconds are typically 10 digits, milliseconds are 13 digits
+      if (timestamp.toString().length === 10) {
+        timestamp = timestamp * 1000;
+      }
+
+      // Create date object
+      const date = new Date(timestamp);
+
+      // Check if date is valid and reasonable (between 2020 and 2050)
+      const year = date.getFullYear();
+      if (
+        isNaN(date.getTime()) ||
+        year < 2020 ||
+        year > 2050 ||
+        date.getTime() < 0
+      ) {
+        return build.toString();
+      }
+
+      // Format: "Jan 15, 2024 14:30"
+      const options = {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      };
+      return date.toLocaleString("en-US", options);
+    } catch (error) {
+      // If any error occurs during parsing, return the unparsed value
+      return build.toString();
+    }
   }
 
   /**

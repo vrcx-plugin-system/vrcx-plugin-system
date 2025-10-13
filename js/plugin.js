@@ -36,9 +36,6 @@ class Plugin extends Module {
     // Create personal logger instance for this plugin
     this.logger = new window.customjs.Logger(this.metadata.id);
 
-    // Initialize config object for PluginSetting instances
-    this.config = {};
-
     // Add hooks tracking to resources
     this.resources.hooks = new Set();
 
@@ -342,33 +339,6 @@ class Plugin extends Module {
   }
 
   /**
-   * Create a PluginSetting instance (automatically adds plugin reference)
-   * @param {object} options - Setting options
-   * @returns {PluginSetting} Setting instance
-   * @deprecated Use defineSettings() instead for Equicord-style settings
-   * @example
-   * this.config.myMessage = this.createSetting({
-   *   key: "message",
-   *   category: "general",
-   *   name: "Custom Message",
-   *   description: "Message to display",
-   *   type: "string",
-   *   defaultValue: "Hello"
-   * });
-   */
-  createSetting(options) {
-    if (!window.customjs?.PluginSetting) {
-      this.warn("PluginSetting class not available");
-      return null;
-    }
-
-    return new window.customjs.PluginSetting({
-      ...options,
-      plugin: this,
-    });
-  }
-
-  /**
    * Define plugin settings using Equicord-style settings system
    * @param {object} definition - Settings definition
    * @returns {object} Settings object with store, plain, def, and helper methods
@@ -377,11 +347,13 @@ class Plugin extends Module {
    *   enabled: {
    *     type: window.customjs.SettingType.BOOLEAN,
    *     description: "Enable the plugin",
+   *     category: "general",
    *     default: true
    *   },
    *   apiKey: {
    *     type: window.customjs.SettingType.STRING,
    *     description: "API Key",
+   *     category: "authentication",
    *     placeholder: "Enter your key...",
    *     default: ""
    *   }
@@ -398,6 +370,26 @@ class Plugin extends Module {
     }
 
     return window.customjs.definePluginSettings(definition, this);
+  }
+
+  /**
+   * Define category metadata for settings
+   * @param {object} categories - Category definitions
+   * @returns {object} Categories object
+   * @example
+   * this.categories = this.defineSettingsCategories({
+   *   general: {
+   *     name: "General Settings",
+   *     description: "Basic plugin configuration"
+   *   },
+   *   notifications: {
+   *     name: "Notifications",
+   *     description: "Configure notification settings"
+   *   }
+   * });
+   */
+  defineSettingsCategories(categories) {
+    return categories;
   }
 
   /**

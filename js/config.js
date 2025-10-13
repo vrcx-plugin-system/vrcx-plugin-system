@@ -227,6 +227,7 @@ class SettingsStore {
  * - type: SettingType - Required setting type
  * - description: string - Required description
  * - default: any - Default value
+ * - category: string - Optional category for grouping in UI (not saved with setting)
  * - placeholder: string - Placeholder text (STRING only)
  * - markers: number[] - Slider markers (SLIDER only)
  * - options: array - Dropdown options (SELECT only)
@@ -350,125 +351,33 @@ function definePluginSettings(definition, plugin) {
       }
       return hidden;
     },
+
+    // Get settings grouped by category
+    getSettingsByCategory() {
+      const categories = {};
+      for (const key in definition) {
+        const category = definition[key].category || "general";
+        if (!categories[category]) {
+          categories[category] = {};
+        }
+        categories[category][key] = definition[key];
+      }
+      return categories;
+    },
+
+    // Get settings for a specific category
+    getCategorySettings(categoryKey) {
+      const categorySettings = {};
+      for (const key in definition) {
+        if (definition[key].category === categoryKey) {
+          categorySettings[key] = definition[key];
+        }
+      }
+      return categorySettings;
+    },
   };
 
   return definedSettings;
-}
-
-// ============================================================================
-// LEGACY PLUGIN SETTING CLASS (for backward compatibility)
-// ============================================================================
-
-/**
- * PluginSetting - Legacy class for backward compatibility
- * Stores metadata and provides get/set methods that use ConfigManager
- * @deprecated Use definePluginSettings instead
- */
-class PluginSetting {
-  /**
-   * Create a new plugin setting
-   * @param {object} options - Setting configuration
-   * @param {string} options.key - Setting key
-   * @param {string} options.category - Category (e.g., "general", "notifications")
-   * @param {string} options.name - Display name
-   * @param {string} options.description - Description text
-   * @param {string} options.type - Type (string, number, boolean, object, array)
-   * @param {any} options.defaultValue - Default value
-   * @param {Plugin} options.plugin - Plugin instance (required for get/set)
-   */
-  constructor(options = {}) {
-    this.key = options.key || "unknown";
-    this.category = options.category || "";
-    this.name = options.name || this.key;
-    this.description = options.description || "";
-    this.type = options.type || "string";
-    this.defaultValue = options.defaultValue;
-    this.plugin = options.plugin;
-
-    if (!this.plugin) {
-      console.warn(
-        "[PluginSetting] No plugin instance provided - get/set will not work"
-      );
-    }
-  }
-
-  /**
-   * Get the full storage key (category.key format)
-   * @returns {string} Full key for use with ConfigManager
-   */
-  toKey() {
-    return this.category ? `${this.category}.${this.key}` : this.key;
-  }
-
-  /**
-   * Get the current value from localStorage
-   * @returns {any} Current value or default
-   */
-  get() {
-    if (!this.plugin) {
-      console.error("[PluginSetting] Cannot get() - no plugin instance");
-      return this.defaultValue;
-    }
-    return this.plugin.get(this.toKey(), this.defaultValue);
-  }
-
-  /**
-   * Set the value in localStorage
-   * @param {any} value - Value to set
-   * @returns {boolean} Success status
-   */
-  set(value) {
-    if (!this.plugin) {
-      console.error("[PluginSetting] Cannot set() - no plugin instance");
-      return false;
-    }
-    return this.plugin.set(this.toKey(), value);
-  }
-
-  /**
-   * Check if this setting has been modified from default
-   * @returns {boolean} True if modified
-   */
-  isModified() {
-    const current = this.get();
-    return JSON.stringify(current) !== JSON.stringify(this.defaultValue);
-  }
-
-  /**
-   * Reset to default value
-   */
-  reset() {
-    return this.set(this.defaultValue);
-  }
-
-  /**
-   * Delete this setting from storage
-   */
-  delete() {
-    if (!this.plugin) {
-      console.error("[PluginSetting] Cannot delete() - no plugin instance");
-      return false;
-    }
-    return this.plugin.deleteSetting(this.toKey());
-  }
-
-  /**
-   * Get metadata about this setting
-   * @returns {object} Setting metadata
-   */
-  getMetadata() {
-    return {
-      key: this.key,
-      category: this.category,
-      fullKey: this.toKey(),
-      name: this.name,
-      description: this.description,
-      type: this.type,
-      defaultValue: this.defaultValue,
-      currentValue: this.get(),
-      isModified: this.isModified(),
-    };
-  }
 }
 
 // ============================================================================
@@ -477,8 +386,8 @@ class PluginSetting {
 
 class ConfigManager {
   constructor() {
-    this.version = "4.1.1";
-    this.build = "1729027200";
+    this.version = "4.2.0";
+    this.build = "1728935100";
 
     // localStorage key prefix
     this.keyPrefix = "customjs";
@@ -966,8 +875,8 @@ class ConfigModule extends window.customjs.CoreModule {
       description:
         "Equicord-inspired configuration management system for VRCX Custom",
       author: "Bluscream",
-      version: "4.1.1",
-      build: "1729027200",
+      version: "4.2.0",
+      build: "1728935100",
     });
   }
 
@@ -977,13 +886,12 @@ class ConfigModule extends window.customjs.CoreModule {
     // Export classes and functions globally
     window.customjs = window.customjs || {};
 
-    // New Equicord-style API
+    // Equicord-style API
     window.customjs.SettingType = SettingType;
     window.customjs.SettingsStore = SettingsStore;
     window.customjs.definePluginSettings = definePluginSettings;
 
-    // Legacy API (backward compatibility)
-    window.customjs.PluginSetting = PluginSetting;
+    // Config Manager API
     window.customjs.ConfigManager = ConfigManager;
     window.customjs.configManager = new ConfigManager();
 

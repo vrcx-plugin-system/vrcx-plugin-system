@@ -5,8 +5,8 @@ class AvatarLogPlugin extends Plugin {
       description:
         "Logs and submits avatar IDs to various avatar database providers (avtrDB, NSVR, PAW, VRCDB, VRCWB)",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1729027200",
+      version: "3.1.0",
+      build: "1728935100",
       dependencies: [],
     });
 
@@ -44,64 +44,91 @@ class AvatarLogPlugin extends Plugin {
   async load() {
     this.logger.log("📦 Loading Avatar Logger...");
 
+    // Define category metadata
+    this.categories = this.defineSettingsCategories({
+      general: {
+        name: "General Settings",
+        description: "Basic plugin configuration",
+      },
+      providers: {
+        name: "Avatar Database Providers",
+        description: "Enable or disable specific avatar databases",
+      },
+      performance: {
+        name: "Performance & Processing",
+        description: "Control how avatars are processed and submitted",
+      },
+    });
+
     // Define settings using new system
     this.settings = this.defineSettings({
       attribution: {
         type: SettingType.STRING,
         description:
           "Your Discord User ID for attribution (leave empty for anonymous)",
+        category: "general",
         default: "",
         placeholder: "Discord User ID",
       },
       logToConsole: {
         type: SettingType.BOOLEAN,
         description: "Log avatar processing to browser console",
+        category: "general",
+        default: true,
+      },
+      scanOnStartup: {
+        type: SettingType.BOOLEAN,
+        description: "Scan avatar stores on login",
+        category: "general",
         default: true,
       },
       enableAvtrDB: {
         type: SettingType.BOOLEAN,
         description: "avtrDB - Avatar Search (api.avtrdb.com)",
+        category: "providers",
         default: true,
       },
       enableNSVR: {
         type: SettingType.BOOLEAN,
         description: "NSVR - NekoSune Community (avtr.nekosunevr.co.uk)",
+        category: "providers",
         default: true,
       },
       enablePAW: {
         type: SettingType.BOOLEAN,
         description: "PAW - Puppy's Avatar World (paw-api.amelia.fun)",
+        category: "providers",
         default: true,
       },
       enableVRCDB: {
         type: SettingType.BOOLEAN,
         description: "VRCDB - Avatar Search (search.bs002.de)",
+        category: "providers",
         default: true,
       },
       enableVRCWB: {
         type: SettingType.BOOLEAN,
         description: "VRCWB - World Balancer (avatar.worldbalancer.com)",
+        category: "providers",
         default: true,
       },
       batchSize: {
         type: SettingType.NUMBER,
         description: "Number of avatars to process simultaneously",
+        category: "performance",
         default: 5,
       },
       queueDelay: {
         type: SettingType.NUMBER,
         description: "Delay between processing batches (milliseconds)",
+        category: "performance",
         default: 2000,
       },
       retryAttempts: {
         type: SettingType.NUMBER,
         description: "Number of retry attempts for failed requests",
+        category: "performance",
         default: 3,
-      },
-      scanOnStartup: {
-        type: SettingType.BOOLEAN,
-        description: "Scan avatar stores on login",
-        default: true,
       },
     });
 

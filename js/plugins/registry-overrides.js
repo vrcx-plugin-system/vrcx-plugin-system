@@ -5,8 +5,8 @@ class RegistryOverridesPlugin extends Plugin {
       description:
         "VRChat registry settings management with event-based triggers",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1729027200",
+      version: "3.0.1",
+      build: "1760362225",
       dependencies: [],
     });
 
@@ -30,7 +30,7 @@ class RegistryOverridesPlugin extends Plugin {
 
     this.settings = this.defineSettings({
       overrides: {
-        type: SettingType.OBJECT,
+        type: SettingType.CUSTOM,
         description:
           "Dictionary of registry key overrides with their values and trigger events",
         default: defaultOverrides,

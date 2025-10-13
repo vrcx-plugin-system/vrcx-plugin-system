@@ -17,8 +17,8 @@ class InvisiblePlayersMonitorPlugin extends Plugin {
       description:
         "Detects and notifies when potentially invisible players are in your instance",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1728847200",
+      version: "3.1.0",
+      build: "1728935100",
       dependencies: [],
     });
 
@@ -29,26 +29,46 @@ class InvisiblePlayersMonitorPlugin extends Plugin {
     // Define settings using new Equicord-style system
     const SettingType = window.customjs.SettingType;
 
+    // Define category metadata
+    this.categories = this.defineSettingsCategories({
+      general: {
+        name: "General Settings",
+        description: "Basic detection configuration",
+      },
+      display: {
+        name: "Display",
+        description: "Control how invisible players are shown",
+      },
+      notifications: {
+        name: "Notifications",
+        description: "Configure detection notifications",
+      },
+    });
+
     this.settings = this.defineSettings({
       enabled: {
         type: SettingType.BOOLEAN,
         description: "Enable invisible player detection",
+        category: "general",
         default: true,
       },
       modifyInstanceName: {
         type: SettingType.BOOLEAN,
         description: "Add invisible player count to instance display name",
+        category: "display",
         default: true,
       },
       showNotification: {
         type: SettingType.BOOLEAN,
         description: "Show notification when invisible players are detected",
+        category: "notifications",
         default: true,
       },
       notifyOnlyOnChange: {
         type: SettingType.BOOLEAN,
         description:
           "Only show notification when invisible player count changes",
+        category: "notifications",
         default: true,
       },
     });

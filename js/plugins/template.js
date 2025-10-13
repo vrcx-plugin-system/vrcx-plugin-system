@@ -45,7 +45,7 @@ class TemplatePlugin extends Plugin {
     // window.customjs.templateMethod = () => this.doSomething();
 
     // ===================================================================
-    // SETTINGS: Three ways to define settings
+    // SETTINGS: Two ways to define settings
     // ===================================================================
 
     // METHOD 1: Simple get/set (good for basic/ad-hoc settings)
@@ -53,44 +53,58 @@ class TemplatePlugin extends Plugin {
     const quickSetting = this.get("quick.value", "default");
     this.logger.log(`Quick setting: ${quickSetting}`);
 
-    // METHOD 2 (DEPRECATED): PluginSetting instances - old way
-    // Only use if you need legacy compatibility
-    // @deprecated Use METHOD 3 (defineSettings) instead
-
-    // METHOD 3 (RECOMMENDED): Equicord-style settings - new way
-    // Define all settings in one object with metadata and type safety
+    // METHOD 2 (RECOMMENDED): Equicord-style settings
+    // Define all settings in one object with metadata, type safety, and category support
     const SettingType = window.customjs.SettingType;
+
+    // Optional: Define category metadata for better UI organization
+    this.categories = this.defineSettingsCategories({
+      general: {
+        name: "General Settings",
+        description: "Basic plugin configuration",
+      },
+      advanced: {
+        name: "Advanced Options",
+        description: "Advanced configuration for power users",
+      },
+    });
 
     this.settings = this.defineSettings({
       enableFeature: {
         type: SettingType.BOOLEAN,
         description: "Enable the main feature of this plugin",
+        category: "general",
         default: true,
       },
       updateInterval: {
         type: SettingType.NUMBER,
         description: "How often to update in milliseconds",
+        category: "general",
         default: 60000,
       },
       username: {
         type: SettingType.STRING,
         description: "Your username",
+        category: "general",
         placeholder: "Enter username...",
         default: "Guest",
       },
       showDesktop: {
         type: SettingType.BOOLEAN,
         description: "Show desktop notifications",
+        category: "general",
         default: false,
       },
       soundEnabled: {
         type: SettingType.BOOLEAN,
         description: "Play sound for notifications",
+        category: "advanced",
         default: true,
       },
       volume: {
         type: SettingType.SLIDER,
         description: "Notification volume",
+        category: "advanced",
         default: 0.5,
         markers: [0, 0.25, 0.5, 0.75, 1],
       },

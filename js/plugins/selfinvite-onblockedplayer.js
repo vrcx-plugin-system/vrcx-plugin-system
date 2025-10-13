@@ -18,8 +18,8 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
       description:
         "Automatically creates a self-invite to a new instance when a blocked player joins your current instance",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1728847200",
+      version: "3.0.1",
+      build: "1728935100",
       dependencies: [],
     });
 
@@ -349,8 +349,8 @@ class SelfInviteOnBlockedPlayerPlugin extends Plugin {
     return {
       lastBlockedPlayerJoin: this.lastBlockedPlayerJoin,
       inviteCreated: this.inviteCreated,
-      enabled: this.config.enabled.get(),
-      cooldown: this.config.cooldownMs.get(),
+      enabled: this.settings.store.enabled,
+      cooldown: this.settings.store.cooldownMs,
     };
   }
 

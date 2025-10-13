@@ -4,8 +4,8 @@ class TagManagerPlugin extends Plugin {
       name: "Tag Manager",
       description: "Custom user tags management with URL-based loading",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1728847200",
+      version: "3.1.0",
+      build: "1728935100",
       dependencies: [],
     });
 
@@ -17,10 +17,27 @@ class TagManagerPlugin extends Plugin {
     // Define settings using new Equicord-style system
     const SettingType = window.customjs.SettingType;
 
+    // Define category metadata
+    this.categories = this.defineSettingsCategories({
+      general: {
+        name: "Tag Sources",
+        description: "Configure tag loading sources",
+      },
+      timing: {
+        name: "Update Timing",
+        description: "Control when and how often tags are refreshed",
+      },
+      notifications: {
+        name: "Notifications",
+        description: "Configure notifications for tagged players",
+      },
+    });
+
     this.settings = this.defineSettings({
       urls: {
         type: SettingType.CUSTOM,
         description: "URLs to load user tags from",
+        category: "general",
         default: [
           "https://github.com/Bluscream/FewTags/raw/refs/heads/main/usertags.json",
         ],
@@ -28,18 +45,21 @@ class TagManagerPlugin extends Plugin {
       updateInterval: {
         type: SettingType.NUMBER,
         description: "How often to reload tags (default: 1 hour in ms)",
+        category: "timing",
         default: 3600000,
       },
       initialDelay: {
         type: SettingType.NUMBER,
         description:
           "Delay before first tag load after login (default: 5 seconds in ms)",
+        category: "timing",
         default: 5000,
       },
       notifyOnPlayerJoin: {
         type: SettingType.BOOLEAN,
         description:
           "Show notification when a tagged player joins your instance",
+        category: "notifications",
         default: true,
       },
     });

@@ -5,8 +5,8 @@ class BioUpdaterPlugin extends Plugin {
       description:
         "Automatic bio updating with user statistics and custom templates",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1728847200",
+      version: "3.1.0",
+      build: "1728935100",
       dependencies: [],
     });
 
@@ -33,38 +33,60 @@ User ID: {userId}
 Steam ID: {steamId}
 Oculus ID: {oculusId}`;
 
+    // Define category metadata
+    this.categories = this.defineSettingsCategories({
+      timing: {
+        name: "Update Timing",
+        description: "Control when and how often bio updates occur",
+      },
+      steam: {
+        name: "Steam Integration",
+        description: "Steam API credentials for playtime tracking",
+      },
+      template: {
+        name: "Bio Template",
+        description: "Customize your bio content and placeholders",
+      },
+    });
+
     this.settings = this.defineSettings({
       updateInterval: {
         type: SettingType.NUMBER,
         description: "How often to update bio (default: 2 hours in ms)",
+        category: "timing",
         default: 7200000,
       },
       initialDelay: {
         type: SettingType.NUMBER,
         description:
           "Delay before first update after login (default: 20 seconds in ms)",
+        category: "timing",
         default: 20000,
       },
       steamId: {
         type: SettingType.STRING,
         description: "Your Steam ID64 (can be base64 encoded)",
+        category: "steam",
         placeholder: "Steam ID64",
         default: "",
       },
       apiKey: {
         type: SettingType.STRING,
         description: "Your Steam Web API key (can be base64 encoded)",
+        category: "steam",
         placeholder: "Steam API Key",
         default: "",
       },
       appId: {
         type: SettingType.STRING,
         description: "Steam app ID for VRChat (default: 438100)",
+        category: "steam",
         default: "438100",
       },
       template: {
         type: SettingType.STRING,
         description: "Bio template with placeholders",
+        category: "template",
         placeholder: defaultTemplate,
         default: defaultTemplate,
         variables: {

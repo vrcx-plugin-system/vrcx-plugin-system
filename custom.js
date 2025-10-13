@@ -5,12 +5,12 @@ window.customjs = {
 };
 
 console.log(
-  `%c[VRCX Custom] %cStarting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
+  `%c[CJS] %cStarting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
   "font-weight: bold; color: #00ff88",
   "color: #888"
 );
 console.log(
-  `%c[VRCX Custom] %cCache buster: ${Date.now()}`,
+  `%c[CJS] %cCache buster: ${Date.now()}`,
   "font-weight: bold; color: #00ff88",
   "color: #888"
 );
@@ -402,7 +402,7 @@ class ModuleLoader {
       if (!success) {
         const moduleName = moduleUrl.split("/").pop();
         alert(
-          `VRCX Custom: Failed to load core module "${moduleName}" after ${this.maxRetries} attempts. The plugin system cannot continue.`
+          `CustomJS: Failed to load core module "${moduleName}" after ${this.maxRetries} attempts. The plugin system cannot continue.`
         );
         throw new Error(`Critical module load failure: ${moduleUrl}`);
       }
@@ -457,7 +457,7 @@ async function bootstrapPluginSystem() {
     const moduleLoader = new window.customjs.ModuleLoader();
 
     console.log(
-      `%c[VRCX Custom] %cLoading ${moduleLoader.coreModules.length} core modules...`,
+      `%c[CJS] %cLoading ${moduleLoader.coreModules.length} core modules...`,
       "font-weight: bold; color: #00ff88",
       "color: #888"
     );
@@ -470,7 +470,7 @@ async function bootstrapPluginSystem() {
     }
 
     console.log(
-      `%c[VRCX Custom] %cCore modules loaded, initializing plugin system...`,
+      `%c[CJS] %cCore modules loaded, initializing plugin system...`,
       "font-weight: bold; color: #00ff88",
       "color: #888"
     );
@@ -479,9 +479,9 @@ async function bootstrapPluginSystem() {
     const manager = new window.customjs.PluginManager();
     await manager.loadAllPlugins();
   } catch (error) {
-    console.error("[VRCX Custom] Bootstrap failed:", error);
+    console.error("[CJS] Bootstrap failed:", error);
     alert(
-      `VRCX Custom: Failed to initialize plugin system.\n\n${error.message}\n\nCheck console for details.`
+      `CustomJS: Failed to initialize plugin system.\n\n${error.message}\n\nCheck console for details.`
     );
   }
 }

@@ -5,8 +5,8 @@ class YoinkerDetectorPlugin extends Plugin {
       description:
         "Automatically checks users against yoinker detection database and applies tags + notifications",
       author: "Bluscream",
-      version: "3.0.0",
-      build: "1728847200",
+      version: "3.1.0",
+      build: "1728935100",
       dependencies: [],
     });
 
@@ -33,68 +33,104 @@ class YoinkerDetectorPlugin extends Plugin {
     // Define settings using new Equicord-style system
     const SettingType = window.customjs.SettingType;
 
+    // Define category metadata
+    this.categories = this.defineSettingsCategories({
+      general: {
+        name: "General Settings",
+        description: "Basic plugin configuration",
+      },
+      detection: {
+        name: "Detection Triggers",
+        description: "Control when to check users",
+      },
+      notifications: {
+        name: "Notifications",
+        description: "Configure notification settings",
+      },
+      tagging: {
+        name: "Auto-Tagging",
+        description: "Automatically tag detected yoinkers",
+      },
+      advanced: {
+        name: "Advanced Options",
+        description: "Advanced configuration and cache settings",
+      },
+    });
+
     this.settings = this.defineSettings({
       enabled: {
         type: SettingType.BOOLEAN,
         description: "Enable or disable yoinker detection",
+        category: "general",
         default: true,
       },
       logToConsole: {
         type: SettingType.BOOLEAN,
         description: "Log detection results to browser console",
+        category: "general",
         default: true,
       },
       checkOnDialogOpen: {
         type: SettingType.BOOLEAN,
         description: "Check users when their profile dialog is opened",
+        category: "detection",
         default: true,
       },
       checkOnPlayerJoin: {
         type: SettingType.BOOLEAN,
         description: "Check users when they join your instance",
+        category: "detection",
         default: true,
       },
       desktopNotification: {
         type: SettingType.BOOLEAN,
         description: "Show desktop notification for yoinker detection",
+        category: "notifications",
         default: true,
       },
       vrNotification: {
         type: SettingType.BOOLEAN,
         description:
           "Show VR notification (XSOverlay, OVR Toolkit) for yoinker detection",
+        category: "notifications",
         default: true,
       },
       autoTag: {
         type: SettingType.BOOLEAN,
         description: "Automatically add tags to detected yoinkers",
+        category: "tagging",
         default: true,
       },
       tagName: {
         type: SettingType.STRING,
         description: "Name of the tag to add to yoinkers",
+        category: "tagging",
         placeholder: "Yoinker",
         default: "Yoinker",
       },
       tagColor: {
         type: SettingType.STRING,
         description: "Color of the tag (hex format)",
+        category: "tagging",
         placeholder: "#ff0000",
         default: "#ff0000",
-      },
-      cacheExpiration: {
-        type: SettingType.NUMBER,
-        description: "How long to cache check results (minutes)",
-        default: 30,
       },
       skipExistingTags: {
         type: SettingType.BOOLEAN,
         description: "Don't check users who already have a custom tag",
+        category: "advanced",
         default: true,
+      },
+      cacheExpiration: {
+        type: SettingType.NUMBER,
+        description: "How long to cache check results (minutes)",
+        category: "advanced",
+        default: 30,
       },
       endpoint: {
         type: SettingType.STRING,
         description: "Yoinker detection API endpoint",
+        category: "advanced",
         placeholder: "https://yd.just-h.party/",
         default: "https://yd.just-h.party/",
       },
