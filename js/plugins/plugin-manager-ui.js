@@ -5,7 +5,7 @@ class PluginManagerUIPlugin extends Plugin {
       description:
         "Visual UI for managing VRCX custom plugins - Equicord inspired",
       author: "Bluscream",
-      version: "6.2.0",
+      version: "6.5.0",
       build: "1729027200",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
@@ -307,12 +307,9 @@ class PluginManagerUIPlugin extends Plugin {
         button.innerHTML = '<i class="ri-check-line"></i> Imported!';
         button.className = "el-button el-button--success";
 
-        if (window.$app?.playNoty) {
-          window.$app.playNoty({
-            message: `Successfully imported ${result.importCount} settings from VRChat config.json!`,
-            type: "success",
-          });
-        }
+        this.logger.showSuccess(
+          `Successfully imported ${result.importCount} settings from VRChat config.json!`
+        );
 
         // Refresh the UI after a short delay
         setTimeout(() => {
@@ -325,12 +322,9 @@ class PluginManagerUIPlugin extends Plugin {
         button.innerHTML = '<i class="ri-information-line"></i> No settings';
         button.className = "el-button el-button--warning";
 
-        if (window.$app?.playNoty) {
-          window.$app.playNoty({
-            message: "No settings found to import from VRChat config.json",
-            type: "warning",
-          });
-        }
+        this.logger.showWarn(
+          "No settings found to import from VRChat config.json"
+        );
 
         setTimeout(() => {
           button.innerHTML = originalHTML;
@@ -341,12 +335,9 @@ class PluginManagerUIPlugin extends Plugin {
         button.innerHTML = '<i class="ri-error-warning-line"></i> Failed';
         button.className = "el-button el-button--danger";
 
-        if (window.$app?.playNoty) {
-          window.$app.playNoty({
-            message: "Failed to import settings from VRChat config.json",
-            type: "error",
-          });
-        }
+        this.logger.showError(
+          "Failed to import settings from VRChat config.json"
+        );
 
         setTimeout(() => {
           button.innerHTML = originalHTML;
@@ -391,12 +382,9 @@ class PluginManagerUIPlugin extends Plugin {
           `[CJS|PluginManagerUI] Exported ${result.settingsCount} settings`
         );
 
-        if (window.$app?.playNoty) {
-          window.$app.playNoty({
-            message: `Settings exported successfully! Path copied to clipboard.`,
-            type: "success",
-          });
-        }
+        this.logger.showSuccess(
+          `Settings exported successfully! Path copied to clipboard.`
+        );
 
         setTimeout(() => {
           button.innerHTML = originalHTML;
@@ -407,12 +395,9 @@ class PluginManagerUIPlugin extends Plugin {
         button.innerHTML = '<i class="ri-error-warning-line"></i> Failed';
         button.className = "el-button el-button--danger";
 
-        if (window.$app?.playNoty) {
-          window.$app.playNoty({
-            message: "Failed to export settings to VRChat config.json",
-            type: "error",
-          });
-        }
+        this.logger.showError(
+          "Failed to export settings to VRChat config.json"
+        );
 
         setTimeout(() => {
           button.innerHTML = originalHTML;
@@ -797,20 +782,14 @@ class PluginManagerUIPlugin extends Plugin {
     const meta = document.createElement("div");
     meta.style.cssText =
       "font-size: 11px; color: #6c757d; font-family: monospace;";
-    meta.textContent = `v${plugin.metadata?.version || "0.0.0"}`;
+    const version = `v${plugin.metadata?.version || "0.0.0"}`;
+    const author = plugin.metadata?.author
+      ? ` • by ${plugin.metadata.author}`
+      : "";
+    meta.textContent = version + author;
 
     nameSection.appendChild(name);
     nameSection.appendChild(meta);
-
-    // Info button
-    const infoBtn = document.createElement("button");
-    infoBtn.className = "el-button el-button--small";
-    infoBtn.style.cssText = "margin: 0 8px;";
-    infoBtn.innerHTML = '<i class="ri-information-line"></i>';
-    this.registerListener(infoBtn, "click", (e) => {
-      e.stopPropagation();
-      this.handleShowDetails(plugin);
-    });
 
     // Toggle switch
     const switchContainer = document.createElement("label");
@@ -857,7 +836,6 @@ class PluginManagerUIPlugin extends Plugin {
     });
 
     header.appendChild(nameSection);
-    header.appendChild(infoBtn);
     header.appendChild(switchContainer);
 
     // Description
@@ -899,15 +877,36 @@ class PluginManagerUIPlugin extends Plugin {
       await this.handleReloadPlugin(plugin.metadata.url);
     });
 
+    const settingsBtn = document.createElement("button");
+    settingsBtn.className = "el-button el-button--small el-button--primary";
+    settingsBtn.innerHTML = '<i class="ri-settings-3-line"></i>';
+    settingsBtn.title = "Plugin Settings";
+    this.registerListener(settingsBtn, "click", async (e) => {
+      e.stopPropagation();
+      await this.handleShowPluginSettings(plugin);
+    });
+
+    const infoBtn = document.createElement("button");
+    infoBtn.className = "el-button el-button--small";
+    infoBtn.innerHTML = '<i class="ri-information-line"></i>';
+    infoBtn.title = "Plugin Details";
+    this.registerListener(infoBtn, "click", (e) => {
+      e.stopPropagation();
+      this.handleShowDetails(plugin);
+    });
+
     const removeBtn = document.createElement("button");
     removeBtn.className = "el-button el-button--small el-button--danger";
     removeBtn.innerHTML = '<i class="ri-delete-bin-line"></i>';
+    removeBtn.title = "Remove Plugin";
     this.registerListener(removeBtn, "click", async (e) => {
       e.stopPropagation();
       await this.handleRemovePlugin(plugin.metadata.url);
     });
 
     actions.appendChild(reloadBtn);
+    actions.appendChild(settingsBtn);
+    actions.appendChild(infoBtn);
     actions.appendChild(removeBtn);
 
     // Assemble card
@@ -1081,6 +1080,14 @@ class PluginManagerUIPlugin extends Plugin {
   }
 
   handleShowDetails(plugin) {
+    // Just dump to console and open devtools
+    console.log(plugin); // eslint-disable-line no-console
+    if (window.AppApi?.ShowDevTools) {
+      window.AppApi.ShowDevTools();
+    }
+  }
+
+  async handleShowPluginSettings(plugin) {
     // Check if plugin has settings
     const hasSettings =
       plugin.settings?.def && Object.keys(plugin.settings.def).length > 0;
@@ -1089,11 +1096,10 @@ class PluginManagerUIPlugin extends Plugin {
       // Show settings modal
       this.showSettingsModal(plugin);
     } else {
-      // Just dump to console and open devtools
-      console.log(plugin); // eslint-disable-line no-console
-      if (window.AppApi?.ShowDevTools) {
-        window.AppApi.ShowDevTools();
-      }
+      // Show message that no settings are available
+      this.logger.showInfo(
+        `${plugin.metadata.name} has no configurable settings`
+      );
     }
   }
 
