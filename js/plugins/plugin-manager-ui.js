@@ -5,8 +5,8 @@ class PluginManagerUIPlugin extends Plugin {
       description:
         "Visual UI for managing VRCX custom plugins - Equicord inspired",
       author: "Bluscream",
-      version: "6.8.0",
-      build: "1760363253",
+      version: "6.8.1",
+      build: "1760442573",
       dependencies: [
         "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/nav-menu-api.js",
       ],
@@ -1536,6 +1536,7 @@ class PluginManagerUIPlugin extends Plugin {
       border-radius: 10px;
       background: ${currentValue ? "#409eff" : "#dcdfe6"};
       transition: background-color 0.3s;
+      cursor: pointer;
     `;
 
     const action = document.createElement("span");
@@ -1548,18 +1549,28 @@ class PluginManagerUIPlugin extends Plugin {
       border-radius: 50%;
       background: white;
       transition: all 0.3s;
+      cursor: pointer;
     `;
 
     core.appendChild(action);
     label.appendChild(checkbox);
     label.appendChild(core);
 
-    this.registerListener(label, "click", () => {
-      const newValue = !plugin.settings.store[key];
-      plugin.settings.store[key] = newValue;
-      checkbox.checked = newValue;
-      core.style.background = newValue ? "#409eff" : "#dcdfe6";
-      action.style.left = newValue ? "21px" : "1px";
+    this.registerListener(label, "click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      try {
+        const newValue = !plugin.settings.store[key];
+        plugin.settings.store[key] = newValue;
+        checkbox.checked = newValue;
+        core.style.background = newValue ? "#409eff" : "#dcdfe6";
+        action.style.left = newValue ? "21px" : "1px";
+        
+        this.logger.log(`Setting ${key} changed to ${newValue}`);
+      } catch (error) {
+        this.logger.error(`Error toggling ${key}:`, error);
+      }
     });
 
     return label;
@@ -1573,10 +1584,15 @@ class PluginManagerUIPlugin extends Plugin {
     input.style.cssText =
       "width: 100%; padding: 6px 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px;";
 
-    this.registerListener(input, "change", () => {
-      const newValue = parseFloat(input.value);
-      if (!isNaN(newValue)) {
-        plugin.settings.store[key] = newValue;
+    this.registerListener(input, "change", (e) => {
+      try {
+        const newValue = parseFloat(input.value);
+        if (!isNaN(newValue)) {
+          plugin.settings.store[key] = newValue;
+          this.logger.log(`Setting ${key} changed to ${newValue}`);
+        }
+      } catch (error) {
+        this.logger.error(`Error updating ${key}:`, error);
       }
     });
 
@@ -1592,8 +1608,13 @@ class PluginManagerUIPlugin extends Plugin {
     input.style.cssText =
       "width: 100%; padding: 6px 10px; border: 1px solid #dcdfe6; border-radius: 4px; font-size: 13px;";
 
-    this.registerListener(input, "change", () => {
-      plugin.settings.store[key] = input.value;
+    this.registerListener(input, "change", (e) => {
+      try {
+        plugin.settings.store[key] = input.value;
+        this.logger.log(`Setting ${key} changed to "${input.value}"`);
+      } catch (error) {
+        this.logger.error(`Error updating ${key}:`, error);
+      }
     });
 
     return input;
@@ -1615,8 +1636,13 @@ class PluginManagerUIPlugin extends Plugin {
       select.appendChild(option);
     });
 
-    this.registerListener(select, "change", () => {
-      plugin.settings.store[key] = select.value;
+    this.registerListener(select, "change", (e) => {
+      try {
+        plugin.settings.store[key] = select.value;
+        this.logger.log(`Setting ${key} changed to "${select.value}"`);
+      } catch (error) {
+        this.logger.error(`Error updating ${key}:`, error);
+      }
     });
 
     return select;
@@ -1639,9 +1665,14 @@ class PluginManagerUIPlugin extends Plugin {
       "text-align: center; font-size: 12px; color: #606266; margin-top: 4px;";
     valueDisplay.textContent = slider.value;
 
-    this.registerListener(slider, "input", () => {
-      valueDisplay.textContent = slider.value;
-      plugin.settings.store[key] = parseFloat(slider.value);
+    this.registerListener(slider, "input", (e) => {
+      try {
+        valueDisplay.textContent = slider.value;
+        plugin.settings.store[key] = parseFloat(slider.value);
+        this.logger.log(`Setting ${key} changed to ${slider.value}`);
+      } catch (error) {
+        this.logger.error(`Error updating ${key}:`, error);
+      }
     });
 
     container.appendChild(slider);
