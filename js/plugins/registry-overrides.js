@@ -3,9 +3,9 @@ class RegistryOverridesPlugin extends Plugin {
     super({
       name: "Registry Overrides",
       description:
-        "VRChat registry settings management with event-based triggers",
+        "VRChat registry settings management with event-based triggers (disabled by default)",
       author: "Bluscream",
-      version: "3.0.1",
+      version: "3.1.0",
       build: "1760362225",
       dependencies: [],
     });
@@ -15,20 +15,18 @@ class RegistryOverridesPlugin extends Plugin {
   }
 
   async load() {
+    const SettingType = window.customjs.SettingType;
+
     // Define settings using new system
-    const defaultOverrides = {
-      VRC_ALLOW_UNTRUSTED_URL: {
-        value: 0,
-        events: [
-          "VRCX_START",
-          "GAME_START",
-          "INSTANCE_SWITCH_PUBLIC",
-          "INSTANCE_SWITCH_PRIVATE",
-        ],
-      },
-    };
+    // VRC_ALLOW_UNTRUSTED_URL has been moved to auto-disable-untrusted-urls.js
+    const defaultOverrides = {};
 
     this.settings = this.defineSettings({
+      enabled: {
+        type: SettingType.BOOLEAN,
+        description: "Enable the registry overrides plugin",
+        default: false,
+      },
       overrides: {
         type: SettingType.CUSTOM,
         description:
@@ -51,6 +49,11 @@ class RegistryOverridesPlugin extends Plugin {
   }
 
   async start() {
+    if (!this.settings.store.enabled) {
+      this.logger.log("Registry Overrides plugin disabled in settings");
+      return;
+    }
+
     // Apply registry settings on startup
     await this.applyRegistrySettings("VRCX_START");
 
@@ -60,7 +63,9 @@ class RegistryOverridesPlugin extends Plugin {
     // Periodic application for keys that need constant enforcement
     const intervalId = this.registerTimer(
       setInterval(async () => {
-        await this.applyRegistrySettings("PERIODIC");
+        if (this.settings.store.enabled) {
+          await this.applyRegistrySettings("PERIODIC");
+        }
       }, 2500)
     );
 

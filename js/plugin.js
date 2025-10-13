@@ -544,8 +544,12 @@ class PluginLoader extends ModuleLoader {
         enabled: true,
       },
       {
-        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/registry-overrides.js",
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/auto-disable-untrusted-urls.js",
         enabled: true,
+      },
+      {
+        url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/registry-overrides.js",
+        enabled: false,
       },
       {
         url: "https://github.com/Bluscream/vrcx-custom/raw/refs/heads/main/js/plugins/tag-manager.js",

@@ -495,15 +495,16 @@ class MyPlugin extends Plugin {
 
 ### Features
 
-| Plugin                 | Description                                 | Default    |
-| ---------------------- | ------------------------------------------- | ---------- |
-| **protocol-links**     | Copy VRCX protocol links (vrcx://user/...)  | ✅ Enabled |
-| **tag-manager**        | Load and display custom user tags from JSON | ✅ Enabled |
-| **registry-overrides** | Manage VRChat registry settings             | ✅ Enabled |
-| **auto-invite**        | Automatically invite users when traveling   | ✅ Enabled |
-| **auto-follow**        | Follow users and send invite requests       | ✅ Enabled |
-| **avatar-log**         | Log and submit avatar IDs to databases      | ✅ Enabled |
-| **yoinker-detector**   | Detect and log yoinker/avatar ripper users  | ✅ Enabled |
+| Plugin                          | Description                                        | Default     |
+| ------------------------------- | -------------------------------------------------- | ----------- |
+| **protocol-links**              | Copy VRCX protocol links (vrcx://user/...)         | ✅ Enabled  |
+| **tag-manager**                 | Load and display custom user tags from JSON        | ✅ Enabled  |
+| **auto-disable-untrusted-urls** | Automatically disable VRChat untrusted URL feature | ✅ Enabled  |
+| **registry-overrides**          | Manage VRChat registry settings (advanced)         | ❌ Disabled |
+| **auto-invite**                 | Automatically invite users when traveling          | ✅ Enabled  |
+| **auto-follow**                 | Follow users and send invite requests              | ✅ Enabled  |
+| **avatar-log**                  | Log and submit avatar IDs to databases             | ✅ Enabled  |
+| **yoinker-detector**            | Detect and log yoinker/avatar ripper users         | ✅ Enabled  |
 
 ### Advanced Features
 
@@ -515,11 +516,11 @@ class MyPlugin extends Plugin {
 
 ### Development
 
-| Plugin              | Description                           | Default     |
-| ------------------- | ------------------------------------- | ----------- |
-| **debug**           | Debug utilities and system inspection | ⚠️ Disabled |
-| **template**        | Comprehensive plugin example/template | ⚠️ Disabled |
-| **invite-message-api** | Legacy invite message API (deprecated) | ✅ Enabled |
+| Plugin                 | Description                            | Default     |
+| ---------------------- | -------------------------------------- | ----------- |
+| **debug**              | Debug utilities and system inspection  | ⚠️ Disabled |
+| **template**           | Comprehensive plugin example/template  | ⚠️ Disabled |
+| **invite-message-api** | Legacy invite message API (deprecated) | ✅ Enabled  |
 
 ---
 
@@ -544,7 +545,8 @@ vrcx-custom/
     ├── nav-menu-api.js          # Navigation tab API
     ├── invite-message-api.js    # Invite message API (legacy)
     ├── protocol-links.js        # VRCX protocol links
-    ├── registry-overrides.js    # VRChat registry settings
+    ├── auto-disable-untrusted-urls.js # Auto-disable untrusted URLs
+    ├── registry-overrides.js    # VRChat registry settings (advanced)
     ├── tag-manager.js           # Custom user tags
     ├── yoinker-detector.js      # Yoinker/ripper detection
     ├── auto-invite.js           # Auto invitation system
