@@ -75,16 +75,26 @@ class Logger {
       webhook: options.webhook ?? this.defaultOptions.webhook,
     };
 
-    const formattedMsg = this._formatMessage(msg, includeTimestamp);
+    const formatted = this._formatMessage(msg, includeTimestamp);
+    const formattedMsg =
+      typeof formatted === "string" ? formatted : formatted.message;
     const timestamp = new Date().toISOString();
 
     // Console logging
     if (opts.console) {
       // Intentional console output - this IS the logger
       if (typeof console[level] === "function") {
-        console[level](formattedMsg); // eslint-disable-line no-console
+        if (formatted.styles) {
+          console[level](formatted.message, ...formatted.styles); // eslint-disable-line no-console
+        } else {
+          console[level](formattedMsg); // eslint-disable-line no-console
+        }
       } else {
-        console.log(formattedMsg); // eslint-disable-line no-console
+        if (formatted.styles) {
+          console.log(formatted.message, ...formatted.styles); // eslint-disable-line no-console
+        } else {
+          console.log(formattedMsg); // eslint-disable-line no-console
+        }
       }
     }
 

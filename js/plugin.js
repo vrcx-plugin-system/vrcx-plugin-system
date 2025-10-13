@@ -641,7 +641,7 @@ class PluginLoader extends ModuleLoader {
             delete window.customjs.__LAST_PLUGIN_CLASS__ ;
             delete window.customjs.__currentPluginUrl;
           } catch (e) {
-            console.error('[CJS|PluginLoader] Error instantiating plugin:', e);
+            console.error('%c[CJS|PluginLoader]%c Error instantiating plugin:', "color: #2196f3", "color: inherit", e);
             delete window.customjs.__currentPluginUrl;
           }
         }
@@ -713,7 +713,12 @@ class PluginLoader extends ModuleLoader {
   }
 
   error(message, ...args) {
-    console.error(`[CJS|PluginLoader] ${message}`, ...args);
+    console.error(
+      `%c[CJS|PluginLoader]%c ${message}`,
+      "color: #2196f3",
+      "color: inherit",
+      ...args
+    );
   }
 }
 
@@ -760,7 +765,11 @@ class PluginManager {
 
   registerPlugin(plugin) {
     if (!plugin || !plugin.metadata) {
-      console.error("[CJS|PluginManager] Invalid plugin registration");
+      console.error(
+        "%c[CJS|PluginManager]%c Invalid plugin registration",
+        "color: #4caf50",
+        "color: inherit"
+      );
       return false;
     }
 
@@ -876,7 +885,7 @@ class PluginManager {
   async startAllPlugins() {
     console.log(
       `%c[CJS|PluginManager] %cCalling start() on ${window.customjs.plugins.length} plugins...`,
-      "font-weight: bold; color: #ff9900",
+      "font-weight: bold; color: #4caf50",
       "color: #888"
     );
 
@@ -904,7 +913,7 @@ class PluginManager {
 
     console.log(
       `%c[CJS|PluginManager] %c✓ All plugins started`,
-      "font-weight: bold; color: #ff9900",
+      "font-weight: bold; color: #4caf50",
       "color: #888"
     );
   }
@@ -928,7 +937,12 @@ class PluginManager {
       try {
         callback(currentUser);
       } catch (error) {
-        console.error("[CJS|PluginManager] Error in login callback:", error);
+        console.error(
+          "%c[CJS|PluginManager]%c Error in login callback:",
+          "color: #4caf50",
+          "color: inherit",
+          error
+        );
       }
     } else {
       this.loginCallbacks.push(callback);
@@ -963,7 +977,12 @@ class PluginManager {
       try {
         callback(user);
       } catch (error) {
-        console.error("[CJS|PluginManager] Error in login callback:", error);
+        console.error(
+          "%c[CJS|PluginManager]%c Error in login callback:",
+          "color: #4caf50",
+          "color: inherit",
+          error
+        );
       }
     }
   }
@@ -1172,7 +1191,11 @@ class PluginManager {
       return result;
     };
 
-    console.log(`[CJS|PluginManager] ✓ Wrapped function: ${functionPath}`);
+    console.log(
+      `%c[CJS|PluginManager]%c ✓ Wrapped function: ${functionPath}`,
+      "color: #4caf50",
+      "color: inherit"
+    );
     return true;
   }
 
@@ -1233,7 +1256,11 @@ class PluginManager {
         console.warn(`[CJS|${this.context}] ${msg}`);
       }
       showError(msg) {
-        console.error(`[CJS|${this.context}] ${msg}`);
+        console.error(
+          `%c[CJS|${this.context}]%c ${msg}`,
+          "color: #4caf50",
+          "color: inherit"
+        );
       }
 
       async notifyDesktop(msg) {
@@ -1257,7 +1284,11 @@ class PluginManager {
       }
     };
 
-    console.log("[CJS|PluginManager] ✓ Fallback Logger class registered");
+    console.log(
+      "%c[CJS|PluginManager]%c ✓ Fallback Logger class registered",
+      "color: #4caf50",
+      "color: inherit"
+    );
   }
 
   /**
@@ -1311,7 +1342,7 @@ class PluginManager {
     // Phase 1: Initialize core modules
     console.log(
       `%c[CJS|PluginManager] %cInitializing core modules...`,
-      "font-weight: bold; color: #00aaff",
+      "font-weight: bold; color: #4caf50",
       "color: #888"
     );
 
@@ -1325,7 +1356,11 @@ class PluginManager {
           if (typeof module.start === "function") {
             await module.start();
           }
-          console.log(`[CJS|PluginManager] ✓ Initialized core module: ${id}`);
+          console.log(
+            `%c[CJS|PluginManager]%c ✓ Initialized core module: ${id}`,
+            "color: #4caf50",
+            "color: inherit"
+          );
         } catch (error) {
           console.error(
             `[CJS|PluginManager] ✗ Error initializing ${id}:`,
@@ -1343,16 +1378,9 @@ class PluginManager {
 
     console.log(
       `%c[CJS|PluginManager] %cLoading ${enabledPlugins.length} plugins from config...`,
-      "font-weight: bold; color: #00aaff",
+      "font-weight: bold; color: #4caf50",
       "color: #888"
     );
-
-    if (window.$app?.playNoty) {
-      window.$app.playNoty({
-        message: `Loading ${enabledPlugins.length} plugins...`,
-        type: "info",
-      });
-    }
 
     // Phase 3: Load enabled plugins using PluginLoader
     if (window.customjs?.PluginLoader) {
@@ -1369,7 +1397,7 @@ class PluginManager {
 
       console.log(
         `%c[CJS|PluginManager] %cPlugin code loading complete. Loaded: ${this.loadedUrls.size}, Failed: ${this.failedUrls.size}`,
-        "font-weight: bold; color: #00aaff",
+        "font-weight: bold; color: #4caf50",
         "color: #888"
       );
     } else {
@@ -1381,7 +1409,7 @@ class PluginManager {
     // Phase 4: Call load() on all plugins
     console.log(
       `%c[CJS|PluginManager] %cCalling load() on ${window.customjs.plugins.length} plugins...`,
-      "font-weight: bold; color: #00aaff",
+      "font-weight: bold; color: #4caf50",
       "color: #888"
     );
     for (const plugin of window.customjs.plugins) {
@@ -1405,22 +1433,19 @@ class PluginManager {
     this.savePluginConfig(pluginConfig);
 
     console.log(
-      `%c[CJS|PluginManager] %c✓ Plugin system ready!`,
-      "font-weight: bold; color: #00ff00",
+      `%c[CJS|PluginManager] %c✓ Plugin system ready! Loaded ${enabledPlugins.length} plugins`,
+      "font-weight: bold; color: #4caf50",
       "color: #0f0"
     );
-
-    if (window.$app?.playNoty) {
-      window.$app.playNoty({
-        text: `Loaded <strong>${enabledPlugins.length}</strong> plugins...`,
-        type: "success",
-      });
-    }
   }
 
   async addPlugin(url) {
     if (this.loadedUrls.has(url)) {
-      console.warn(`[CJS|PluginManager] Already loaded: ${url}`);
+      console.warn(
+        `%c[CJS|PluginManager]%c Already loaded: ${url}`,
+        "color: #4caf50",
+        "color: inherit"
+      );
       return { success: false, message: "Already loaded" };
     }
 
@@ -1463,7 +1488,12 @@ class PluginManager {
 
       return { success: true, message: "Loaded successfully" };
     } catch (error) {
-      console.error(`[CJS|PluginManager] ✗ Failed to load: ${url}`, error);
+      console.error(
+        `%c[CJS|PluginManager]%c ✗ Failed to load: ${url}`,
+        "color: #4caf50",
+        "color: inherit",
+        error
+      );
       return { success: false, message: error.message };
     }
   }
@@ -1471,7 +1501,11 @@ class PluginManager {
   async removePlugin(url) {
     const plugin = this.findPluginByUrl(url);
     if (!plugin) {
-      console.warn(`[CJS|PluginManager] Plugin not found for URL: ${url}`);
+      console.warn(
+        `%c[CJS|PluginManager]%c Plugin not found for URL: ${url}`,
+        "color: #4caf50",
+        "color: inherit"
+      );
       return { success: false, message: "Not found" };
     }
 
@@ -1484,9 +1518,15 @@ class PluginManager {
     delete config[url];
     this.savePluginConfig(config);
 
-    console.log(`[CJS|PluginManager] ✓ Removed: ${plugin.metadata.name}`);
+    console.log(
+      `%c[CJS|PluginManager]%c ✓ Removed: ${plugin.metadata.name}`,
+      "color: #4caf50",
+      "color: inherit"
+    );
     console.warn(
-      `[CJS|PluginManager] Note: Code remains in memory. Refresh VRCX for full removal.`
+      `%c[CJS|PluginManager]%c Note: Code remains in memory. Refresh VRCX for full removal.`,
+      "color: #4caf50",
+      "color: inherit"
     );
     return {
       success: true,
@@ -1495,7 +1535,11 @@ class PluginManager {
   }
 
   async reloadPlugin(url) {
-    console.log(`[CJS|PluginManager] Reloading: ${url}`);
+    console.log(
+      `%c[CJS|PluginManager]%c Reloading: ${url}`,
+      "color: #4caf50",
+      "color: inherit"
+    );
     await this.removePlugin(url);
     return await this.addPlugin(url);
   }

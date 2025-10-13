@@ -1,17 +1,17 @@
 window.AppApi.ShowDevTools();
 window.customjs = {
-  version: "2.1.0",
-  build: "1728778800",
+  version: "2.2.0",
+  build: "1729027200",
 };
 
 console.log(
   `%c[VRCX Custom] %cStarting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
-  "font-weight: bold; color: #00ff00",
+  "font-weight: bold; color: #00ff88",
   "color: #888"
 );
 console.log(
   `%c[VRCX Custom] %cCache buster: ${Date.now()}`,
-  "font-weight: bold; color: #00ff00",
+  "font-weight: bold; color: #00ff88",
   "color: #888"
 );
 
@@ -155,15 +155,33 @@ class Module {
    * Logging methods (with fallback if Logger not available)
    */
   log(message, ...args) {
-    console.log(`[CJS|${this.metadata.id}] ${message}`, ...args);
+    const color = this.getLogColor ? this.getLogColor() : "#888";
+    console.log(
+      `%c[CJS|${this.metadata.id}]%c ${message}`,
+      `color: ${color}`,
+      "color: inherit",
+      ...args
+    );
   }
 
   warn(message, ...args) {
-    console.warn(`[CJS|${this.metadata.id}] ${message}`, ...args);
+    const color = this.getLogColor ? this.getLogColor() : "#888";
+    console.warn(
+      `%c[CJS|${this.metadata.id}]%c ${message}`,
+      `color: ${color}`,
+      "color: inherit",
+      ...args
+    );
   }
 
   error(message, ...args) {
-    console.error(`[CJS|${this.metadata.id}] ${message}`, ...args);
+    const color = this.getLogColor ? this.getLogColor() : "#888";
+    console.error(
+      `%c[CJS|${this.metadata.id}]%c ${message}`,
+      `color: ${color}`,
+      "color: inherit",
+      ...args
+    );
   }
 }
 
@@ -180,6 +198,19 @@ class CoreModule extends Module {
       window.customjs.coreModules = new Map();
     }
     window.customjs.coreModules.set(this.metadata.id, this);
+  }
+
+  /**
+   * Get color for this core module
+   */
+  getLogColor() {
+    const colors = {
+      logger: "#00bcd4", // cyan
+      utils: "#ff9800", // orange
+      config: "#e91e63", // magenta
+      plugin: "#ffc107", // yellow
+    };
+    return colors[this.metadata.id] || "#888";
   }
 
   /**
@@ -381,15 +412,30 @@ class ModuleLoader {
   }
 
   log(message, ...args) {
-    console.log(`[CJS|ModuleLoader] ${message}`, ...args);
+    console.log(
+      `%c[CJS|ModuleLoader]%c ${message}`,
+      "color: #2196f3",
+      "color: inherit",
+      ...args
+    );
   }
 
   warn(message, ...args) {
-    console.warn(`[CJS|ModuleLoader] ${message}`, ...args);
+    console.warn(
+      `%c[CJS|ModuleLoader]%c ${message}`,
+      "color: #2196f3",
+      "color: inherit",
+      ...args
+    );
   }
 
   error(message, ...args) {
-    console.error(`[CJS|ModuleLoader] ${message}`, ...args);
+    console.error(
+      `%c[CJS|ModuleLoader]%c ${message}`,
+      "color: #2196f3",
+      "color: inherit",
+      ...args
+    );
   }
 }
 
@@ -412,7 +458,7 @@ async function bootstrapPluginSystem() {
 
     console.log(
       `%c[VRCX Custom] %cLoading ${moduleLoader.coreModules.length} core modules...`,
-      "font-weight: bold; color: #00aaff",
+      "font-weight: bold; color: #00ff88",
       "color: #888"
     );
 
@@ -425,7 +471,7 @@ async function bootstrapPluginSystem() {
 
     console.log(
       `%c[VRCX Custom] %cCore modules loaded, initializing plugin system...`,
-      "font-weight: bold; color: #00aaff",
+      "font-weight: bold; color: #00ff88",
       "color: #888"
     );
 
