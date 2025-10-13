@@ -15,7 +15,7 @@ if (window.AppApi?.ShowDevTools) {
   window.AppApi.ShowDevTools();
 }
 
-// Initialize window.customjs namespace
+// Initialize window.customjs
 window.customjs = {
   version: "3.0.0",
   build: Math.floor(Date.now() / 1000).toString(),
