@@ -1,23 +1,6 @@
-# VRCX Plugin System v3.0
+# VRCX Plugin System
 
 TypeScript-based plugin management system for VRCX, with build-time bundling and runtime plugin loading.
-
-## Architecture Changes (v3.0)
-
-### What Changed
-
-- **TypeScript Migration**: All core modules converted from JavaScript to TypeScript
-- **Build System**: Uses webpack to bundle TypeScript into a single `dist/custom.js`
-- **Removed Runtime Module Loading**: Core modules are now bundled at build time instead of downloaded at runtime
-- **Cleaner Class Structure**: Removed `Module`, `CoreModule`, and `ModuleLoader` base classes
-- **Separate Plugin Repository**: Plugins are now in [`vrcx-plugin-system/plugins`](https://github.com/vrcx-plugin-system/plugins)
-
-### What Stayed the Same
-
-- **Plugin API**: Plugins continue to work the same way with the `Plugin` base class
-- **Remote Plugin Loading**: Plugins are still downloaded from GitHub at runtime via `PluginLoader`
-- **Hook System**: Pre/Post/Void/Replace hooks function identically
-- **Settings System**: Equicord-inspired settings system unchanged
 
 ## Project Structure
 
@@ -383,7 +366,7 @@ MIT License - see LICENSE file for details
 
 - **[Plugin Development Guide](docs/plugins.md)** - Complete guide for plugin developers
 - **[API Reference](docs/api-reference.md)** - Full API documentation
-- **[Migration Guide](MIGRATION-GUIDE.md)** - Migrating from v2.x to v3.0
+- **[Migration Guide](MIGRATION-GUIDE.md)** - Migrating from v2.x to
 - **[Changelog](CHANGELOG.md)** - Version history and changes
 
 ## Links
@@ -395,13 +378,8 @@ MIT License - see LICENSE file for details
 ## Credits
 
 - Original VRCX Custom JS by Bluscream
-- v3.0 TypeScript refactor and build system
+- TypeScript refactor and build system
 - Equicord-inspired settings system
 - Community plugin developers
 
 ---
-
-**Version**: 3.0.0  
-**Build System**: webpack + TypeScript  
-**Node Version**: 20+  
-**Target**: VRCX (Electron-based VRChat companion)
