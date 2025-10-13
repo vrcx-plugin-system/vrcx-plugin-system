@@ -1091,9 +1091,8 @@ class PluginManager {
     }
 
     console.log(
-      `%c[CJS|PluginManager] %c✓ All plugins started`,
-      "font-weight: bold; color: #4caf50",
-      "color: #888"
+      `%c[CJS|PluginManager] ✓ All plugins started`,
+      "color: #4caf50"
     );
   }
 
@@ -1103,7 +1102,8 @@ class PluginManager {
         await plugin.stop();
       } catch (error) {
         console.error(
-          `[CJS|PluginManager] Error stopping ${plugin.metadata.name}:`,
+          `%c[CJS|PluginManager] Error stopping ${plugin.metadata.name}:`,
+          "color: #4caf50",
           error
         );
       }
@@ -1117,9 +1117,8 @@ class PluginManager {
         callback(currentUser);
       } catch (error) {
         console.error(
-          "%c[CJS|PluginManager]%c Error in login callback:",
+          "%c[CJS|PluginManager] Error in login callback:",
           "color: #4caf50",
-          "color: inherit",
           error
         );
       }
@@ -1145,7 +1144,8 @@ class PluginManager {
         }
       } catch (error) {
         console.error(
-          `[CJS|PluginManager] Error in ${plugin.metadata.name}.onLogin:`,
+          `%c[CJS|PluginManager] Error in ${plugin.metadata.name}.onLogin:`,
+          "color: #4caf50",
           error
         );
       }
@@ -1157,9 +1157,8 @@ class PluginManager {
         callback(user);
       } catch (error) {
         console.error(
-          "%c[CJS|PluginManager]%c Error in login callback:",
+          "%c[CJS|PluginManager] Error in login callback:",
           "color: #4caf50",
-          "color: inherit",
           error
         );
       }
@@ -1192,7 +1191,8 @@ class PluginManager {
     this.wrapFunctionWhenReady(functionPath);
 
     console.log(
-      `[CJS|PluginManager] Registered pre-hook for ${functionPath} from ${plugin.metadata.name}`
+      `%c[CJS|PluginManager] Registered pre-hook for ${functionPath} from ${plugin.metadata.name}`,
+      "color: #4caf50"
     );
   }
 
@@ -1205,7 +1205,8 @@ class PluginManager {
     this.wrapFunctionWhenReady(functionPath);
 
     console.log(
-      `[CJS|PluginManager] Registered post-hook for ${functionPath} from ${plugin.metadata.name}`
+      `%c[CJS|PluginManager] Registered post-hook for ${functionPath} from ${plugin.metadata.name}`,
+      "color: #4caf50"
     );
   }
 
@@ -1218,7 +1219,8 @@ class PluginManager {
     this.wrapFunctionWhenReady(functionPath);
 
     console.log(
-      `[CJS|PluginManager] Registered void-hook for ${functionPath} from ${plugin.metadata.name}`
+      `%c[CJS|PluginManager] Registered void-hook for ${functionPath} from ${plugin.metadata.name}`,
+      "color: #4caf50"
     );
   }
 
@@ -1231,7 +1233,8 @@ class PluginManager {
     this.wrapFunctionWhenReady(functionPath);
 
     console.log(
-      `[CJS|PluginManager] Registered replace-hook for ${functionPath} from ${plugin.metadata.name}`
+      `%c[CJS|PluginManager] Registered replace-hook for ${functionPath} from ${plugin.metadata.name}`,
+      "color: #4caf50"
     );
   }
 
@@ -1246,15 +1249,17 @@ class PluginManager {
       const delay = Math.min(500 * Math.pow(1.5, retries), 5000);
       setTimeout(() => {
         console.log(
-          `[CJS|PluginManager] Retrying to wrap ${functionPath} (attempt ${
+          `%c[CJS|PluginManager] Retrying to wrap ${functionPath} (attempt ${
             retries + 1
-          }/${maxRetries})...`
+          }/${maxRetries})...`,
+          "color: #4caf50"
         );
         this.wrapFunctionWhenReady(functionPath, retries + 1, maxRetries);
       }, delay);
     } else {
       console.warn(
-        `[CJS|PluginManager] Failed to wrap ${functionPath} after ${maxRetries} attempts - function may not exist`
+        `%c[CJS|PluginManager] Failed to wrap ${functionPath} after ${maxRetries} attempts - function may not exist`,
+        "color: #4caf50"
       );
     }
 
@@ -1300,7 +1305,8 @@ class PluginManager {
             callback.call(plugin, args);
           } catch (error) {
             console.error(
-              `[CJS|PluginManager] Error in void-hook for ${functionPath}:`,
+              `%c[CJS|PluginManager] Error in void-hook for ${functionPath}:`,
+              "color: #4caf50",
               error
             );
           }
@@ -1315,7 +1321,8 @@ class PluginManager {
           callback.call(plugin, args);
         } catch (error) {
           console.error(
-            `[CJS|PluginManager] Error in pre-hook for ${functionPath}:`,
+            `%c[CJS|PluginManager] Error in pre-hook for ${functionPath}:`,
+            "color: #4caf50",
             error
           );
         }
@@ -1339,7 +1346,8 @@ class PluginManager {
               return callback.call(plugin, nextFunction, ...hookArgs);
             } catch (error) {
               console.error(
-                `[CJS|PluginManager] Error in replace-hook for ${functionPath}:`,
+                `%c[CJS|PluginManager] Error in replace-hook for ${functionPath}:`,
+                "color: #4caf50",
                 error
               );
               // On error, call the next function in chain
@@ -1361,7 +1369,8 @@ class PluginManager {
           callback.call(plugin, result, args);
         } catch (error) {
           console.error(
-            `[CJS|PluginManager] Error in post-hook for ${functionPath}:`,
+            `%c[CJS|PluginManager] Error in post-hook for ${functionPath}:`,
+            "color: #4caf50",
             error
           );
         }
@@ -1371,9 +1380,8 @@ class PluginManager {
     };
 
     console.log(
-      `%c[CJS|PluginManager]%c ✓ Wrapped function: ${functionPath}`,
-      "color: #4caf50",
-      "color: inherit"
+      `%c[CJS|PluginManager] ✓ Wrapped function: ${functionPath}`,
+      "color: #4caf50"
     );
     return true;
   }
@@ -1464,9 +1472,8 @@ class PluginManager {
     };
 
     console.log(
-      "%c[CJS|PluginManager]%c ✓ Fallback Logger class registered",
-      "color: #4caf50",
-      "color: inherit"
+      "%c[CJS|PluginManager] ✓ Fallback Logger class registered",
+      "color: #4caf50"
     );
   }
 
