@@ -14,6 +14,8 @@ function Get-UnixTime {
     return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds)
 }
 
+$unixTime = Get-UnixTime
+
 function Commit-AndPushChanges {
     param(
         [string]$RepositoryPath,
@@ -114,7 +116,7 @@ function Commit-AndPushChanges {
 }
 
 Write-Host "=== VRCX Plugin System Build & Update Script ===" -ForegroundColor Cyan
-Write-Host "Unix Time: $(Get-UnixTime)" -ForegroundColor Gray
+Write-Host "Unix Time: $unixTime" -ForegroundColor Gray
 Write-Host "Project Directory: $ProjectDir" -ForegroundColor Gray
 Write-Host "Target Directory: $TargetDir" -ForegroundColor Gray
 Write-Host ""
@@ -321,11 +323,12 @@ if ($ghAvailable -and $hasChanges) {
     Write-Host ""
     Write-Host "=== GitHub Release ===" -ForegroundColor Cyan
     
-    # Generate release tag based on timestamp
-    $releaseTag = "v$(Get-Date -Format 'yyyy.MM.dd.HHmmss')"
-    $releaseTitle = "VRCX Plugin System Build - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
+    # Generate release tag based on Unix time
+    $unixTime = $unixTime
+    $releaseTag = "v$unixTime"
+    $releaseTitle = "VRCX Plugin System Build - $unixTime"
     $releaseNotes = @"
-Automated build and release of VRCX Plugin System
+Automated build and release of VRCX Plugin System at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 
 ## Installation
 Download \`custom.js\` and place it in your VRCX AppData folder.
