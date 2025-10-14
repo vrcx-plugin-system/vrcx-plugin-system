@@ -80,6 +80,52 @@ async function initializeConfigManager() {
   );
 }
 
+// Expose Element Plus notification functions globally
+async function exposeElementPlus() {
+  return new Promise<void>((resolve) => {
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    const checkInterval = setInterval(() => {
+      attempts++;
+      
+      // Check if Vue app is loaded with global properties
+      if ((window as any).$app?.config?.globalProperties) {
+        const globalProps = (window as any).$app.config.globalProperties;
+        
+        // Expose $message and $notify directly to window for easier access
+        if (globalProps.$message || globalProps.$notify) {
+          if (globalProps.$message) {
+            (window as any).ElMessage = globalProps.$message;
+          }
+          if (globalProps.$notify) {
+            (window as any).ElNotification = globalProps.$notify;
+          }
+          clearInterval(checkInterval);
+          console.log(
+            `%c[CJS] %c✓ Element Plus notifications exposed globally`,
+            "font-weight: bold; color: #00ff88",
+            "color: #888"
+          );
+          resolve();
+          return;
+        }
+      }
+      
+      // Timeout after max attempts - proceed anyway
+      if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        console.warn(
+          `%c[CJS] %c⚠ Element Plus not detected yet, will use Vue global properties fallback`,
+          "font-weight: bold; color: #00ff88",
+          "color: #ffa726"
+        );
+        resolve();
+      }
+    }, 100);
+  });
+}
+
 // Bootstrap function: Initialize core modules, then start plugin system
 async function bootstrapPluginSystem() {
   try {
@@ -92,7 +138,10 @@ async function bootstrapPluginSystem() {
       "color: #888"
     );
 
-    // Step 2: Instantiate PluginManager and load plugins
+    // Step 2: Wait for Element Plus to be available
+    await exposeElementPlus();
+
+    // Step 3: Instantiate PluginManager and load plugins
     const manager = new PluginManager();
     await manager.loadAllPlugins();
 

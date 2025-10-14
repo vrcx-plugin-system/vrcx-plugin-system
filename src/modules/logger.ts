@@ -142,51 +142,77 @@ export class Logger {
       }, 0);
     }
 
-    // VRCX Noty notifications
-    if (opts.vrcx!.noty && (window as any).$app?.playNoty) {
+    // VRCX Element Plus Message (primary notification method)
+    if (opts.vrcx!.message || opts.vrcx!.noty) {
       try {
-        (window as any).$app.playNoty({
-          message: formattedMsg,
-          type: level === "warn" ? "warning" : level,
-        });
-      } catch (error) {
-        console.error("Error sending VRCX noty:", error);
-      }
-    }
-
-    // VRCX UI notifications
-    if (opts.vrcx!.notify && (window as any).$app?.$notify) {
-      try {
-        const notifyMethod = (window as any).$app.$notify[level];
-        if (typeof notifyMethod === "function") {
-          notifyMethod({
-            title: this.context,
+        const msgType = level === 'warn' ? 'warning' : (level === 'error' ? 'error' : 'success');
+        
+        // Try window.ElMessage first (if exposed)
+        if (typeof (window as any).ElMessage === 'function') {
+          (window as any).ElMessage({
             message: msg,
-            type: level,
-          });
-        } else {
-          (window as any).$app.$notify.info({
-            title: this.context,
-            message: msg,
-            type: "info",
+            type: msgType,
+            duration: 3000,
+            showClose: true,
           });
         }
-      } catch (error) {
-        console.error("Error sending VRCX notify:", error);
-      }
-    }
-
-    // VRCX message toasts
-    if (opts.vrcx!.message && (window as any).$app?.$message) {
-      try {
-        const messageMethod = (window as any).$app.$message[level];
-        if (typeof messageMethod === "function") {
-          messageMethod(msg);
-        } else {
-          (window as any).$app.$message.info(msg);
+        // Try via Vue globalProperties (this is what actually works)
+        else if ((window as any).$app?.config?.globalProperties?.$message) {
+          const $message = (window as any).$app.config.globalProperties.$message;
+          
+          // Call the appropriate method (success, warning, error, info)
+          if (typeof $message[msgType] === 'function') {
+            $message[msgType](msg);
+          } else if (typeof $message === 'function') {
+            $message({ message: msg, type: msgType });
+          }
+        }
+        // Fallback to old playNoty method
+        else if ((window as any).$app?.playNoty) {
+          (window as any).$app.playNoty({
+            message: formattedMsg,
+            type: msgType,
+          });
         }
       } catch (error) {
         console.error("Error sending VRCX message:", error);
+      }
+    }
+
+    // VRCX Element Plus Notification (for more prominent notifications)
+    if (opts.vrcx!.notify) {
+      try {
+        const notifType = level === 'warn' ? 'warning' : (level === 'error' ? 'error' : 'success');
+        
+        // Try window.ElNotification first (if exposed)
+        if (typeof (window as any).ElNotification === 'function') {
+          (window as any).ElNotification({
+            title: this.context,
+            message: msg,
+            type: notifType,
+            duration: 4500,
+          });
+        }
+        // Try via Vue globalProperties (this is what actually works)
+        else if ((window as any).$app?.config?.globalProperties?.$notify) {
+          const $notify = (window as any).$app.config.globalProperties.$notify;
+          
+          // Call the appropriate method
+          if (typeof $notify[notifType] === 'function') {
+            $notify[notifType]({
+              title: this.context,
+              message: msg,
+            });
+          } else if (typeof $notify === 'function') {
+            $notify({
+              title: this.context,
+              message: msg,
+              type: notifType,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error sending VRCX notification:", error);
       }
     }
 
@@ -256,19 +282,39 @@ export class Logger {
   }
 
   showInfo(msg: string): void {
-    this.log(msg, { console: false, vrcx: { noty: true } }, "info", false);
+    this.log(msg, { console: false, vrcx: { message: true } }, "info", false);
   }
 
   showSuccess(msg: string): void {
-    this.log(msg, { console: false, vrcx: { noty: true } }, "info", false);
+    // Use info level but ElMessage will show as success due to type mapping
+    this.log(msg, { console: false, vrcx: { message: true } }, "info", false);
   }
 
   showWarn(msg: string): void {
-    this.log(msg, { console: false, vrcx: { noty: true } }, "warn", false);
+    this.log(msg, { console: false, vrcx: { message: true } }, "warn", false);
+  }
+
+  showWarning(msg: string): void {
+    this.showWarn(msg);
   }
 
   showError(msg: string): void {
-    this.log(msg, { console: false, vrcx: { noty: true } }, "error", false);
+    this.log(msg, { console: false, vrcx: { message: true } }, "error", false);
+  }
+
+  // Show a message with custom type
+  showMessage(msg: string, type: 'success' | 'warning' | 'info' | 'error' = 'info'): void {
+    const level = type === 'warning' ? 'warn' : (type === 'success' || type === 'info' ? 'info' : 'error');
+    this.log(msg, { console: false, vrcx: { message: true } }, level, false);
+  }
+
+  // Show a notification (more prominent than message)
+  showNotification(title: string, msg: string, type: 'success' | 'warning' | 'info' | 'error' = 'info'): void {
+    const originalContext = this.context;
+    this.context = title;
+    const level = type === 'warning' ? 'warn' : (type === 'success' || type === 'info' ? 'info' : 'error');
+    this.log(msg, { console: false, vrcx: { notify: true } }, level, false);
+    this.context = originalContext;
   }
 
   async notifyDesktop(msg: string): Promise<void> {
