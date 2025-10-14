@@ -18,7 +18,7 @@ if (window.AppApi?.ShowDevTools) {
 // Initialize window.customjs
 window.customjs = {
   version: "3.0.0",
-  build: Math.floor(Date.now() / 1000).toString(),
+  build: "0",
   logColors: {
     CustomJS: "#00ff88",
     PluginLoader: "#2196f3",
