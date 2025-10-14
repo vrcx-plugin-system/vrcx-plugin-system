@@ -422,6 +422,7 @@ export class PluginLoader {
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/auto-follow.js", enabled: true },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/bio-updater.js", enabled: false },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/plugin-manager-ui.js", enabled: true },
+    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/start-game-button.js", enabled: false },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/monitor-invisibleplayers.js", enabled: false },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/selfinvite-onblockedplayer.js", enabled: false },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/avatar-log.js", enabled: true },
