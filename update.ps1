@@ -336,7 +336,7 @@ if ($ghAvailable -and $hasChanges) {
     
     # Generate release tag based on Unix time
     $unixTime = $unixTime
-    $releaseTag = "v$unixTime"
+    $releaseTag = "$unixTime"
     $releaseTitle = "VRCX Plugin System Build - $unixTime"
     $releaseNotes = @"
 Automated build and release of VRCX Plugin System at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
