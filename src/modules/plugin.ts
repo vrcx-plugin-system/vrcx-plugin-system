@@ -530,6 +530,178 @@ export class PluginLoader {
     }
   }
 
+  /**
+   * Extract metadata from plugin source code without executing it
+   * @param pluginUrl - URL of the plugin to analyze
+   * @param includeSource - Whether to include the full source code in the metadata (default: true)
+   * @returns Promise with plugin metadata or null if extraction fails
+   */
+  async extractPluginMetadata(pluginUrl: string, includeSource: boolean = true): Promise<any | null> {
+    try {
+      this.log(`Extracting metadata from: ${pluginUrl}`);
+      
+      // Download the source code
+      const url = pluginUrl + "?v=" + Date.now();
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const sourceCode = await response.text();
+      const metadata: any = {
+        url: pluginUrl,
+        size: sourceCode.length,
+        sizeFormatted: this.formatBytes(sourceCode.length),
+        lineCount: sourceCode.split('\n').length,
+      };
+
+      // Optionally include full source code
+      if (includeSource) {
+        metadata.sourceCode = sourceCode;
+      }
+
+      // Extract plugin class name
+      const classNameMatch = sourceCode.match(/class\s+(\w+)\s+extends\s+Plugin/);
+      if (classNameMatch) {
+        metadata.className = classNameMatch[1];
+      }
+
+      // Extract constructor metadata (name, description, author, version, build, tags, dependencies)
+      const constructorMatch = sourceCode.match(/constructor\s*\(\s*\)\s*{[\s\S]*?super\s*\(\s*{([\s\S]*?)}\s*\)/);
+      if (constructorMatch) {
+        const superArgs = constructorMatch[1];
+        
+        // Extract name
+        const nameMatch = superArgs.match(/name:\s*["'](.+?)["']/);
+        if (nameMatch) metadata.name = nameMatch[1];
+        
+        // Extract description
+        const descMatch = superArgs.match(/description:\s*["'](.+?)["']/s);
+        if (descMatch) metadata.description = descMatch[1].replace(/\s+/g, ' ').trim();
+        
+        // Extract author
+        const authorMatch = superArgs.match(/author:\s*["'](.+?)["']/);
+        if (authorMatch) metadata.author = authorMatch[1];
+        
+        // Extract version
+        const versionMatch = superArgs.match(/version:\s*["'](.+?)["']/);
+        if (versionMatch) metadata.version = versionMatch[1];
+        
+        // Extract build
+        const buildMatch = superArgs.match(/build:\s*["'](.+?)["']/);
+        if (buildMatch) metadata.build = buildMatch[1];
+        
+        // Extract tags
+        const tagsMatch = superArgs.match(/tags:\s*\[(.*?)\]/);
+        if (tagsMatch) {
+          metadata.tags = tagsMatch[1].split(',').map(t => t.trim().replace(/["']/g, ''));
+        }
+        
+        // Extract dependencies
+        const depsMatch = superArgs.match(/dependencies:\s*\[([\s\S]*?)\]/);
+        if (depsMatch) {
+          const depsStr = depsMatch[1];
+          metadata.dependencies = depsStr.split(',')
+            .map(d => d.trim().replace(/["']/g, ''))
+            .filter(d => d.length > 0);
+        }
+      }
+
+      // Count settings
+      const settingsMatch = sourceCode.match(/this\.defineSettings\s*\(\s*{([\s\S]*?)}\s*\)/);
+      if (settingsMatch) {
+        const settingsStr = settingsMatch[1];
+        // Count setting keys (approximate)
+        const settingKeys = settingsStr.match(/\w+:\s*{/g);
+        metadata.settingsCount = settingKeys ? settingKeys.length : 0;
+      } else {
+        metadata.settingsCount = 0;
+      }
+
+      // Count setting categories
+      const categoriesMatch = sourceCode.match(/this\.defineSettingsCategories\s*\(\s*{([\s\S]*?)}\s*\)/);
+      if (categoriesMatch) {
+        const categoriesStr = categoriesMatch[1];
+        const categoryKeys = categoriesStr.match(/\w+:\s*{/g);
+        metadata.categoriesCount = categoryKeys ? categoryKeys.length : 0;
+      } else {
+        metadata.categoriesCount = 0;
+      }
+
+      // Count lifecycle methods
+      metadata.lifecycle = {
+        hasLoad: /async\s+load\s*\(/.test(sourceCode),
+        hasStart: /async\s+start\s*\(/.test(sourceCode),
+        hasStop: /async\s+stop\s*\(/.test(sourceCode),
+        hasOnLogin: /async\s+onLogin\s*\(/.test(sourceCode),
+      };
+
+      // Count observer registrations
+      const observerCalls = sourceCode.match(/this\.registerObserver\s*\(/g);
+      metadata.observerCount = observerCalls ? observerCalls.length : 0;
+
+      // Count listener registrations
+      const listenerCalls = sourceCode.match(/this\.registerListener\s*\(/g);
+      metadata.listenerCount = listenerCalls ? listenerCalls.length : 0;
+
+      // Count subscription registrations
+      const subscribeCalls = sourceCode.match(/this\.subscribe\s*\(/g);
+      metadata.subscriptionCount = subscribeCalls ? subscribeCalls.length : 0;
+
+      // Count hook registrations
+      const hookCalls = sourceCode.match(/this\.registerHook\s*\(/g);
+      metadata.hookCount = hookCalls ? hookCalls.length : 0;
+
+      // Count timer registrations
+      const timerCalls = sourceCode.match(/this\.registerTimer\s*\(/g);
+      metadata.timerCount = timerCalls ? timerCalls.length : 0;
+
+      // Count function definitions (methods)
+      const functionDefs = sourceCode.match(/^\s*(async\s+)?\w+\s*\([^)]*\)\s*{/gm);
+      metadata.functionCount = functionDefs ? functionDefs.length : 0;
+
+      // Count event handlers (onClick, onShow, onHide, etc.)
+      const eventHandlers = sourceCode.match(/(on\w+):\s*(async\s+)?\([^)]*\)\s*=>/g);
+      metadata.eventHandlerCount = eventHandlers ? eventHandlers.length : 0;
+
+      // Detect external API usage
+      metadata.externalApis = {
+        usesAppApi: /window\.AppApi/g.test(sourceCode),
+        usesPinia: /window\.\$pinia/g.test(sourceCode),
+        usesVueRouter: /window\.\$router/g.test(sourceCode),
+        usesVRCXAPI: /API\.\w+/g.test(sourceCode),
+        usesWebAPI: /fetch\s*\(/g.test(sourceCode),
+      };
+
+      // Detect resource usage patterns
+      metadata.resourceUsage = {
+        createsDomElements: /document\.createElement/g.test(sourceCode),
+        modifiesDom: /\.appendChild|\.insertBefore|\.removeChild/g.test(sourceCode),
+        usesLocalStorage: /localStorage\./g.test(sourceCode),
+        usesSessionStorage: /sessionStorage\./g.test(sourceCode),
+        usesWebSocket: /WebSocket/g.test(sourceCode),
+      };
+
+      this.log(`✓ Extracted metadata from ${metadata.name || 'unknown plugin'}`);
+      return metadata;
+
+    } catch (error) {
+      this.error(`Failed to extract metadata from ${pluginUrl}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Format bytes to human readable size
+   */
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  }
+
   log(message: string, ...args: any[]): void {
     console.log(`%c[CJS|PluginLoader] ${message}`, `color: ${this.logColor}`, ...args);
   }
@@ -553,6 +725,7 @@ export class PluginManager {
   private hasTriggeredLogin: boolean = false;
   loadedUrls: Set<string>;
   failedUrls: Set<string>;
+  loader: PluginLoader | null = null;
 
   constructor() {
     this.logColor = window.customjs?.logColors?.PluginManager || '#4caf50';
@@ -1149,10 +1322,10 @@ export class PluginManager {
     );
 
     // Phase 2: Load enabled plugins using PluginLoader
-    const pluginLoader = new PluginLoader(this);
+    this.loader = new PluginLoader(this);
 
     for (const pluginUrl of enabledPlugins) {
-      const success = await pluginLoader.loadPluginCode(pluginUrl);
+      const success = await this.loader.loadPluginCode(pluginUrl);
       if (success) {
         this.loadedUrls.add(pluginUrl);
       } else {
