@@ -1,491 +1,314 @@
 # API Reference
 
-Complete API reference for VRCX Plugin System v3.0.
+Complete API reference for VRCX Plugin System.
 
-## Core Classes
+## Plugin Base Class
 
-### Plugin
-
-Base class for all plugins.
-
-#### Constructor
+### Constructor
 
 ```javascript
 constructor(metadata?: Partial<PluginMetadata>)
 ```
 
-**Metadata Properties:**
-
-- `id` (string, optional) - Auto-derived from filename if not provided
-- `name` (string) - Display name
-- `description` (string) - Plugin description
-- `author` (string) - Author name
-- `version` (string) - Semantic version (e.g., "1.0.0")
-- `dependencies` (string[]) - Array of required plugin IDs
-
-#### Properties
-
-- `metadata: PluginMetadata` - Plugin metadata
-- `loaded: boolean` - Whether `load()` has completed
-- `started: boolean` - Whether `start()` has completed
-- `enabled: boolean` - Whether plugin is enabled
-- `logger: Logger` - Personal logger instance
-- `resources: ResourceTracking` - Tracked resources for cleanup
-
-#### Lifecycle Methods
-
-**`async load(): Promise<void>`**
-
-- Called immediately after instantiation
-- Use for: Initial setup, registering hooks, defining settings
-- Should NOT start timers or modify DOM
-
-**`async start(): Promise<void>`**
-
-- Called after all plugins have loaded
-- Use for: Starting timers, modifying DOM, plugin-dependent setup
-
-**`async onLogin(currentUser: any): Promise<void>`**
-
-- Called after successful VRChat login
-- Use for: User-specific initialization, loading user data
-
-**`async stop(): Promise<void>`**
-
-- Called when plugin is disabled or unloaded
-- Automatically cleans up registered resources
-- Override to add custom cleanup
-
-**`async enable(): Promise<boolean>`**
-
-- Enable the plugin
-- Returns `true` if enabled, `false` if already enabled
-
-**`async disable(): Promise<boolean>`**
-
-- Disable the plugin (calls `stop()`)
-- Returns `true` if disabled, `false` if already disabled
-
-**`async toggle(): Promise<boolean>`**
-
-- Toggle enabled state
-- Returns new enabled state
-
-#### Resource Management
-
-**`registerTimer(timerId: number): number`**
-
-- Register a timer for automatic cleanup
-- Works with `setInterval()` and `setTimeout()`
-
-**`registerObserver(observer: Observer): Observer`**
-
-- Register an observer for automatic cleanup
-- Works with MutationObserver, IntersectionObserver, etc.
-
-**`registerListener(element: EventTarget, event: string, handler: Function, options?: object): object`**
-
-- Register an event listener for automatic cleanup
-- Returns listener info object
-
-**`registerSubscription(unsubscribe: Function): Function`**
-
-- Register a subscription for automatic cleanup
-- Returns the unsubscribe function
-
-**`registerResource(unsubscribe: Function): Function`**
-
-- Alias for `registerSubscription()`
-
-#### Hook Registration
-
-**`registerPreHook(functionPath: string, callback: Function): void`**
-
-- Register a pre-hook (runs before original function)
-- `callback` receives: `(args: any[]) => void`
-
-**`registerPostHook(functionPath: string, callback: Function): void`**
-
-- Register a post-hook (runs after original function)
-- `callback` receives: `(result: any, args: any[]) => void`
-
-**`registerVoidHook(functionPath: string, callback: Function): void`**
-
-- Register a void-hook (prevents original function execution)
-- `callback` receives: `(args: any[]) => void`
-
-**`registerReplaceHook(functionPath: string, callback: Function): void`**
-
-- Register a replace-hook (replace function with custom implementation)
-- `callback` receives: `(originalFunc: Function, ...args: any[]) => any`
-
-#### Events
-
-**`emit(eventName: string, data: any): void`**
-
-- Emit an event that other plugins can listen to
-- Event name is auto-prefixed with plugin ID
-
-**`on(eventName: string, callback: Function): void`**
-
-- Listen to events (from this or other plugins)
-- Use format `"pluginId:eventName"` for other plugins
-
-**`subscribe(eventType: string, callback: Function): Function | null`**
-
-- Subscribe to VRCX system events
-- Event types: `"LOCATION"`, `"USER"`, `"GAME"`, `"GAMELOG"`, `"FRIENDS"`, `"UI"`
-- Returns unsubscribe function or null if failed
-
-#### Settings
-
-**`defineSettings(definition: object): SettingsObject`**
-
-- Define plugin settings using Equicord-style system
-- Returns settings object with `store`, `plain`, `def` properties
-
-**`get(key: string, defaultValue?: any): any`**
-
-- Get setting value (auto-prefixes plugin ID)
-
-**`set(key: string, value: any): boolean`**
-
-- Set setting value (auto-prefixes plugin ID)
-
-**`deleteSetting(key: string): boolean`**
-
-- Delete a setting
-
-**`hasSetting(key: string): boolean`**
-
-- Check if setting exists
-
-**`getAllSettingKeys(): string[]`**
-
-- Get all setting keys for this plugin
-
-**`getAllSettings(): object`**
-
-- Get all settings as nested object
-
-**`clearAllSettings(): void`**
-
-- Clear all settings for this plugin
-
-#### Logging
-
-**`log(message: string, ...args: any[]): void`**
-
-- Log info message to console
-
-**`warn(message: string, ...args: any[]): void`**
-
-- Log warning message to console
-
-**`error(message: string, ...args: any[]): void`**
-
-- Log error message to console
-
----
-
-## Logger
-
-Centralized logging system with multiple output targets.
-
-### Constructor
+**Metadata:**
+
+- `id` - Auto-derived from filename
+- `name` - Display name
+- `description` - Description
+- `author` - Author name
+- `version` - Semantic version
+- `build` - Build timestamp
+- `dependencies` - Array of plugin IDs
+
+### Lifecycle Methods
 
 ```javascript
-new Logger(context: string = "CJS", options?: LogOptions)
+async load()      // Initial setup
+async start()     // Start operations
+async onLogin(currentUser)  // After VRChat login
+async stop()      // Cleanup
+async enable()    // Enable plugin
+async disable()   // Disable plugin
+async toggle()    // Toggle state
 ```
 
-### Methods
-
-**`log(msg: string, options?: LogOptions, level?: string, timestamp?: boolean): void`**
-
-- Main logging method with full control
-- `level`: `"info"` | `"warn"` | `"error"` | `"log"`
-
-**`logInfo(msg: string): void`**
-**`info(msg: string): void`**
-
-- Log info message to console only
-
-**`logWarn(msg: string): void`**
-**`warn(msg: string): void`**
-
-- Log warning message to console only
-
-**`logError(msg: string): void`**
-**`error(msg: string): void`**
-
-- Log error message to console only
-
-**`logDebug(msg: string): void`**
-**`debug(msg: string): void`**
-
-- Log debug message with timestamp
-
-**`showInfo(msg: string): void`**
-
-- Show info notification in VRCX (no console)
-
-**`showSuccess(msg: string): void`**
-
-- Show success notification in VRCX
-
-**`showWarn(msg: string): void`**
-
-- Show warning notification in VRCX
-
-**`showError(msg: string): void`**
-
-- Show error notification in VRCX
-
-**`async notifyDesktop(msg: string): Promise<void>`**
-
-- Send desktop notification
-
-**`async notifyXSOverlay(msg: string, duration?: number): Promise<void>`**
-
-- Send XSOverlay notification
-
-**`async notifyOVRToolkit(msg: string, duration?: number): Promise<void>`**
-
-- Send OVRToolkit notification
-
-**`async notifyVR(msg: string): Promise<void>`**
-
-- Send to all VR overlays
-
-**`logAndShow(msg: string, level?: string): void`**
-
-- Log to console and show in VRCX UI
-
-**`logAndNotifyAll(msg: string, level?: string): void`**
-
-- Log to all outputs (console, UI, desktop, VR)
-
----
-
-## ConfigManager
-
-Configuration management with localStorage backend.
-
-### Methods
-
-**`get(key: string, defaultValue?: any): any`**
-
-- Get value from localStorage (auto-prefixed with "customjs.")
-
-**`set(key: string, value: any): boolean`**
-
-- Set value in localStorage
-
-**`delete(key: string): boolean`**
-
-- Delete value from localStorage
-
-**`has(key: string): boolean`**
-
-- Check if key exists
-
-**`clear(prefix?: string): void`**
-
-- Clear all keys with prefix
-
-**`keys(prefix?: string): string[]`**
-
-- Get all keys with prefix
-
-**`getPluginConfig(pluginId?: string): object`**
-
-- Get plugin configuration
-- If no pluginId: returns url → enabled mapping
-- With pluginId: returns all settings for that plugin
-
-**`setPluginConfig(config: object): void`**
-
-- Set plugin configuration (url → enabled mapping)
-
-**`export(): string`**
-
-- Export all settings to JSON string
-
-**`import(jsonString: string): boolean`**
-
-- Import settings from JSON string
-
-**`async exportToVRChatConfig(): Promise<object>`**
-
-- Export to VRChat config.json
-
-**`async importFromVRChatConfig(): Promise<object>`**
-
-- Import from VRChat config.json
-
----
-
-## Settings System
-
-Equicord-inspired settings system.
-
-### SettingType Enum
+### Custom Action Buttons
 
 ```javascript
-window.customjs.SettingType.STRING;
-window.customjs.SettingType.NUMBER;
-window.customjs.SettingType.BIGINT;
-window.customjs.SettingType.BOOLEAN;
-window.customjs.SettingType.SELECT;
-window.customjs.SettingType.SLIDER;
-window.customjs.SettingType.COMPONENT;
-window.customjs.SettingType.CUSTOM;
+getActionButtons(): Array<ButtonDefinition>
 ```
 
-### definePluginSettings
-
-```javascript
-definePluginSettings(definition: object, plugin: Plugin): SettingsObject
-```
-
-**Definition Properties:**
-
-- `type` (SettingType) - Required setting type
-- `description` (string) - Required description
-- `default` (any) - Default value
-- `category` (string) - Category for grouping
-- `placeholder` (string) - Placeholder text (STRING only)
-- `markers` (number[]) - Slider markers (SLIDER only)
-- `options` (array) - Dropdown options (SELECT only)
-- `hidden` (boolean) - Hide from UI
-- `variables` (object) - Template variables (STRING templates)
-
-**Returns:**
+**ButtonDefinition:**
 
 ```javascript
 {
-  store: object,          // Reactive access to settings
-  plain: object,          // Non-reactive access
-  def: object,            // Definition metadata
-  pluginName: string,     // Plugin ID
-
-  // Methods
-  onChange(key, callback): void,
-  offChange(key, callback): void,
-  reset(key): void,
-  resetAll(): void,
-  getVisibleSettings(): object,
-  getHiddenSettings(): object,
-  getSettingsByCategory(): object,
-  getCategorySettings(category): object,
+  label: string,          // Button text
+  color: string,          // primary|success|warning|danger|info
+  icon?: string,          // Remix Icon class (e.g., "ri-refresh-line")
+  title?: string,         // Tooltip
+  callback: async () => void  // Click handler
 }
 ```
 
----
+### Resource Management
+
+```javascript
+registerTimer(timerId: number): number
+registerListener(element, event, handler, options?): object
+registerObserver(observer): Observer
+registerSubscription(unsubscribe): Function
+```
+
+### Hook Registration
+
+```javascript
+registerPreHook(path: string, callback: (args) => void)
+registerPostHook(path: string, callback: (result, args) => void)
+registerVoidHook(path: string, callback: (args) => void)
+registerReplaceHook(path: string, callback: (original, ...args) => any)
+```
+
+### Events
+
+```javascript
+emit(eventName: string, data: any): void
+on(eventName: string, callback: Function): void
+subscribe(type: string, callback: Function): Function | null
+```
+
+**Event Types:** `"LOCATION"`, `"USER"`, `"GAME"`, `"GAMELOG"`, `"FRIENDS"`, `"UI"`
+
+### Settings
+
+```javascript
+defineSettings(definition: object): SettingsObject
+get(key: string, defaultValue?): any
+set(key: string, value: any): boolean
+deleteSetting(key: string): boolean
+getAllSettings(): object
+clearAllSettings(): void
+```
+
+**SettingType Enum:**
+
+- `STRING` - Text input
+- `NUMBER` - Number input
+- `BOOLEAN` - Toggle switch
+- `SELECT` - Dropdown
+- `SLIDER` - Slider with markers
+- `CUSTOM` - JSON editor
+
+**Setting Definition:**
+
+```javascript
+{
+  type: SettingType,
+  description: string,
+  category?: string,
+  default?: any,
+  placeholder?: string,      // STRING only
+  markers?: number[],        // SLIDER only
+  options?: Array<{          // SELECT only
+    label: string,
+    value: any,
+    default?: boolean
+  }>,
+  hidden?: boolean,
+  variables?: {              // For template strings
+    "{placeholder}": "Description"
+  }
+}
+```
+
+**SettingsObject:**
+
+```javascript
+{
+  store: object,              // Reactive access
+  plain: object,              // Non-reactive
+  def: object,                // Definitions
+  onChange(key, callback): void,
+  reset(key): void,
+  resetAll(): void
+}
+```
+
+### Logging
+
+```javascript
+// Console only
+log(msg, ...args): void
+warn(msg, ...args): void
+error(msg, ...args): void
+```
+
+## Logger Class
+
+Accessed via `this.logger` in plugins or `new Logger(context)`.
+
+### Console Logging
+
+```javascript
+log(msg, ...args): void
+logInfo(msg, ...args): void
+logWarn(msg, ...args): void
+logWarning(msg, ...args): void
+logError(msg, ...args): void
+
+// Aliases
+info(msg, ...args): void
+warn(msg, ...args): void
+warning(msg, ...args): void
+error(msg, ...args): void
+```
+
+### UI Toasts (try $message → $notify → console)
+
+```javascript
+showInfo(msg, ...args): void
+showSuccess(msg, ...args): void
+showWarning(msg, ...args): void
+showWarn(msg, ...args): void  // Alias
+showError(msg, ...args): void
+```
+
+### UI Notifications (try $notify → $message → console)
+
+```javascript
+notifyInfo(msg, ...args): void
+notifySuccess(msg, ...args): void
+notifyWarning(msg, ...args): void
+notifyError(msg, ...args): void
+```
+
+### Desktop & VR
+
+```javascript
+notifyDesktop(msg, ...args): void
+notifyVR(msg, ...args): void
+notifyAll(msg, ...args): void  // Desktop + VR
+```
+
+### Browser Alert
+
+```javascript
+alert(msg, ...args): void
+```
+
+### VRCX Log Stores
+
+```javascript
+addFeed(entry: FeedEntry): void
+addGameLog(entry: GameLogEntry): void
+addFriendLog(entry: FriendLogEntry): void
+addNotificationLog(entry: NotificationLogEntry): void
+```
+
+**Entry Structures:**
+
+```javascript
+// FeedEntry
+{
+  type: string,
+  message: string,
+  created_at: string  // ISO 8601
+}
+
+// GameLogEntry
+{
+  type: string,
+  dt: string,         // ISO 8601
+  data: string
+}
+
+// FriendLogEntry
+{
+  type: string,
+  created_at: string, // ISO 8601
+  userId: string,
+  displayName: string
+}
+
+// NotificationLogEntry
+{
+  type: string,
+  created_at: string, // ISO 8601
+  data: string
+}
+```
+
+## ConfigManager
+
+Accessed via `window.customjs.configManager`.
+
+```javascript
+get(key: string, defaultValue?): any
+set(key: string, value: any): boolean
+delete(key: string): boolean
+has(key: string): boolean
+clear(prefix?: string): void
+keys(prefix?: string): string[]
+
+getPluginConfig(pluginId?: string): object
+setPluginConfig(config: object): void
+
+export(): string
+import(jsonString: string): boolean
+
+async exportToVRChatConfig(): Promise<object>
+async importFromVRChatConfig(): Promise<object>
+```
 
 ## Utils
 
-Utility functions accessible via `window.customjs.utils`.
+Accessed via `window.customjs.utils`.
 
-### Methods
+```javascript
+// Checks
+isEmpty(value): boolean
 
-**`isEmpty(v: any): boolean`**
+// Time
+timeToText(ms: number): string
+getTimestamp(now?: Date): string
+formatDateTime(now?: Date): string
 
-- Check if value is empty (null, undefined, or "")
+// Clipboard
+async copyToClipboard(text, description?): Promise<boolean>
 
-**`timeToText(ms: number): string`**
+// VRChat
+async saveBio(bio?, bioLinks?): Promise<any>
+async getLocationObject(location): Promise<object>
 
-- Convert milliseconds to human-readable text
-- Example: `300000` → `"5m 0s"`
-
-**`getTimestamp(now?: Date): string`**
-
-- Get formatted timestamp
-- Format: `"MM/DD/YYYY, HH:MM:SS"`
-
-**`formatDateTime(now?: Date): string`**
-
-- Format date and time
-- Format: `"YYYY-MM-DD HH:MM:SS GMT+1"`
-
-**`async copyToClipboard(text: string, description?: string): Promise<boolean>`**
-
-- Copy text to clipboard with fallback
-
-**`saveBio(bio?: string, bioLinks?: any): Promise<any>`**
-
-- Save VRChat user bio
-
-**`async getLocationObject(loc: any): Promise<object>`**
-
-- Get location object from various formats
-
-**`hexToRgba(hex: string, alpha: number): string`**
-
-- Convert hex color to rgba
-- Example: `hexToRgba("#ff0000", 0.5)` → `"rgba(255, 0, 0, 0.5)"`
-
-**`darkenColor(hex: string, percent: number): string`**
-
-- Darken a hex color by percentage
-- Example: `darkenColor("#ff0000", 20)` → darker red
-
----
+// Colors
+hexToRgba(hex: string, alpha: number): string
+darkenColor(hex: string, percent: number): string
+```
 
 ## PluginManager
 
-Global plugin lifecycle manager.
+Accessed via `window.customjs.pluginManager`.
 
-Access via: `window.customjs.pluginManager`
-
-### Methods
-
-**`registerPlugin(plugin: Plugin): boolean`**
-
-- Register a plugin (called automatically)
-
-**`getPlugin(pluginId: string): Plugin | undefined`**
-
-- Get plugin by ID
-
-**`async waitForPlugin(pluginId: string, timeout?: number): Promise<Plugin>`**
-
-- Wait for a plugin to be available
-
-**`getAllPlugins(): Plugin[]`**
-
-- Get all registered plugins
-
-**`async startAllPlugins(): Promise<void>`**
-
-- Start all plugins
-
-**`async stopAllPlugins(): Promise<void>`**
-
-- Stop all plugins
-
-**`onLogin(callback: Function): void`**
-
-- Register callback for login event
-
-**`async loadAllPlugins(): Promise<void>`**
-
-- Load all enabled plugins from config
-
----
+```javascript
+registerPlugin(plugin): boolean
+getPlugin(id: string): Plugin | undefined
+async waitForPlugin(id: string, timeout?): Promise<Plugin>
+getAllPlugins(): Plugin[]
+async startAllPlugins(): void
+async stopAllPlugins(): void
+onLogin(callback): void
+async loadAllPlugins(): void
+```
 
 ## Global Objects
 
 ### window.customjs
 
-Main namespace for the plugin system.
-
 ```javascript
 {
-  version: string,                  // System version
-  build: string,                    // Build timestamp
+  version: string,
+  build: string,
 
-  // Core classes
+  // Classes
   Logger: typeof Logger,
   ConfigManager: typeof ConfigManager,
   Plugin: typeof Plugin,
@@ -495,23 +318,69 @@ Main namespace for the plugin system.
 
   // Utilities
   utils: object,
-  SettingType: object,
+  SettingType: enum,
   definePluginSettings: Function,
 
   // Instances
   configManager: ConfigManager,
   pluginManager: PluginManager,
 
-  // Plugin tracking
+  // Data
   plugins: Plugin[],
-  subscriptions: Map<string, Set<Function>>,
+  core_modules: any[],
+  subscriptions: Map,
   hooks: object,
   functions: Record<string, Function>,
-  events: Record<string, Function[]>,
+  events: Record<string, Function[]>
 }
 ```
 
----
+### window.$pinia
+
+VRCX's Pinia stores:
+
+```javascript
+{
+  user: { currentUser, ... },
+  location: { location, lastLocation, ... },
+  game: { isGameRunning, ... },
+  gameLog: { gameLogTable, ... },
+  friend: { friends, offlineFriends, ... },
+  favorite: { favoriteFriends, ... },
+  moderation: { cachedPlayerModerations, ... },
+  notification: { /* notification methods */ },
+  feed: { /* feed methods */ }
+}
+```
+
+### window.$app
+
+VRCX's Vue app instance:
+
+```javascript
+{
+  config: {
+    globalProperties: {
+      $message: Function,  // Element Plus message
+      $notify: Function    // Element Plus notification
+    }
+  }
+}
+```
+
+### window.AppApi
+
+VRCX's C# API bridge:
+
+```javascript
+{
+  SendIpc(method, ...args): any,
+  ShowDevTools(): void,
+  DesktopNotification(title, message, icon?): void,
+  StartGame(): void,
+  // ... many more methods
+}
+```
 
 ## Type Definitions
 
@@ -526,46 +395,22 @@ interface PluginMetadata {
   version: string;
   build: string;
   url: string | null;
+  tags?: string[];
 }
 ```
 
-### LogOptions
+### ResourceTracking
 
 ```typescript
-interface LogOptions {
-  console?: boolean;
-  vrcx?: {
-    notify?: boolean;
-    noty?: boolean;
-    message?: boolean;
-  };
-  event?: {
-    noty?: boolean;
-    external?: boolean;
-  };
-  desktop?: boolean;
-  xsoverlay?: boolean;
-  ovrtoolkit?: boolean;
-  webhook?: boolean;
+interface ResourceTracking {
+  timers: Set<number>;
+  observers: Set<Observer>;
+  listeners: Map<any, any>;
+  subscriptions: Set<Function>;
+  hooks: Set<string>;
 }
 ```
 
-### SettingDefinition
+## Examples
 
-```typescript
-interface SettingDefinition {
-  type: SettingType;
-  description: string;
-  default?: any;
-  category?: string;
-  placeholder?: string;
-  markers?: number[];
-  options?: Array<{ label: string; value: any; default?: boolean }>;
-  hidden?: boolean;
-  variables?: Record<string, string>;
-}
-```
-
----
-
-For complete examples, see the [Plugin Development Guide](plugins.md).
+See **[Plugin Development Guide](plugins.md)** for complete examples.
