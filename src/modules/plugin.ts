@@ -734,8 +734,14 @@ export class PluginManager {
           if (window.$pinia?.ui?.$subscribe) {
             storeSubscription = window.$pinia.ui.$subscribe((mutation: any, state: any) => {
               try {
+                // Debug: Log what we're getting from Pinia
+                console.log(`[CJS|PluginManager] UI subscription callback - mutation:`, mutation, 'state:', state);
+                console.log(`[CJS|PluginManager] state.menuActiveIndex:`, state?.menuActiveIndex);
+                console.log(`[CJS|PluginManager] Direct from Pinia:`, window.$pinia?.ui?.menuActiveIndex);
+                
+                // Pass the menuActiveIndex, with fallback to direct Pinia access
                 callback({
-                  menuActiveIndex: state.menuActiveIndex,
+                  menuActiveIndex: state?.menuActiveIndex || window.$pinia?.ui?.menuActiveIndex,
                 });
               } catch (error) {
                 plugin.error(`Error in UI subscription: ${error}`);
