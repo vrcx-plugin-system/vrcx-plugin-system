@@ -2,529 +2,441 @@ import { LogOptions } from '../types';
 
 /**
  * Logger class for VRCX Plugin System
- * Provides centralized logging to console, VRCX UI, VR overlays, and webhooks
+ * Simplified and focused on essential notification methods
  */
 export class Logger {
   private context: string;
-  private defaultOptions: LogOptions;
+  private logColor: string;
 
-  /**
-   * Create a new Logger instance
-   * @param context - Plugin name or context (e.g., "My Plugin")
-   * @param options - Default logging options
-   */
-  constructor(context: string = "CJS", options: LogOptions = {}) {
+  constructor(context: string = "CJS") {
     this.context = context;
-    this.defaultOptions = {
-      console: true,
-      vrcx: {
-        notify: false,
-        noty: false,
-        message: false,
-      },
-      event: {
-        noty: false,
-        external: false,
-      },
-      desktop: false,
-      xsoverlay: false,
-      ovrtoolkit: false,
-      webhook: false,
-      ...options,
-    };
+    this.logColor = (window as any).customjs?.logColors?.Plugin || '#888888';
   }
 
   /**
-   * Format message with context and optional timestamp
+   * Format message - handles objects and formatting
    */
-  private formatMessage(msg: string, includeTimestamp: boolean = false): {message: string; styles: string[]} {
-    const parts: string[] = [`[CJS|${this.context}]`];
-
-    if (includeTimestamp) {
-      const timestamp = new Date().toLocaleTimeString("en-US", {
-        hour12: false,
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
+  private formatMessage(msg: any, ...args: any[]): string {
+    let formatted: string;
+    
+    if (typeof msg === 'object') {
+      formatted = JSON.stringify(msg, null, 2);
+    } else if (typeof msg === 'string' && args.length > 0) {
+      // Simple string formatting
+      formatted = msg;
+      args.forEach((arg, i) => {
+        formatted = formatted.replace(`{${i}}`, String(arg));
       });
-      parts.unshift(`[${timestamp}]`);
+    } else {
+      formatted = String(msg);
     }
-
-    parts.push(msg);
-
-    const logColor = window.customjs?.logColors?.Plugin || '#888888';
-    return {
-      message: `%c${parts.join(" ")}`,
-      styles: [`color: ${logColor}`],
-    };
+    
+    return formatted;
   }
 
   /**
-   * Main logging method
+   * Console-only logging methods
    */
-  log(msg: string, options: LogOptions = {}, level: 'info' | 'warn' | 'error' | 'log' = 'info', includeTimestamp: boolean = false): void {
-    // Merge with default options
-    const opts: LogOptions = {
-      console: options.console ?? this.defaultOptions.console,
-      vrcx: {
-        notify: options.vrcx?.notify ?? this.defaultOptions.vrcx!.notify,
-        noty: options.vrcx?.noty ?? this.defaultOptions.vrcx!.noty,
-        message: options.vrcx?.message ?? this.defaultOptions.vrcx!.message,
-      },
-      event: {
-        noty: options.event?.noty ?? this.defaultOptions.event!.noty,
-        external: options.event?.external ?? this.defaultOptions.event!.external,
-      },
-      desktop: options.desktop ?? this.defaultOptions.desktop,
-      xsoverlay: options.xsoverlay ?? this.defaultOptions.xsoverlay,
-      ovrtoolkit: options.ovrtoolkit ?? this.defaultOptions.ovrtoolkit,
-      webhook: options.webhook ?? this.defaultOptions.webhook,
-    };
-
-    const formatted = this.formatMessage(msg, includeTimestamp);
-    const formattedMsg = formatted.message;
-    const timestamp = new Date().toISOString();
-
-    // Console logging
-    if (opts.console) {
-      const consoleMethod = (console as any)[level] || console.log;
-      consoleMethod(formatted.message, ...formatted.styles);
-    }
-
-    // VRCX event logging via IPC
-    if (opts.event!.noty && window.AppApi?.SendIpc) {
-      try {
-        window.AppApi.SendIpc("Noty", formattedMsg);
-      } catch (error) {
-        console.warn("Failed to send Noty event:", error);
-      }
-    }
-
-    if (opts.event!.external && window.$pinia?.user && window.AppApi?.SendIpc) {
-      try {
-        const userId = (window.$pinia.user as any).currentUser?.id || "";
-        window.AppApi.SendIpc("External", `${userId}:${formattedMsg}`);
-      } catch (error) {
-        console.warn("Failed to send External event:", error);
-      }
-    }
-
-    // Desktop notifications
-    if (opts.desktop && window.AppApi?.DesktopNotification) {
-      setTimeout(async () => {
-        try {
-          await window.AppApi!.DesktopNotification(`VRCX - ${this.context}`, msg);
-        } catch (error) {
-          console.error("Error sending desktop notification:", error);
-        }
-      }, 0);
-    }
-
-    // XSOverlay notifications
-    if (opts.xsoverlay && window.AppApi?.XSNotification) {
-      setTimeout(async () => {
-        try {
-          await window.AppApi!.XSNotification(`VRCX - ${this.context}`, msg, 5000, 1.0, "");
-        } catch (error) {
-          console.error("Error sending XSOverlay notification:", error);
-        }
-      }, 0);
-    }
-
-    // OVRToolkit notifications
-    if (opts.ovrtoolkit && window.AppApi?.OVRTNotification) {
-      setTimeout(async () => {
-        try {
-          await window.AppApi!.OVRTNotification(true, true, `VRCX - ${this.context}`, msg, 5000, 1.0, null);
-        } catch (error) {
-          console.error("Error sending OVRToolkit notification:", error);
-        }
-      }, 0);
-    }
-
-    // VRCX Notifications - try multiple methods
-    if (opts.vrcx!.message || opts.vrcx!.noty) {
-      try {
-        const msgType = level === 'warn' ? 'warning' : (level === 'error' ? 'error' : 'success');
-        
-        // Try Noty library first (what VRCX uses for login messages)
-        if (typeof (window as any).Noty === 'function') {
-          new (window as any).Noty({
-            type: msgType,
-            text: msg,
-            timeout: 3000,
-          }).show();
-        }
-        // Try window.ElMessage (if exposed)
-        else if (typeof (window as any).ElMessage === 'function') {
-          (window as any).ElMessage({
-            message: msg,
-            type: msgType,
-            duration: 3000,
-            showClose: true,
-          });
-        }
-        // Try via Vue globalProperties (this is what actually works for Element Plus)
-        else if ((window as any).$app?.config?.globalProperties?.$message) {
-          const $message = (window as any).$app.config.globalProperties.$message;
-          
-          // Call the appropriate method (success, warning, error, info)
-          if (typeof $message[msgType] === 'function') {
-            $message[msgType](msg);
-          } else if (typeof $message === 'function') {
-            $message({ message: msg, type: msgType });
-          }
-        }
-        // Fallback to old playNoty method
-        else if ((window as any).$app?.playNoty) {
-          (window as any).$app.playNoty({
-            message: formattedMsg,
-            type: msgType,
-          });
-        }
-      } catch (error) {
-        console.error("Error sending VRCX message:", error);
-      }
-    }
-
-    // VRCX Element Plus Notification (for more prominent notifications)
-    if (opts.vrcx!.notify) {
-      try {
-        const notifType = level === 'warn' ? 'warning' : (level === 'error' ? 'error' : 'success');
-        
-        // Try window.ElNotification first (if exposed)
-        if (typeof (window as any).ElNotification === 'function') {
-          (window as any).ElNotification({
-            title: this.context,
-            message: msg,
-            type: notifType,
-            duration: 4500,
-          });
-        }
-        // Try via Vue globalProperties (this is what actually works)
-        else if ((window as any).$app?.config?.globalProperties?.$notify) {
-          const $notify = (window as any).$app.config.globalProperties.$notify;
-          
-          // Call the appropriate method
-          if (typeof $notify[notifType] === 'function') {
-            $notify[notifType]({
-              title: this.context,
-              message: msg,
-            });
-          } else if (typeof $notify === 'function') {
-            $notify({
-              title: this.context,
-              message: msg,
-              type: notifType,
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error sending VRCX notification:", error);
-      }
-    }
-
-    // Webhook notifications
-    if (opts.webhook) {
-      setTimeout(async () => {
-        try {
-          let webhookUrl: string | null = null;
-          try {
-            webhookUrl = JSON.parse(localStorage.getItem("customjs.logger.webhook") || 'null');
-          } catch {}
-
-          if (webhookUrl) {
-            const payload = {
-              message: formattedMsg,
-              level: level,
-              timestamp: timestamp,
-              source: `VRCX-${this.context}`,
-            };
-
-            await fetch(webhookUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(payload),
-            });
-          }
-        } catch (error) {
-          console.error("Error sending webhook notification:", error);
-        }
-      }, 0);
-    }
+  log(msg: any, ...args: any[]): void {
+    const formatted = this.formatMessage(msg, ...args);
+    console.log(`%c[CJS|${this.context}] ${formatted}`, `color: ${this.logColor}`);
   }
 
-  // Convenience methods
-  logInfo(msg: string): void {
-    this.log(msg, { console: true }, "info", false);
+  logInfo(msg: any, ...args: any[]): void {
+    const formatted = this.formatMessage(msg, ...args);
+    console.info(`%c[CJS|${this.context}] ${formatted}`, `color: ${this.logColor}`);
   }
 
-  info(msg: string): void {
-    this.logInfo(msg);
+  logWarn(msg: any, ...args: any[]): void {
+    const formatted = this.formatMessage(msg, ...args);
+    console.warn(`%c[CJS|${this.context}] ${formatted}`, `color: ${this.logColor}`);
   }
 
-  logWarn(msg: string): void {
-    this.log(msg, { console: true }, "warn", false);
+  logWarning(msg: any, ...args: any[]): void {
+    this.logWarn(msg, ...args);
   }
 
-  warn(msg: string): void {
-    this.logWarn(msg);
+  logError(msg: any, ...args: any[]): void {
+    const formatted = this.formatMessage(msg, ...args);
+    console.error(`%c[CJS|${this.context}] ${formatted}`, `color: ${this.logColor}`);
   }
 
-  logError(msg: string): void {
-    this.log(msg, { console: true }, "error", false);
-  }
-
-  error(msg: string): void {
-    this.logError(msg);
-  }
-
-  logDebug(msg: string): void {
-    this.log(msg, { console: true }, "log", true);
-  }
-
-  debug(msg: string): void {
-    this.logDebug(msg);
-  }
-
-  showInfo(msg: string): void {
-    this.log(msg, { console: false, vrcx: { message: true } }, "info", false);
-  }
-
-  showSuccess(msg: string): void {
-    // Use info level but ElMessage will show as success due to type mapping
-    this.log(msg, { console: false, vrcx: { message: true } }, "info", false);
-  }
-
-  showWarn(msg: string): void {
-    this.log(msg, { console: false, vrcx: { message: true } }, "warn", false);
-  }
-
-  showWarning(msg: string): void {
-    this.showWarn(msg);
-  }
-
-  showError(msg: string): void {
-    this.log(msg, { console: false, vrcx: { message: true } }, "error", false);
-  }
-
-  // Show a message with custom type
-  showMessage(msg: string, type: 'success' | 'warning' | 'info' | 'error' = 'info'): void {
-    const level = type === 'warning' ? 'warn' : (type === 'success' || type === 'info' ? 'info' : 'error');
-    this.log(msg, { console: false, vrcx: { message: true } }, level, false);
-  }
-
-  // Show a notification (more prominent than message)
-  showNotification(title: string, msg: string, type: 'success' | 'warning' | 'info' | 'error' = 'info'): void {
-    const originalContext = this.context;
-    this.context = title;
-    const level = type === 'warning' ? 'warn' : (type === 'success' || type === 'info' ? 'info' : 'error');
-    this.log(msg, { console: false, vrcx: { notify: true } }, level, false);
-    this.context = originalContext;
-  }
-
-  async notifyDesktop(msg: string): Promise<void> {
-    if (window.AppApi?.DesktopNotification) {
-      try {
-        await window.AppApi.DesktopNotification(`VRCX - ${this.context}`, msg);
-      } catch (error) {
-        this.logError(`Failed to send desktop notification: ${(error as Error).message}`);
-      }
-    } else {
-      this.logWarn("Desktop notifications not available");
-    }
-  }
-
-  async notifyXSOverlay(msg: string, duration: number = 5000): Promise<void> {
-    if (window.AppApi?.XSNotification) {
-      try {
-        await window.AppApi.XSNotification(`VRCX - ${this.context}`, msg, duration, 1.0, "");
-      } catch (error) {
-        this.logError(`Failed to send XSOverlay notification: ${(error as Error).message}`);
-      }
-    } else {
-      this.logWarn("XSOverlay notifications not available");
-    }
-  }
-
-  async notifyOVRToolkit(msg: string, duration: number = 5000): Promise<void> {
-    if (window.AppApi?.OVRTNotification) {
-      try {
-        await window.AppApi.OVRTNotification(true, true, `VRCX - ${this.context}`, msg, duration, 1.0, null);
-      } catch (error) {
-        this.logError(`Failed to send OVRToolkit notification: ${(error as Error).message}`);
-      }
-    } else {
-      this.logWarn("OVRToolkit notifications not available");
-    }
-  }
-
-  async notifyVR(msg: string): Promise<void> {
-    await Promise.all([this.notifyXSOverlay(msg), this.notifyOVRToolkit(msg)]);
-  }
-
-  // Noty library notifications (what VRCX uses for login messages)
-  showNoty(msg: string, type: 'success' | 'info' | 'warning' | 'error' | 'alert' = 'info', timeout: number = 3000): void {
+  /**
+   * Show methods - UI toast messages (brief, top-center)
+   * Priority: $message.* → $notify.* → console fallback
+   * @param msg - Message to display (string or object)
+   * @param type - Message type (success, warning, error, info)
+   * @param args - Additional formatting arguments
+   */
+  private showMessage(msg: any, type: 'success' | 'warning' | 'error' | 'info', ...args: any[]): void {
+    const formatted = this.formatMessage(msg, ...args);
+    
     try {
-      if (typeof (window as any).Noty === 'function') {
-        new (window as any).Noty({
-          type: type,
-          text: msg,
-          timeout: timeout,
-        }).show();
-      } else {
-        this.logWarn("Noty library not available, falling back to console");
-        this.log(msg);
+      // Try $message first (Element Plus Message - toast)
+      const $message = (window as any).$app?.config?.globalProperties?.$message;
+      if ($message && typeof $message[type] === 'function') {
+        $message[type](formatted);
+        return;
       }
-    } catch (error) {
-      this.logError(`Failed to show Noty: ${(error as Error).message}`);
-    }
-  }
-
-  showNotySuccess(msg: string): void {
-    this.showNoty(msg, 'success');
-  }
-
-  showNotyInfo(msg: string): void {
-    this.showNoty(msg, 'info');
-  }
-
-  showNotyWarning(msg: string): void {
-    this.showNoty(msg, 'warning');
-  }
-
-  showNotyError(msg: string): void {
-    this.showNoty(msg, 'error');
-  }
-
-  showNotyAlert(msg: string): void {
-    this.showNoty(msg, 'alert');
-  }
-
-  // Pinia notification store methods (VRCX game event notifications)
-  // This uses VRCX's notification system which shows in VR overlays, desktop, etc.
-  // based on user's notification settings
-  playGameNoty(type: string, displayName: string = 'Plugin', additionalData: any = {}): void {
-    try {
-      if ((window as any).$pinia?.notification?.playNoty) {
-        const noty = {
-          type: type,
-          created_at: new Date().toJSON(),
-          displayName: displayName,
-          userId: `usr_${this.context}_${Date.now()}`,
-          isFriend: false,
-          isFavorite: false,
-          ...additionalData,
-        };
-        (window as any).$pinia.notification.playNoty(noty);
-      } else {
-        this.logWarn("Pinia notification store not available");
+      
+      // Try $notify second (Element Plus Notification - more prominent)
+      const $notify = (window as any).$app?.config?.globalProperties?.$notify;
+      if ($notify && typeof $notify[type] === 'function') {
+        $notify[type]({
+          title: this.context,
+          message: formatted,
+        });
+        return;
       }
-    } catch (error) {
-      this.logError(`Failed to play game noty: ${(error as Error).message}`);
+      
+      // Fallback to console
+      const level = type === 'warning' ? 'warn' : (type === 'error' ? 'error' : 'info');
+      this[`log${level.charAt(0).toUpperCase() + level.slice(1)}` as keyof Logger](formatted);
+      } catch (error) {
+      this.logError('Failed to show message:', error);
     }
   }
 
   /**
-   * Show a custom plugin notification using VRCX's playNoty system
-   * This will show in VR overlays, desktop notifications, etc. based on user settings
-   * @param message - The message to display
-   * @param options - Optional configuration
+   * Show info toast message (blue, brief notification)
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
    */
-  showPluginNoty(message: string, options: {
-    type?: string,
-    displayName?: string,
-    title?: string,
-    skipBusyCheck?: boolean,
-    skipTimeCheck?: boolean,
-  } = {}): void {
+  showInfo(msg: any, ...args: any[]): void {
+    this.showMessage(msg, 'info', ...args);
+  }
+
+  /**
+   * Show success toast message (green, brief notification)
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
+   */
+  showSuccess(msg: any, ...args: any[]): void {
+    this.showMessage(msg, 'success', ...args);
+  }
+
+  /**
+   * Show warning toast message (orange, brief notification)
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
+   */
+  showWarning(msg: any, ...args: any[]): void {
+    this.showMessage(msg, 'warning', ...args);
+  }
+
+  /**
+   * Show error toast message (red, brief notification)
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
+   */
+  showError(msg: any, ...args: any[]): void {
+    this.showMessage(msg, 'error', ...args);
+  }
+
+  /**
+   * Notify methods - UI notifications (persistent, top-right corner)
+   * Priority: $notify.* → $message.* → console fallback
+   * @param msg - Message to display (string or object)
+   * @param type - Notification type (success, warning, error, info)
+   * @param args - Additional formatting arguments
+   */
+  private notify(msg: any, type: 'success' | 'warning' | 'error' | 'info', ...args: any[]): void {
+    const formatted = this.formatMessage(msg, ...args);
+    
     try {
-      const {
-        type = 'Event',
-        displayName = this.context,
-        title = null,
-        skipBusyCheck = true,
-        skipTimeCheck = true,
-      } = options;
-
-      // Use the existing playNoty if we want full VRCX integration
-      if ((window as any).$pinia?.notification?.playNoty) {
-        const noty: any = {
-          type: type,
-          created_at: new Date().toJSON(),
-          displayName: displayName,
-          userId: `usr_plugin_${this.context}_${Date.now()}`,
-          isFriend: false,
-          isFavorite: false,
-        };
-
-        if (title) {
-          noty.title = title;
-          noty.message = message;
-        } else if (type === 'Event') {
-          noty.data = message;
-        } else {
-          noty.message = message;
-        }
-
-        // For custom plugin notifications, we might want to bypass some checks
-        // so we call playNoty directly without going through queue functions
-        (window as any).$pinia.notification.playNoty(noty);
-      } else {
-        // Fallback to regular showInfo
-        this.showInfo(message);
+      // Try $notify first (Element Plus Notification - more prominent)
+      const $notify = (window as any).$app?.config?.globalProperties?.$notify;
+      if ($notify && typeof $notify[type] === 'function') {
+        $notify[type]({
+          title: this.context,
+          message: formatted,
+        });
+        return;
       }
+      
+      // Try $message second (Element Plus Message - toast)
+      const $message = (window as any).$app?.config?.globalProperties?.$message;
+      if ($message && typeof $message[type] === 'function') {
+        $message[type](formatted);
+        return;
+      }
+      
+      // Fallback to console
+      const level = type === 'warning' ? 'warn' : (type === 'error' ? 'error' : 'info');
+      this[`log${level.charAt(0).toUpperCase() + level.slice(1)}` as keyof Logger](formatted);
     } catch (error) {
-      this.logError(`Failed to show plugin noty: ${(error as Error).message}`);
+      this.logError('Failed to notify:', error);
     }
   }
 
-  // Convenience methods for common game notification types
-  showOnlineNoty(displayName: string): void {
-    this.playGameNoty('Online', displayName);
+  /**
+   * Show persistent info notification (blue, top-right corner)
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
+   */
+  notifyInfo(msg: any, ...args: any[]): void {
+    this.notify(msg, 'info', ...args);
   }
 
-  showOfflineNoty(displayName: string): void {
-    this.playGameNoty('Offline', displayName);
+  /**
+   * Show persistent success notification (green, top-right corner)
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
+   */
+  notifySuccess(msg: any, ...args: any[]): void {
+    this.notify(msg, 'success', ...args);
   }
 
-  showGPSNoty(displayName: string, worldName: string, location: string): void {
-    this.playGameNoty('GPS', displayName, { worldName, location, time: 0 });
+  /**
+   * Show persistent warning notification (orange, top-right corner)
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
+   */
+  notifyWarning(msg: any, ...args: any[]): void {
+    this.notify(msg, 'warning', ...args);
   }
 
-  showPlayerJoinedNoty(displayName: string): void {
-    this.playGameNoty('OnPlayerJoined', displayName);
+  /**
+   * Show persistent error notification (red, top-right corner)
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
+   */
+  notifyError(msg: any, ...args: any[]): void {
+    this.notify(msg, 'error', ...args);
   }
 
-  showPlayerLeftNoty(displayName: string): void {
-    this.playGameNoty('OnPlayerLeft', displayName);
+  /**
+   * Browser alert dialog (blocking)
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
+   */
+  alert(msg: any, ...args: any[]): void {
+    const formatted = this.formatMessage(msg, ...args);
+    alert(formatted);
   }
 
-  showEventNoty(message: string, displayName?: string): void {
-    this.showPluginNoty(message, { 
-      type: 'Event', 
-      displayName: displayName || this.context 
-    });
+  /**
+   * Add to VRCX Feed
+   * @param entry - Feed entry object
+   * Example: { 
+   *   created_at: new Date().toJSON(),
+   *   type: 'GPS' | 'Online' | 'Offline' | 'Status' | 'Avatar' | 'Bio',
+   *   userId: 'usr_xxx',
+   *   displayName: 'Username',
+   *   location?: 'wrld_xxx:12345',         // Required for GPS
+   *   worldName?: 'World Name',            // For GPS, Online
+   *   time?: number,                       // For GPS
+   *   status?: string,                     // For Status
+   *   statusDescription?: string,          // For Status
+   *   avatarName?: string,                 // For Avatar
+   *   bio?: string,                        // For Bio
+   *   previousBio?: string,                // For Bio
+   *   isFriend?: boolean,
+   *   isFavorite?: boolean
+   * }
+   */
+  addFeed(entry: any): void {
+    try {
+      if ((window as any).$pinia?.feed?.addFeed) {
+        (window as any).$pinia.feed.addFeed(entry);
+      } else {
+        this.logWarn('Feed store not available');
+      }
+    } catch (error) {
+      this.logError('Failed to add feed entry:', error);
+    }
   }
 
-  logAndShow(msg: string, level: 'info' | 'warn' | 'error' = 'info'): void {
-    this.log(msg, { console: true, vrcx: { message: true } }, level, false);
+  /**
+   * Add to VRCX Game Log
+   * @param entry - Game log entry object
+   * Example: {
+   *   created_at: new Date().toJSON(),
+   *   type: 'Event' | 'OnPlayerJoined' | 'OnPlayerLeft' | 'VideoPlay' | 'PortalSpawn' | 'External' | ...,
+   *   data?: string,              // For type 'Event' or 'External'
+   *   message?: string,            // For type 'External'
+   *   displayName?: string,
+   *   userId?: string,
+   *   location?: string,
+   *   worldName?: string
+   * }
+   */
+  addGameLog(entry: any): void {
+    try {
+      if ((window as any).$pinia?.gameLog?.addGameLog) {
+        (window as any).$pinia.gameLog.addGameLog(entry);
+      } else {
+        this.logWarn('GameLog store not available');
+      }
+    } catch (error) {
+      this.logError('Failed to add game log:', error);
+    }
   }
 
-  logAndNotifyAll(msg: string, level: 'info' | 'warn' | 'error' = 'info'): void {
-    this.log(
-      msg,
-      {
-        console: true,
-        vrcx: { notify: true, message: true },
-        desktop: true,
-        xsoverlay: true,
-        ovrtoolkit: true,
-      },
-      level,
-      false
-    );
+  /**
+   * Add to VRCX Friend Log
+   * @param entry - Friend log entry object
+   * Example: {
+   *   created_at: new Date().toJSON(),
+   *   type: 'Friend' | 'Unfriend' | 'DisplayName' | 'TrustLevel' | 'FriendOnline' | 'FriendOffline',
+   *   userId: 'usr_xxx',
+   *   displayName: 'Username',
+   *   friendNumber?: number,
+   *   previousDisplayName?: string,    // For type 'DisplayName'
+   *   trustLevel?: string,              // For type 'TrustLevel'
+   *   previousTrustLevel?: string       // For type 'TrustLevel'
+   * }
+   */
+  addFriendLog(entry: any): void {
+    try {
+      if ((window as any).$pinia?.friend?.friendLogTable?.data) {
+        (window as any).$pinia.friend.friendLogTable.data.push(entry);
+        // Also add to database if available
+        if ((window as any).database?.addFriendLogHistory) {
+          (window as any).database.addFriendLogHistory(entry);
+      }
+    } else {
+        this.logWarn('Friend store not available');
+      }
+    } catch (error) {
+      this.logError('Failed to add friend log:', error);
+    }
+  }
+
+  /**
+   * Add to VRCX Notification Log
+   * @param entry - Notification entry object (simplified for plugins)
+   * Example: {
+   *   id?: string,                      // Auto-generated if not provided
+   *   type: 'friendRequest' | 'invite' | 'requestInvite' | 'Plugin' | ...,
+   *   created_at: new Date().toJSON(),
+   *   message: string,
+   *   senderUserId?: string,
+   *   senderUsername?: string,
+   *   displayName?: string
+   * }
+   */
+  addNotificationLog(entry: any): void {
+    try {
+      if ((window as any).$pinia?.notification?.notificationTable?.data) {
+        // Auto-generate ID if not provided
+        if (!entry.id) {
+          entry.id = `plugin_${this.context}_${Date.now()}`;
+        }
+        (window as any).$pinia.notification.notificationTable.data.push(entry);
+        // Also add to database if available
+        if ((window as any).database?.addNotificationToDatabase) {
+          (window as any).database.addNotificationToDatabase(entry);
+      }
+    } else {
+        this.logWarn('Notification store not available');
+      }
+    } catch (error) {
+      this.logError('Failed to add notification log:', error);
+    }
+  }
+
+  /**
+   * Desktop notification (Windows toast notification)
+   * Note: May not work in Electron builds
+   * @param msg - Message to display (string or object)
+   * @param title - Notification title (optional, defaults to "VRCX - {context}")
+   * @param args - Additional formatting arguments
+   */
+  async notifyDesktop(msg: any, title?: string, ...args: any[]): Promise<void> {
+    const formatted = this.formatMessage(msg, ...args);
+    const notifTitle = title || `VRCX - ${this.context}`;
+    
+    try {
+      if ((window as any).AppApi?.DesktopNotification) {
+        await (window as any).AppApi.DesktopNotification(notifTitle, formatted);
+      } else {
+        this.logWarn('Desktop notifications not available');
+      }
+      } catch (error) {
+      this.logError('Failed to send desktop notification:', error);
+    }
+  }
+
+  /**
+   * VR notifications (XSOverlay + OVRToolkit)
+   * Shows notification in VR overlays if user has them configured
+   * @param msg - Message to display (string or object)
+   * @param title - Notification title (optional, defaults to "VRCX - {context}")
+   * @param args - Additional formatting arguments
+   */
+  async notifyVR(msg: any, title?: string, ...args: any[]): Promise<void> {
+    const formatted = this.formatMessage(msg, ...args);
+    const notifTitle = title || `VRCX - ${this.context}`;
+    
+    const promises: Promise<void>[] = [];
+    
+    // XSOverlay
+    if ((window as any).AppApi?.XSNotification) {
+      promises.push(
+        (window as any).AppApi.XSNotification(notifTitle, formatted, 5000, 1.0, "")
+          .catch((err: Error) => this.logError('XSOverlay notification failed:', err))
+      );
+    }
+    
+    // OVRToolkit
+    if ((window as any).AppApi?.OVRTNotification) {
+      promises.push(
+        (window as any).AppApi.OVRTNotification(true, true, notifTitle, formatted, 5000, 1.0, null)
+          .catch((err: Error) => this.logError('OVRToolkit notification failed:', err))
+      );
+    }
+    
+    if (promises.length === 0) {
+      this.logWarn('VR notifications not available');
+    } else {
+      await Promise.all(promises);
+    }
+  }
+
+  /**
+   * Notify everywhere - all available notification methods
+   * Sends to: console, UI toast, UI notification, desktop, VR, and notification log
+   * @param msg - Message to display (string or object)
+   * @param args - Additional formatting arguments
+   */
+  async notifyAll(msg: any, ...args: any[]): Promise<void> {
+    const formatted = this.formatMessage(msg, ...args);
+    
+    try {
+      // Console
+      this.logInfo(formatted);
+      
+      // UI Message
+      const $message = (window as any).$app?.config?.globalProperties?.$message;
+      if ($message?.info) {
+        $message.info(formatted);
+      }
+      
+      // UI Notification
+      const $notify = (window as any).$app?.config?.globalProperties?.$notify;
+      if ($notify?.info) {
+        $notify.info({
+          title: this.context,
+          message: formatted,
+        });
+      }
+      
+      // Desktop
+      await this.notifyDesktop(formatted);
+      
+      // VR
+      await this.notifyVR(formatted);
+      
+      // Add to notification log
+      this.addNotificationLog({
+        type: 'Plugin',
+        created_at: new Date().toJSON(),
+        message: formatted,
+        displayName: this.context,
+      });
+    } catch (error) {
+      this.logError('Failed to notify all:', error);
+    }
   }
 }
