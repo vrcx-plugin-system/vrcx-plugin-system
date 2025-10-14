@@ -318,7 +318,7 @@ $hasChanges = Commit-AndPushChanges -RepositoryPath $ProjectDir -CommitMessage $
 Write-Host ""
 Write-Host "--- Plugins Repository (Parent Repo) ---" -ForegroundColor Cyan
 
-$pluginsRepoPath = Split-Path -Parent $PluginSystemRoot
+$pluginsRepoPath = Join-Path $PluginSystemRoot "plugins"
 Write-Host "Plugins repo path: $pluginsRepoPath" -ForegroundColor Gray
 
 # Create commit message for plugins
