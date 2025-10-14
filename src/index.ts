@@ -40,9 +40,9 @@ window.customjs = {
 };
 
 // Create system logger
-const systemLogger = new Logger("CustomJS");
-systemLogger.log(`Starting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`);
-systemLogger.log(`Cache buster: ${Date.now()}`);
+window.customjs.systemLogger = new Logger("CustomJS");
+window.customjs.systemLogger.log(`Starting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`);
+window.customjs.systemLogger.log(`Cache buster: ${Date.now()}`);
 
 // Export all core classes to global scope
 window.customjs.Logger = Logger;
@@ -58,14 +58,13 @@ window.customjs.PluginManager = PluginManager;
 // Note: We don't export to global window scope - plugins get these via destructuring in the loader
 
 // Initialize ConfigManager
-const configManager = new ConfigManager();
-window.customjs.configManager = configManager;
+window.customjs.configManager = new ConfigManager();
 
 // Initialize ConfigManager
 async function initializeConfigManager() {
-  systemLogger.log("Initializing ConfigManager...");
-  await configManager.init();
-  systemLogger.log("✓ ConfigManager initialized");
+  window.customjs.systemLogger.log("Initializing ConfigManager...");
+  await window.customjs.configManager.init();
+  window.customjs.systemLogger.log("✓ ConfigManager initialized");
 }
 
 // Expose Element Plus notification functions globally
@@ -90,7 +89,7 @@ async function exposeElementPlus() {
             (window as any).ElNotification = globalProps.$notify;
           }
           clearInterval(checkInterval);
-          systemLogger.log("✓ Element Plus notifications exposed globally");
+          window.customjs.systemLogger.log("✓ Element Plus notifications exposed globally");
           resolve();
           return;
         }
@@ -99,7 +98,7 @@ async function exposeElementPlus() {
       // Timeout after max attempts - proceed anyway
       if (attempts >= maxAttempts) {
         clearInterval(checkInterval);
-        systemLogger.logWarn("Element Plus not detected yet, will use Vue global properties fallback");
+        window.customjs.systemLogger.logWarn("Element Plus not detected yet, will use Vue global properties fallback");
         resolve();
       }
     }, 100);
@@ -112,20 +111,20 @@ async function bootstrapPluginSystem() {
     // Step 1: Initialize ConfigManager
     await initializeConfigManager();
 
-    systemLogger.log("Core modules loaded, initializing plugin system...");
+    window.customjs.systemLogger.log("Core modules loaded, initializing plugin system...");
 
     // Step 2: Wait for Element Plus to be available
     await exposeElementPlus();
 
     // Step 3: Instantiate PluginManager and load plugins
-    const manager = new PluginManager();
-    await manager.loadAllPlugins();
+    window.customjs.pluginManager = new PluginManager();
+    await window.customjs.pluginManager.loadAllPlugins();
 
-    systemLogger.log("✓ Plugin system fully initialized");
-    systemLogger.showSuccess("VRCX Plugin System loaded successfully");
+    window.customjs.systemLogger.log("✓ Plugin system fully initialized");
+    window.customjs.systemLogger.showSuccess("VRCX Plugin System loaded successfully");
   } catch (error) {
-    systemLogger.logError("Bootstrap failed:", error);
-    systemLogger.showError(`Failed to initialize plugin system: ${(error as Error).message}`);
+    window.customjs.systemLogger.logError("Bootstrap failed:", error);
+    window.customjs.systemLogger.showError(`Failed to initialize plugin system: ${(error as Error).message}`);
   }
 }
 

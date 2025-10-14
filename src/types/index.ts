@@ -80,6 +80,7 @@ declare global {
       events: Record<string, Array<Function>>;
       coreModules?: Map<string, any>;
       Logger?: any;
+      systemLogger?: any;
       configManager?: any;
       ConfigManager?: any;
       SettingType?: any;
