@@ -142,13 +142,21 @@ export class Logger {
       }, 0);
     }
 
-    // VRCX Element Plus Message (primary notification method)
+    // VRCX Notifications - try multiple methods
     if (opts.vrcx!.message || opts.vrcx!.noty) {
       try {
         const msgType = level === 'warn' ? 'warning' : (level === 'error' ? 'error' : 'success');
         
-        // Try window.ElMessage first (if exposed)
-        if (typeof (window as any).ElMessage === 'function') {
+        // Try Noty library first (what VRCX uses for login messages)
+        if (typeof (window as any).Noty === 'function') {
+          new (window as any).Noty({
+            type: msgType,
+            text: msg,
+            timeout: 3000,
+          }).show();
+        }
+        // Try window.ElMessage (if exposed)
+        else if (typeof (window as any).ElMessage === 'function') {
           (window as any).ElMessage({
             message: msg,
             type: msgType,
@@ -156,7 +164,7 @@ export class Logger {
             showClose: true,
           });
         }
-        // Try via Vue globalProperties (this is what actually works)
+        // Try via Vue globalProperties (this is what actually works for Element Plus)
         else if ((window as any).$app?.config?.globalProperties?.$message) {
           const $message = (window as any).$app.config.globalProperties.$message;
           
@@ -355,6 +363,44 @@ export class Logger {
 
   async notifyVR(msg: string): Promise<void> {
     await Promise.all([this.notifyXSOverlay(msg), this.notifyOVRToolkit(msg)]);
+  }
+
+  // Noty library notifications (what VRCX uses for login messages)
+  showNoty(msg: string, type: 'success' | 'info' | 'warning' | 'error' | 'alert' = 'info', timeout: number = 3000): void {
+    try {
+      if (typeof (window as any).Noty === 'function') {
+        new (window as any).Noty({
+          type: type,
+          text: msg,
+          timeout: timeout,
+        }).show();
+      } else {
+        this.logWarn("Noty library not available, falling back to console");
+        this.log(msg);
+      }
+    } catch (error) {
+      this.logError(`Failed to show Noty: ${(error as Error).message}`);
+    }
+  }
+
+  showNotySuccess(msg: string): void {
+    this.showNoty(msg, 'success');
+  }
+
+  showNotyInfo(msg: string): void {
+    this.showNoty(msg, 'info');
+  }
+
+  showNotyWarning(msg: string): void {
+    this.showNoty(msg, 'warning');
+  }
+
+  showNotyError(msg: string): void {
+    this.showNoty(msg, 'error');
+  }
+
+  showNotyAlert(msg: string): void {
+    this.showNoty(msg, 'alert');
   }
 
   logAndShow(msg: string, level: 'info' | 'warn' | 'error' = 'info'): void {
