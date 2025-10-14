@@ -428,7 +428,7 @@ export class PluginLoader {
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/selfinvite-onblockedplayer.js", enabled: false },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/avatar-log.js", enabled: true },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/nav-menu-test.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/test-logger.js", enabled: false },
+    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/logger-test.js", enabled: false },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/debug.js", enabled: false },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/template.js", enabled: false },
   ];
