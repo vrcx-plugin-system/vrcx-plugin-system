@@ -736,12 +736,8 @@ export class PluginManager {
           if (window.$pinia?.ui?.$subscribe) {
             storeSubscription = window.$pinia.ui.$subscribe((mutation: any, state: any) => {
               try {
-                // Debug: Log what we're getting from Pinia
-                console.log(`[CJS|PluginManager] UI subscription callback - mutation:`, mutation, 'state:', state);
-                console.log(`[CJS|PluginManager] state.menuActiveIndex:`, state?.menuActiveIndex);
-                console.log(`[CJS|PluginManager] Direct from Pinia:`, window.$pinia?.ui?.menuActiveIndex);
-                
                 // Pass the menuActiveIndex, with fallback to direct Pinia access
+                // (state.menuActiveIndex is undefined due to Pinia Proxy issue)
                 callback({
                   menuActiveIndex: state?.menuActiveIndex || window.$pinia?.ui?.menuActiveIndex,
                 });
@@ -1222,5 +1218,91 @@ export class PluginManager {
 
   getAllPlugins(): Plugin[] {
     return window.customjs.plugins;
+  }
+
+  async addPlugin(pluginUrl: string): Promise<{success: boolean; message?: string}> {
+    try {
+      // Check if already loaded
+      if (this.loadedUrls.has(pluginUrl)) {
+        return { success: false, message: "Plugin already loaded" };
+      }
+
+      // Use PluginLoader to load the plugin
+      const pluginLoader = new PluginLoader(this);
+      const success = await pluginLoader.loadPluginCode(pluginUrl);
+
+      if (success) {
+        this.loadedUrls.add(pluginUrl);
+        
+        // Get the newly added plugin and start it
+        const newPlugin = window.customjs.plugins[window.customjs.plugins.length - 1];
+        if (newPlugin) {
+          await newPlugin.load();
+          await newPlugin.start();
+          
+          // Save to config
+          const config = this.getPluginConfig();
+          config[pluginUrl] = true;
+          this.savePluginConfig(config);
+        }
+
+        return { success: true };
+      } else {
+        this.failedUrls.add(pluginUrl);
+        return { success: false, message: "Failed to load plugin code" };
+      }
+    } catch (error) {
+      return { success: false, message: (error as Error).message };
+    }
+  }
+
+  async removePlugin(pluginUrl: string): Promise<{success: boolean; message?: string}> {
+    try {
+      // Find plugin by URL
+      const plugin = window.customjs.plugins.find((p: Plugin) => p.metadata.url === pluginUrl);
+      
+      if (!plugin) {
+        return { success: false, message: "Plugin not found" };
+      }
+
+      // Stop the plugin
+      await plugin.stop();
+
+      // Remove from plugins array
+      const index = window.customjs.plugins.indexOf(plugin);
+      if (index > -1) {
+        window.customjs.plugins.splice(index, 1);
+      }
+
+      // Remove from loaded URLs
+      this.loadedUrls.delete(pluginUrl);
+
+      // Update config
+      const config = this.getPluginConfig();
+      delete config[pluginUrl];
+      this.savePluginConfig(config);
+
+      return { success: true };
+    } catch (error) {
+      return { success: false, message: (error as Error).message };
+    }
+  }
+
+  async reloadPlugin(pluginUrl: string): Promise<{success: boolean; message?: string}> {
+    try {
+      // Remove the plugin first
+      const removeResult = await this.removePlugin(pluginUrl);
+      if (!removeResult.success) {
+        return removeResult;
+      }
+
+      // Wait a bit for cleanup
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Add it back
+      return await this.addPlugin(pluginUrl);
+    } catch (error) {
+      return { success: false, message: (error as Error).message };
+    }
   }
 }
