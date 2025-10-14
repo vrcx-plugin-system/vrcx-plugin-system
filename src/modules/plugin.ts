@@ -1025,11 +1025,9 @@ export class PluginManager {
 
     for (const plugin of window.customjs.plugins) {
       try {
-        if (!plugin.enabled) {
-          plugin.enabled = true;
-        }
-
-        if (!plugin.started) {
+        // Only enable plugins that are supposed to be enabled (from config)
+        // Don't forcibly enable all plugins
+        if (plugin.enabled && !plugin.started) {
           await plugin.start();
           console.log(
             `%c[CJS|PluginManager] ✓ Started ${plugin.metadata.name} v${plugin.metadata.version}`,
@@ -1166,13 +1164,18 @@ export class PluginManager {
       `color: ${this.logColor}`
     );
 
-    // Phase 3: Call load() on all plugins
+    // Phase 3: Set enabled state from config and call load() on all plugins
     console.log(
       `%c[CJS|PluginManager] Calling load() on ${window.customjs.plugins.length} plugins...`,
       `color: ${this.logColor}`
     );
     for (const plugin of window.customjs.plugins) {
       try {
+        // Set enabled state from config
+        if (plugin.metadata.url && pluginConfig[plugin.metadata.url] !== undefined) {
+          plugin.enabled = pluginConfig[plugin.metadata.url];
+        }
+        
         await plugin.load();
       } catch (error) {
         console.error(
