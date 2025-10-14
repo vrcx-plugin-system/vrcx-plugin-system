@@ -61,6 +61,23 @@ export class Logger {
     console.error(`%c[CJS|${this.context}] ${formatted}`, `color: ${this.logColor}`);
   }
 
+  // Aliases for console logging
+  info(msg: any, ...args: any[]): void {
+    this.logInfo(msg, ...args);
+  }
+
+  warn(msg: any, ...args: any[]): void {
+    this.logWarn(msg, ...args);
+  }
+
+  warning(msg: any, ...args: any[]): void {
+    this.logWarn(msg, ...args);
+  }
+
+  error(msg: any, ...args: any[]): void {
+    this.logError(msg, ...args);
+  }
+
   /**
    * Show methods - UI toast messages (brief, top-center)
    * Priority: $message.* → $notify.* → console fallback
@@ -83,7 +100,7 @@ export class Logger {
       const $notify = (window as any).$app?.config?.globalProperties?.$notify;
       if ($notify && typeof $notify[type] === 'function') {
         $notify[type]({
-          title: this.context,
+            title: this.context,
           message: formatted,
         });
         return;
@@ -131,6 +148,13 @@ export class Logger {
    */
   showError(msg: any, ...args: any[]): void {
     this.showMessage(msg, 'error', ...args);
+  }
+
+  /**
+   * Alias for showWarning
+   */
+  showWarn(msg: any, ...args: any[]): void {
+    this.showWarning(msg, ...args);
   }
 
   /**
@@ -242,7 +266,7 @@ export class Logger {
       } else {
         this.logWarn('Feed store not available');
       }
-    } catch (error) {
+      } catch (error) {
       this.logError('Failed to add feed entry:', error);
     }
   }
@@ -265,7 +289,7 @@ export class Logger {
     try {
       if ((window as any).$pinia?.gameLog?.addGameLog) {
         (window as any).$pinia.gameLog.addGameLog(entry);
-      } else {
+    } else {
         this.logWarn('GameLog store not available');
       }
     } catch (error) {

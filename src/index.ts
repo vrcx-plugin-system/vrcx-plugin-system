@@ -39,14 +39,10 @@ window.customjs = {
   events: {},
 };
 
-console.log(
-  `%c[CJS] Starting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`,
-  `color: ${window.customjs.logColors.CustomJS}`
-);
-console.log(
-  `%c[CJS] Cache buster: ${Date.now()}`,
-  `color: ${window.customjs.logColors.CustomJS}`
-);
+// Create system logger
+const systemLogger = new Logger("CustomJS");
+systemLogger.log(`Starting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`);
+systemLogger.log(`Cache buster: ${Date.now()}`);
 
 // Export all core classes to global scope
 window.customjs.Logger = Logger;
@@ -67,17 +63,9 @@ window.customjs.configManager = configManager;
 
 // Initialize ConfigManager
 async function initializeConfigManager() {
-  console.log(
-    `%c[CJS] %cInitializing ConfigManager...`,
-    "font-weight: bold; color: #00ff88",
-    "color: #888"
-  );
+  systemLogger.log("Initializing ConfigManager...");
   await configManager.init();
-  console.log(
-    `%c[CJS] %c✓ ConfigManager initialized`,
-    "font-weight: bold; color: #00ff88",
-    "color: #888"
-  );
+  systemLogger.log("✓ ConfigManager initialized");
 }
 
 // Expose Element Plus notification functions globally
@@ -102,11 +90,7 @@ async function exposeElementPlus() {
             (window as any).ElNotification = globalProps.$notify;
           }
           clearInterval(checkInterval);
-          console.log(
-            `%c[CJS] %c✓ Element Plus notifications exposed globally`,
-            "font-weight: bold; color: #00ff88",
-            "color: #888"
-          );
+          systemLogger.log("✓ Element Plus notifications exposed globally");
           resolve();
           return;
         }
@@ -115,11 +99,7 @@ async function exposeElementPlus() {
       // Timeout after max attempts - proceed anyway
       if (attempts >= maxAttempts) {
         clearInterval(checkInterval);
-        console.warn(
-          `%c[CJS] %c⚠ Element Plus not detected yet, will use Vue global properties fallback`,
-          "font-weight: bold; color: #00ff88",
-          "color: #ffa726"
-        );
+        systemLogger.logWarn("Element Plus not detected yet, will use Vue global properties fallback");
         resolve();
       }
     }, 100);
@@ -132,11 +112,7 @@ async function bootstrapPluginSystem() {
     // Step 1: Initialize ConfigManager
     await initializeConfigManager();
 
-    console.log(
-      `%c[CJS] %cCore modules loaded, initializing plugin system...`,
-      "font-weight: bold; color: #00ff88",
-      "color: #888"
-    );
+    systemLogger.log("Core modules loaded, initializing plugin system...");
 
     // Step 2: Wait for Element Plus to be available
     await exposeElementPlus();
@@ -145,16 +121,11 @@ async function bootstrapPluginSystem() {
     const manager = new PluginManager();
     await manager.loadAllPlugins();
 
-    console.log(
-      `%c[CJS] %c✓ Plugin system fully initialized`,
-      "font-weight: bold; color: #00ff88",
-      "color: #888"
-    );
+    systemLogger.log("✓ Plugin system fully initialized");
+    systemLogger.showSuccess("VRCX Plugin System loaded successfully");
   } catch (error) {
-    console.error("[CJS] Bootstrap failed:", error);
-    alert(
-      `CustomJS: Failed to initialize plugin system.\n\n${(error as Error).message}\n\nCheck console for details.`
-    );
+    systemLogger.logError("Bootstrap failed:", error);
+    systemLogger.showError(`Failed to initialize plugin system: ${(error as Error).message}`);
   }
 }
 
