@@ -40,6 +40,7 @@ export class Plugin {
       version: metadata.version || "1.0.0",
       build: metadata.build || Date.now().toString(),
       url: pluginUrl,
+      tags: (metadata as any).tags || [],
     };
 
     this.dependencies = (metadata as any).dependencies || [];

@@ -8,6 +8,7 @@ export interface PluginMetadata {
   version: string;
   build: string;
   url: string | null;
+  tags?: string[];
 }
 
 export interface ResourceTracking {

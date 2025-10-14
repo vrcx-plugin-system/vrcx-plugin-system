@@ -14,6 +14,80 @@ function Get-UnixTime {
     return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds)
 }
 
+function Update-PluginVersionAndBuild {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$PluginPath
+    )
+    
+    if (-not (Test-Path $PluginPath)) {
+        Write-Host "✗ Plugin file not found: $PluginPath" -ForegroundColor Red
+        return $false
+    }
+    
+    Write-Host "Updating version and build for: $PluginPath" -ForegroundColor Yellow
+    
+    # Read the file content
+    $content = Get-Content $PluginPath -Raw
+    
+    # Find the version number
+    if ($content -match 'version:\s*"(\d+)\.(\d+)\.(\d+)"') {
+        $major = [int]$matches[1]
+        $minor = [int]$matches[2]
+        $patch = [int]$matches[3]
+        $oldVersion = "$major.$minor.$patch"
+        
+        # Increment the patch version with rollover
+        $patch++
+        if ($patch -gt 9) {
+            $patch = 0
+            $minor++
+            if ($minor -gt 9) {
+                $minor = 0
+                $major++
+                if ($major -gt 9) {
+                    $major = 0  # Complete rollover
+                }
+            }
+        }
+        
+        $newVersion = "$major.$minor.$patch"
+        Write-Host "  Version: $oldVersion → $newVersion" -ForegroundColor Cyan
+        
+        # Update the version in content
+        $content = $content -replace 'version:\s*"\d+\.\d+\.\d+"', "version: `"$newVersion`""
+    }
+    else {
+        Write-Host "  ⚠ Version pattern not found in file" -ForegroundColor Yellow
+    }
+    
+    # Get the file's last modified time and convert to Unix timestamp
+    $fileInfo = Get-Item $PluginPath
+    $lastModified = $fileInfo.LastWriteTime
+    $unixTimestamp = [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End $lastModified).TotalSeconds)
+    
+    Write-Host "  Build: $unixTimestamp (Last Modified: $lastModified)" -ForegroundColor Cyan
+    
+    # Update the build in content
+    if ($content -match 'build:\s*"\d+"') {
+        $content = $content -replace 'build:\s*"\d+"', "build: `"$unixTimestamp`""
+    }
+    else {
+        Write-Host "  ⚠ Build pattern not found in file" -ForegroundColor Yellow
+    }
+    
+    # Write the updated content back to the file
+    try {
+        Set-Content -Path $PluginPath -Value $content -NoNewline
+        Write-Host "✓ Plugin version and build updated successfully" -ForegroundColor Green
+        return $true
+    }
+    catch {
+        Write-Host "✗ Failed to update plugin file: $($_.Exception.Message)" -ForegroundColor Red
+        return $false
+    }
+}
+
 $unixTime = Get-UnixTime
 
 function Commit-AndPushChanges {
