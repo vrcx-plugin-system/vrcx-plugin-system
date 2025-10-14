@@ -411,6 +411,7 @@ export class PluginLoader {
 
   // Default plugins configuration - updated to new repo URL
   defaultPlugins: Array<{url: string; enabled: boolean}> = [
+    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/bio-symbols-patch.js", enabled: true },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/api-retry-patch.js", enabled: true },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/context-menu-api.js", enabled: true },
     { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/nav-menu-api.js", enabled: true },
