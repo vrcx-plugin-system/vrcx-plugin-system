@@ -40,7 +40,7 @@ window.customjs = {
 };
 
 // Create system logger
-window.customjs.systemLogger = new Logger("CustomJS");
+window.customjs.systemLogger = new Logger("");
 window.customjs.systemLogger.log(`Starting Plugin System v${window.customjs.version} (Build: ${window.customjs.build})`);
 window.customjs.systemLogger.log(`Cache buster: ${Date.now()}`);
 
