@@ -314,6 +314,27 @@ Update VRCX Plugin System - $timestamp
 # Commit and push from the project directory
 $hasChanges = Commit-AndPushChanges -RepositoryPath $ProjectDir -CommitMessage $commitMessage -BranchName $Branch
 
+# Also commit and push the parent plugins repository
+Write-Host ""
+Write-Host "--- Plugins Repository (Parent Repo) ---" -ForegroundColor Cyan
+
+$pluginsRepoPath = Split-Path -Parent $PluginSystemRoot
+Write-Host "Plugins repo path: $pluginsRepoPath" -ForegroundColor Gray
+
+# Create commit message for plugins
+$pluginsCommitMessage = @"
+Update plugin-manager-ui with debug logging - $timestamp
+
+- Added extensive debug logging with emojis for better visibility
+- Track content rendering lifecycle
+- Log menu watcher subscription status
+- Debug grid container and children
+- Help diagnose why plugin-manager-ui tab content isn't loading
+"@
+
+# Commit and push plugins repo changes
+$hasPluginsChanges = Commit-AndPushChanges -RepositoryPath $pluginsRepoPath -CommitMessage $pluginsCommitMessage -BranchName $Branch
+
 # Create GitHub Release if gh CLI is available and there were changes
 if ($ghAvailable -and $hasChanges) {
     Write-Host ""
