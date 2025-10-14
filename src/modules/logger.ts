@@ -403,6 +403,49 @@ export class Logger {
     this.showNoty(msg, 'alert');
   }
 
+  // Pinia notification store methods (VRCX game event notifications)
+  playGameNoty(type: string, displayName: string = 'Plugin', additionalData: any = {}): void {
+    try {
+      if ((window as any).$pinia?.notification?.playNoty) {
+        const noty = {
+          type: type,
+          created_at: new Date().toJSON(),
+          displayName: displayName,
+          userId: `usr_${this.context}`,
+          isFriend: false,
+          isFavorite: false,
+          ...additionalData,
+        };
+        (window as any).$pinia.notification.playNoty(noty);
+      } else {
+        this.logWarn("Pinia notification store not available");
+      }
+    } catch (error) {
+      this.logError(`Failed to play game noty: ${(error as Error).message}`);
+    }
+  }
+
+  // Convenience methods for common game notification types
+  showOnlineNoty(displayName: string): void {
+    this.playGameNoty('Online', displayName);
+  }
+
+  showOfflineNoty(displayName: string): void {
+    this.playGameNoty('Offline', displayName);
+  }
+
+  showGPSNoty(displayName: string, worldName: string, location: string): void {
+    this.playGameNoty('GPS', displayName, { worldName, location, time: 0 });
+  }
+
+  showPlayerJoinedNoty(displayName: string): void {
+    this.playGameNoty('OnPlayerJoined', displayName);
+  }
+
+  showPlayerLeftNoty(displayName: string): void {
+    this.playGameNoty('OnPlayerLeft', displayName);
+  }
+
   logAndShow(msg: string, level: 'info' | 'warn' | 'error' = 'info'): void {
     this.log(msg, { console: true, vrcx: { message: true } }, level, false);
   }
