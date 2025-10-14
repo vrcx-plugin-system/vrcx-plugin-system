@@ -323,13 +323,7 @@ Write-Host "Plugins repo path: $pluginsRepoPath" -ForegroundColor Gray
 
 # Create commit message for plugins
 $pluginsCommitMessage = @"
-Update plugin-manager-ui with debug logging - $timestamp
-
-- Added extensive debug logging with emojis for better visibility
-- Track content rendering lifecycle
-- Log menu watcher subscription status
-- Debug grid container and children
-- Help diagnose why plugin-manager-ui tab content isn't loading
+Update plugins - $timestamp
 "@
 
 # Commit and push plugins repo changes
