@@ -404,6 +404,8 @@ export class Logger {
   }
 
   // Pinia notification store methods (VRCX game event notifications)
+  // This uses VRCX's notification system which shows in VR overlays, desktop, etc.
+  // based on user's notification settings
   playGameNoty(type: string, displayName: string = 'Plugin', additionalData: any = {}): void {
     try {
       if ((window as any).$pinia?.notification?.playNoty) {
@@ -411,7 +413,7 @@ export class Logger {
           type: type,
           created_at: new Date().toJSON(),
           displayName: displayName,
-          userId: `usr_${this.context}`,
+          userId: `usr_${this.context}_${Date.now()}`,
           isFriend: false,
           isFavorite: false,
           ...additionalData,
@@ -422,6 +424,60 @@ export class Logger {
       }
     } catch (error) {
       this.logError(`Failed to play game noty: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Show a custom plugin notification using VRCX's playNoty system
+   * This will show in VR overlays, desktop notifications, etc. based on user settings
+   * @param message - The message to display
+   * @param options - Optional configuration
+   */
+  showPluginNoty(message: string, options: {
+    type?: string,
+    displayName?: string,
+    title?: string,
+    skipBusyCheck?: boolean,
+    skipTimeCheck?: boolean,
+  } = {}): void {
+    try {
+      const {
+        type = 'Event',
+        displayName = this.context,
+        title = null,
+        skipBusyCheck = true,
+        skipTimeCheck = true,
+      } = options;
+
+      // Use the existing playNoty if we want full VRCX integration
+      if ((window as any).$pinia?.notification?.playNoty) {
+        const noty: any = {
+          type: type,
+          created_at: new Date().toJSON(),
+          displayName: displayName,
+          userId: `usr_plugin_${this.context}_${Date.now()}`,
+          isFriend: false,
+          isFavorite: false,
+        };
+
+        if (title) {
+          noty.title = title;
+          noty.message = message;
+        } else if (type === 'Event') {
+          noty.data = message;
+        } else {
+          noty.message = message;
+        }
+
+        // For custom plugin notifications, we might want to bypass some checks
+        // so we call playNoty directly without going through queue functions
+        (window as any).$pinia.notification.playNoty(noty);
+      } else {
+        // Fallback to regular showInfo
+        this.showInfo(message);
+      }
+    } catch (error) {
+      this.logError(`Failed to show plugin noty: ${(error as Error).message}`);
     }
   }
 
@@ -444,6 +500,13 @@ export class Logger {
 
   showPlayerLeftNoty(displayName: string): void {
     this.playGameNoty('OnPlayerLeft', displayName);
+  }
+
+  showEventNoty(message: string, displayName?: string): void {
+    this.showPluginNoty(message, { 
+      type: 'Event', 
+      displayName: displayName || this.context 
+    });
   }
 
   logAndShow(msg: string, level: 'info' | 'warn' | 'error' = 'info'): void {
