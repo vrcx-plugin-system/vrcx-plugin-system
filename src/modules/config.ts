@@ -284,7 +284,7 @@ export class ConfigManager {
   version: string = "4.2.0";
   build: string = "1728935100";
   keyPrefix: string = "customjs";
-  vrchatConfigPath: string = "%LOCALAPPDATA%\\VRChat\\VRChat\\config.json";
+  vrchatConfigPath: string = "%APPDATA%\\..\\LocalLow\\VRChat\\VRChat\\config.json";
 
   constructor() {
     console.log(
