@@ -11,9 +11,9 @@ import { ConfigManager, SettingsStore, SettingType, definePluginSettings } from 
 import { Plugin, PluginLoader, PluginManager } from './modules/plugin';
 
 // Show dev tools
-if (window.AppApi?.ShowDevTools) {
-  window.AppApi.ShowDevTools();
-}
+// if (window.AppApi?.ShowDevTools) {
+//   window.AppApi.ShowDevTools();
+// }
 
 // Initialize window.customjs
 window.customjs = {
