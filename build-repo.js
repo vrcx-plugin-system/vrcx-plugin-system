@@ -150,13 +150,13 @@ function buildRepository() {
       });
     });
 
-    console.log("\n🏷️  Tags:");
-    Object.entries(tagCount)
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 15)
-      .forEach(([tag, count]) => {
-        console.log(`  ${tag}: ${count}`);
-      });
+    console.log(`\n🏷️ ${tagCount} Tags`);
+    // Object.entries(tagCount)
+    //   .sort(([, a], [, b]) => b - a)
+    //   .slice(0, 15)
+    //   .forEach(([tag, count]) => {
+    //     console.log(`  ${tag}: ${count}`);
+    //   });
 
     // Show enabled/disabled breakdown
     const enabledCount = plugins.filter((p) => p.enabled).length;
