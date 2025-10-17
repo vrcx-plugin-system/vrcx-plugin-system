@@ -416,7 +416,7 @@ if ($ghAvailable -and $hasChanges) {
 Automated build and release of VRCX Plugin System at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 
 ## Installation
-Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in your VRCX AppData folder.
+Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in `%APPDATA%\VRCX\`
 "@
     
     Write-Host "Creating release '$releaseTag'..." -ForegroundColor Yellow
