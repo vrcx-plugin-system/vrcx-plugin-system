@@ -53,10 +53,10 @@ export class PluginRepo {
   }
 
   /**
-   * Get plugins by category
+   * Get plugins by tag
    */
-  getPluginsByCategory(category: string): PluginRepoMetadata[] {
-    return this.getPlugins().filter(p => p.category === category);
+  getPluginsByTag(tag: string): PluginRepoMetadata[] {
+    return this.getPlugins().filter(p => p.tags?.includes(tag));
   }
 
   /**

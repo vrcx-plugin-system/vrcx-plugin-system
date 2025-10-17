@@ -63,12 +63,6 @@ export interface PluginRepoMetadata {
   url: string;
   enabled?: boolean;
   tags?: string[];
-  category?: string;
-}
-
-export interface PluginCategory {
-  name: string;
-  description: string;
 }
 
 export interface PluginRepoData {
@@ -78,7 +72,6 @@ export interface PluginRepoData {
   version: string;
   url: string;
   plugins: PluginRepoMetadata[];
-  categories?: Record<string, PluginCategory>;
 }
 
 export interface RepoConfig {
