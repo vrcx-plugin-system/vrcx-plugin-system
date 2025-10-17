@@ -480,7 +480,7 @@ export class PluginLoader {
           const pluginCountAfter = window.customjs.plugins.length;
           if (pluginCountAfter > pluginCountBefore) {
             const newPlugin = window.customjs.plugins[pluginCountAfter - 1];
-            this.log(`✓ Loaded ${newPlugin.metadata.name} v${newPlugin.metadata.version}`);
+            this.log(`✓ Loaded ${newPlugin.metadata.name} (build: ${newPlugin.metadata.build})`);
           }
           resolve();
         }, 100);
@@ -559,10 +559,6 @@ export class PluginLoader {
         // Extract author
         const authorMatch = superArgs.match(/author:\s*["'](.+?)["']/);
         if (authorMatch) metadata.author = authorMatch[1];
-        
-        // Extract version
-        const versionMatch = superArgs.match(/version:\s*["'](.+?)["']/);
-        if (versionMatch) metadata.version = versionMatch[1];
         
         // Extract build
         const buildMatch = superArgs.match(/build:\s*["'](.+?)["']/);
