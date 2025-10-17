@@ -54,6 +54,37 @@ export interface PluginConfig {
   [url: string]: boolean;
 }
 
+export interface PluginRepoMetadata {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  version: string;
+  url: string;
+  enabled?: boolean;
+  tags?: string[];
+  category?: string;
+}
+
+export interface PluginCategory {
+  name: string;
+  description: string;
+}
+
+export interface PluginRepoData {
+  name: string;
+  description: string;
+  author: string;
+  version: string;
+  url: string;
+  plugins: PluginRepoMetadata[];
+  categories?: Record<string, PluginCategory>;
+}
+
+export interface RepoConfig {
+  [repoUrl: string]: boolean;
+}
+
 // Global window type augmentation
 declare global {
   interface Window {
@@ -90,6 +121,9 @@ declare global {
       PluginManager?: any;
       Plugin?: any;
       PluginLoader?: any;
+      repoManager?: any;
+      PluginRepoManager?: any;
+      PluginRepo?: any;
       utils?: Record<string, any>;
       __currentPluginUrl?: string;
       __LAST_PLUGIN_CLASS__?: any;

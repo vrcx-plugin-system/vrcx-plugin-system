@@ -1,5 +1,6 @@
-import { PluginMetadata, ResourceTracking, PluginConfig } from '../types';
+import { PluginMetadata, ResourceTracking, PluginConfig, PluginRepoMetadata } from '../types';
 import { Logger } from './logger';
+import { PluginRepoManager } from './repo';
 
 /**
  * Base Plugin class for VRCX plugins
@@ -408,33 +409,6 @@ export class PluginLoader {
   private retryAttempts: Map<string, number>;
   private maxRetries: number = 3;
   private logColor: string;
-
-  // Default plugins configuration - updated to new repo URL
-  defaultPlugins: Array<{url: string; enabled: boolean}> = [
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/bio-symbols-patch.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/api-retry-patch.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/user-badge-pipeline-patch.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/context-menu-api.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/nav-menu-api.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/invite-message-api.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/protocol-links.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/auto-disable-untrusted-urls.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/registry-overrides.js", enabled: false },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/tag-manager.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/yoinker-detector.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/auto-invite.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/auto-follow.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/bio-updater.js", enabled: false },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/plugin-manager-ui.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/start-game-button.js", enabled: false },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/monitor-invisibleplayers.js", enabled: false },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/selfinvite-onblockedplayer.js", enabled: false },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/avatar-log.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/nav-menu-test.js", enabled: true },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/logger-test.js", enabled: false },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/debug.js", enabled: false },
-    { url: "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/template.js", enabled: false },
-  ];
 
   constructor(pluginManager: PluginManager) {
     this.pluginManager = pluginManager;
@@ -1241,15 +1215,15 @@ export class PluginManager {
   getPluginConfig(): PluginConfig {
     const config: PluginConfig = {};
 
-    // Use defaultPlugins from PluginLoader if available
-    if (window.customjs?.PluginLoader) {
-      const tempLoader = new PluginLoader(this);
-      tempLoader.defaultPlugins.forEach((plugin) => {
-        config[plugin.url] = plugin.enabled;
+    // Get default plugins from repository manager
+    if (window.customjs?.repoManager) {
+      const allPlugins = window.customjs.repoManager.getAllPlugins();
+      allPlugins.forEach((plugin: PluginRepoMetadata) => {
+        config[plugin.url] = plugin.enabled ?? true;
       });
     }
 
-    // Load from ConfigManager if available
+    // Load from ConfigManager if available (overrides repo defaults)
     if (window.customjs?.configManager) {
       const loadedConfig = window.customjs.configManager.getPluginConfig();
       if (loadedConfig && typeof loadedConfig === "object") {
@@ -1314,7 +1288,20 @@ export class PluginManager {
       this.setupFallbackLogger();
     }
 
-    // Phase 1: Get plugin list from config (merge with defaults)
+    // Phase 0: Initialize PluginRepoManager and load repositories
+    console.log(
+      `%c[CJS|PluginManager] Initializing repository manager...`,
+      `color: ${this.logColor}`
+    );
+    const repoManager = new PluginRepoManager();
+    await repoManager.loadRepositories();
+    
+    console.log(
+      `%c[CJS|PluginManager] Loaded ${repoManager.getAllRepositories().length} repositories with ${repoManager.getAllPlugins().length} plugins`,
+      `color: ${this.logColor}`
+    );
+
+    // Phase 1: Get plugin list from config (merge with defaults from repos)
     const pluginConfig = this.getPluginConfig();
     const enabledPlugins = Object.entries(pluginConfig)
       .filter(([url, enabled]) => enabled)

@@ -9,6 +9,7 @@ import { Logger } from './modules/logger';
 import { utils } from './modules/utils';
 import { ConfigManager, SettingsStore, SettingType, definePluginSettings } from './modules/config';
 import { Plugin, PluginLoader, PluginManager } from './modules/plugin';
+import { PluginRepo, PluginRepoManager } from './modules/repo';
 
 // Show dev tools
 // if (window.AppApi?.ShowDevTools) {
@@ -54,6 +55,8 @@ window.customjs.definePluginSettings = definePluginSettings;
 window.customjs.Plugin = Plugin;
 window.customjs.PluginLoader = PluginLoader;
 window.customjs.PluginManager = PluginManager;
+window.customjs.PluginRepo = PluginRepo;
+window.customjs.PluginRepoManager = PluginRepoManager;
 
 // Note: We don't export to global window scope - plugins get these via destructuring in the loader
 
