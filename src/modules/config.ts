@@ -281,14 +281,13 @@ export function definePluginSettings(definition: Record<string, SettingDefinitio
  * ConfigManager - Manages plugin configuration storage
  */
 export class ConfigManager {
-  version: string = "4.2.0";
   build: string = "1728935100";
   keyPrefix: string = "customjs";
   vrchatConfigPath: string = "%APPDATA%\\..\\LocalLow\\VRChat\\VRChat\\config.json";
 
   constructor() {
     console.log(
-      `[CJS|ConfigManager] ConfigManager v${this.version} (${this.build}) initialized - Equicord-inspired settings system`
+      `[CJS|ConfigManager] ConfigManager (build: ${this.build}) initialized - Equicord-inspired settings system`
     );
   }
 

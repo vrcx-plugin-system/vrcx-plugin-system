@@ -38,8 +38,7 @@ export class Plugin {
       name: metadata.name || pluginId,
       description: metadata.description || "",
       author: metadata.author || "Unknown",
-      version: metadata.version || "1.0.0",
-      build: metadata.build || Date.now().toString(),
+      build: metadata.build || (metadata as any).version || "0",
       url: pluginUrl,
       tags: (metadata as any).tags || [],
     };
@@ -760,7 +759,7 @@ export class PluginManager {
     }
 
     console.log(
-      `%c[CJS|PluginManager] Registered plugin: ${plugin.metadata.name} v${plugin.metadata.version}`,
+      `%c[CJS|PluginManager] Registered plugin: ${plugin.metadata.name} (build: ${plugin.metadata.build})`,
       `color: ${this.logColor}`
     );
     return true;
@@ -1182,7 +1181,7 @@ export class PluginManager {
         if (plugin.enabled && !plugin.started) {
           await plugin.start();
           console.log(
-            `%c[CJS|PluginManager] ✓ Started ${plugin.metadata.name} v${plugin.metadata.version}`,
+            `%c[CJS|PluginManager] ✓ Started ${plugin.metadata.name} (build: ${plugin.metadata.build})`,
             `color: ${this.logColor}`
           );
         }

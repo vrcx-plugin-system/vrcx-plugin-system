@@ -43,7 +43,7 @@ function extractPluginMetadata(filePath, fileName) {
         .join(" "),
       description: "",
       author: "Unknown",
-      version: "1.0.0",
+      build: "?",
       url: `${BASE_URL}/${fileName}`,
       tags: [],
       enabled: DEFAULT_ENABLED.includes(pluginId),
@@ -67,10 +67,10 @@ function extractPluginMetadata(filePath, fileName) {
       metadata.author = authorMatch[1];
     }
 
-    // Extract version
-    const versionMatch = content.match(/version:\s*["']([^"']+)["']/);
-    if (versionMatch) {
-      metadata.version = versionMatch[1];
+    // Extract build
+    const buildMatch = content.match(/build:\s*["']([^"']+)["']/);
+    if (buildMatch) {
+      metadata.build = buildMatch[1];
     }
 
     // Extract tags
@@ -130,8 +130,8 @@ function buildRepository() {
   const repository = {
     name: "VRCX Plugin Repository",
     description: "Default repository for VRCX plugins",
-    author: "VRCX Team",
-    version: "1.0.0",
+    author: "Bluscream",
+    build: Date.now().toString(),
     url: "https://github.com/vrcx-plugin-system/plugins",
     plugins: plugins,
   };

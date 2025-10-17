@@ -5,7 +5,6 @@ export interface PluginMetadata {
   name: string;
   description: string;
   author: string;
-  version: string;
   build: string;
   url: string | null;
   tags?: string[];
@@ -59,7 +58,7 @@ export interface PluginRepoMetadata {
   name: string;
   description: string;
   author: string;
-  version: string;
+  build: string;
   url: string;
   enabled?: boolean;
   tags?: string[];
@@ -69,7 +68,7 @@ export interface PluginRepoData {
   name: string;
   description: string;
   author: string;
-  version: string;
+  build: string;
   url: string;
   plugins: PluginRepoMetadata[];
 }
@@ -82,7 +81,6 @@ export interface RepoConfig {
 declare global {
   interface Window {
     customjs: {
-      version: string;
       build: string;
       logColors: {
         CustomJS: string;
