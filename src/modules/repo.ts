@@ -84,7 +84,7 @@ export class PluginRepoManager {
   
   // Default repositories
   defaultRepos: string[] = [
-    "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/repo.json"
+    "https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/dist/repo.json"
   ];
 
   constructor() {

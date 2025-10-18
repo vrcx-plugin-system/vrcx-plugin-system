@@ -4,13 +4,16 @@
   "description": "VRCX Plugin System - TypeScript-based plugin manager",
   "main": "dist/custom.js",
   "scripts": {
-    "build": "npm run build:repo && webpack --mode production",
-    "build:dev": "npm run build:repo && webpack --mode development",
-    "build:repo": "node build-repo.js",
+    "build": "webpack --mode production",
+    "build:dev": "webpack --mode development",
     "watch": "webpack --mode development --watch",
     "clean": "rimraf dist"
   },
-  "keywords": ["vrcx", "plugins", "vrchat"],
+  "keywords": [
+    "vrcx",
+    "plugins",
+    "vrchat"
+  ],
   "author": "Bluscream",
   "license": "MIT",
   "devDependencies": {

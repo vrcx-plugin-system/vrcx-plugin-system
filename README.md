@@ -159,8 +159,10 @@ https://github.com/vrcx-plugin-system/plugins
 Default plugin URL format:
 
 ```
-https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/{plugin-name}.js
+https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/dist/{plugin-name}.js
 ```
+
+Plugins are now written in TypeScript (`src/plugins/*.ts`) and compiled to JavaScript (`dist/*.js`).
 
 ## Documentation
 

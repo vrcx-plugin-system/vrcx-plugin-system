@@ -423,10 +423,11 @@ See existing plugins:
 
 ## Publishing
 
-1. Create `my-plugin.js`
+1. Create `src/plugins/my-plugin.ts` in TypeScript
 2. Test locally via Plugin Manager UI
-3. Submit PR to [plugins repo](https://github.com/vrcx-plugin-system/plugins)
-4. Available at: `https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/my-plugin.js`
+3. Build with `npm run build` (compiles to `dist/my-plugin.js`)
+4. Submit PR to [plugins repo](https://github.com/vrcx-plugin-system/plugins)
+5. Available at: `https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/dist/my-plugin.js`
 
 ## Support
 
