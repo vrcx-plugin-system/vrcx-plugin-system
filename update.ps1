@@ -484,7 +484,10 @@ Automated build - $timestamp
 - Tests: $($BuildResults.Tests.Passed)/$($BuildResults.Tests.Total) passed
 
 ## Installation
-Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in ``%APPDATA%\VRCX\``
+Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in
+```
+%APPDATA%\VRCX\
+```
 "@
         
         $assetPath = Join-Path $ProjectDir "dist\custom.js"
