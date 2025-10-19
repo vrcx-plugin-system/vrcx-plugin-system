@@ -27,14 +27,20 @@ export const utils = {
   },
 
   /**
-   * Decode Unicode escape sequences in a string (e.g., \u{1F504} → 🔄)
+   * Decode Unicode escape sequences in a string (e.g., \u{1F504} → 🔄, \uFE0F → ️)
    */
   decodeUnicode(str: string): string {
     if (!str) return str;
     try {
-      return str.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (match, code) => {
+      // Handle \u{XXXX} format
+      str = str.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (match, code) => {
         return String.fromCodePoint(parseInt(code, 16));
       });
+      // Handle \uXXXX format (4 hex digits)
+      str = str.replace(/\\u([0-9A-Fa-f]{4})/g, (match, code) => {
+        return String.fromCodePoint(parseInt(code, 16));
+      });
+      return str;
     } catch (err) {
       console.error("decodeUnicode failed:", err);
       return str;
