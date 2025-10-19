@@ -166,12 +166,18 @@ function Show-BuildSummary {
     $tableData = @()
     
     # Core module
+    $coreReduction = if ($BuildResults.Core.TsSize -gt 0) {
+        [math]::Round((1 - ($BuildResults.Core.JsSize / $BuildResults.Core.TsSize)) * 100, 1)
+    } else { 0 }
+    
     $tableData += [PSCustomObject]@{
         Component = "Core System"
         Built     = if ($BuildResults.Core.Built) { "✓" } else { "✗" }
         Committed = if ($BuildResults.Core.Committed) { "✓" } else { "✗" }
         Pushed    = if ($BuildResults.Core.Pushed) { "✓" } else { "✗" }
-        Size      = "$($BuildResults.Core.JsSize) KB"
+        TS        = "$($BuildResults.Core.TsSize) KB"
+        JS        = "$($BuildResults.Core.JsSize) KB"
+        Result    = "-$coreReduction%"
     }
     
     # Plugins
@@ -181,22 +187,33 @@ function Show-BuildSummary {
         Failed = ($BuildResults.Plugins | Where-Object { -not $_.Built }).Count
     }
     
+    $totalTsSize = ($BuildResults.Plugins | Measure-Object -Property TsSize -Sum).Sum
+    $totalJsSize = ($BuildResults.Plugins | Measure-Object -Property JsSize -Sum).Sum
+    $pluginReduction = if ($totalTsSize -gt 0) {
+        [math]::Round((1 - ($totalJsSize / $totalTsSize)) * 100, 1)
+    } else { 0 }
+    
     $tableData += [PSCustomObject]@{
         Component = "Plugins ($($pluginStats.Built)/$($pluginStats.Total))"
         Built     = if ($pluginStats.Built -gt 0) { "✓" } else { "✗" }
         Committed = if ($BuildResults.Core.Committed) { "✓" } else { "✗" }
         Pushed    = if ($BuildResults.Core.Pushed) { "✓" } else { "✗" }
-        Size      = "$(($BuildResults.Plugins | Measure-Object -Property JsSize -Sum).Sum) KB"
+        TS        = "$([math]::Round($totalTsSize, 2)) KB"
+        JS        = "$([math]::Round($totalJsSize, 2)) KB"
+        Result    = "-$pluginReduction%"
     }
     
     # Tests
     if ($BuildResults.Tests.Total -gt 0) {
+        $testResult = if ($BuildResults.Tests.Failed -eq 0) { "PASS" } else { "FAIL" }
         $tableData += [PSCustomObject]@{
             Component = "Tests ($($BuildResults.Tests.Passed)/$($BuildResults.Tests.Total))"
             Built     = if ($BuildResults.Tests.Failed -eq 0) { "✓" } else { "✗" }
             Committed = "-"
             Pushed    = "-"
-            Size      = "$([math]::Round($BuildResults.Tests.Duration / 1000, 1))s"
+            TS        = "-"
+            JS        = "-"
+            Result    = "$testResult $([math]::Round($BuildResults.Tests.Duration / 1000, 1))s"
         }
     }
     
@@ -325,9 +342,16 @@ if ($LASTEXITCODE -ne 0) {
 
 $distFile = Join-Path $ProjectDir "dist\custom.js"
 if (Test-Path $distFile) {
+    # Calculate source TS size
+    $tsFiles = Get-ChildItem -Path (Join-Path $ProjectDir "src") -Recurse -Filter "*.ts"
+    $tsTotalSize = ($tsFiles | Measure-Object -Property Length -Sum).Sum
+    
     $BuildResults.Core.Built = $true
+    $BuildResults.Core.TsSize = [math]::Round($tsTotalSize / 1KB, 2)
     $BuildResults.Core.JsSize = Get-FileSize $distFile
-    Write-Success "Core built successfully ($($BuildResults.Core.JsSize) KB)"
+    
+    $reduction = [math]::Round((1 - ($BuildResults.Core.JsSize / $BuildResults.Core.TsSize)) * 100, 1)
+    Write-Success "Core built successfully ($($BuildResults.Core.TsSize) KB → $($BuildResults.Core.JsSize) KB, -$reduction%)"
 }
 else {
     Write-Failure "Build output not found"
@@ -367,13 +391,16 @@ if (Test-Path $PluginsDir) {
                 
                 # Track each plugin
                 foreach ($module in $repoContent.modules) {
-                    $pluginFile = Join-Path $PluginsDir "dist\$($module.id).js"
+                    $pluginTsFile = Join-Path $PluginsDir "src\plugins\$($module.id).ts"
+                    $pluginJsFile = Join-Path $PluginsDir "dist\$($module.id).js"
+                    
                     $BuildResults.Plugins += @{
                         Name      = $module.name
                         Id        = $module.id
                         Path      = "dist\$($module.id).js"
-                        Built     = (Test-Path $pluginFile)
-                        JsSize    = (Get-FileSize $pluginFile)
+                        Built     = (Test-Path $pluginJsFile)
+                        TsSize    = (Get-FileSize $pluginTsFile)
+                        JsSize    = (Get-FileSize $pluginJsFile)
                         Committed = $false
                         Pushed    = $false
                     }
