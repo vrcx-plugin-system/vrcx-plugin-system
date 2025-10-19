@@ -34,6 +34,7 @@ export class SettingsStore {
   private options: any;
   private pathListeners: Map<string, Set<Function>>;
   private globalListeners: Set<Function>;
+  private definitions: Record<string, SettingDefinition>;
   store: any;
 
   constructor(plain: Record<string, any> = {}, options: any = {}) {
@@ -41,6 +42,7 @@ export class SettingsStore {
     this.options = options;
     this.pathListeners = new Map();
     this.globalListeners = new Set();
+    this.definitions = options.definitions || {};
 
     // Create proxy for reactive access
     this.store = this.makeProxy(this.plain);
@@ -79,8 +81,24 @@ export class SettingsStore {
         const oldValue = obj[key];
         if (oldValue === value) return true;
 
-        obj[key] = value;
         const fullPath = path ? `${path}.${key}` : key;
+        
+        // Validate min/max for number and timespan types
+        const definition = self.definitions[fullPath];
+        if (definition && (definition.type === 'number' || definition.type === 'timespan')) {
+          if (typeof value === 'number') {
+            if (definition.min !== undefined && value < definition.min) {
+              console.warn(`[SettingsStore] Value ${value} is below minimum ${definition.min} for ${fullPath}, clamping to min`);
+              value = definition.min;
+            }
+            if (definition.max !== undefined && value > definition.max) {
+              console.warn(`[SettingsStore] Value ${value} is above maximum ${definition.max} for ${fullPath}, clamping to max`);
+              value = definition.max;
+            }
+          }
+        }
+
+        obj[key] = value;
 
         // Notify listeners
         self.notifyListeners(fullPath, value);
@@ -188,6 +206,7 @@ export function definePluginSettings(definition: Record<string, SettingDefinitio
   // Create settings store with change listener that saves to localStorage
   const settingsStore = new SettingsStore(plainSettings, {
     getDefaultValue,
+    definitions: definition
   });
 
   // Auto-save to localStorage on any change

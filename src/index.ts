@@ -16,7 +16,7 @@ import { ModuleRepository, repositoryMetadata, loadRepositories, addRepository, 
 // Initialize window.customjs
 window.customjs = {
   sourceUrl: 'https://github.com/vrcx-plugin-system/vrcx-plugin-system/raw/refs/heads/main/src/index.ts',
-  build: 1760885000, // AUTO-GENERATED BUILD TIMESTAMP
+  build: 1760885596, // AUTO-GENERATED BUILD TIMESTAMP
   modules: [],
   repos: [],
   subscriptions: new Map(),

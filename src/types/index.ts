@@ -23,6 +23,8 @@ export interface ModuleMetadata {
   build?: string;
   url?: string | null;
   tags?: string[];
+  required_dependencies?: string[];
+  optional_dependencies?: string[];
 }
 
 export interface ResourceTracking {
@@ -62,6 +64,8 @@ export interface SettingDefinition {
   options?: Array<{label: string; value: any; default?: boolean}>;
   hidden?: boolean;
   variables?: Record<string, string>;
+  min?: number;
+  max?: number;
 }
 
 export interface PluginConfig {
