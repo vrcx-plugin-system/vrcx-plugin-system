@@ -16,44 +16,115 @@ TypeScript-based extensible plugin system for VRCX with hot-reload support, sett
 - ✅ **Testing** - Comprehensive Jest test suite
 - ✅ **Min/max validation** - Built-in setting value clamping
 
-## Quick Start
+## Installation
 
-### Installation
+### For Users
+
+1. **Download the latest release:**
+
+   Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js)
+
+2. **Place in VRCX directory:**
+
+   Copy `custom.js` to `%APPDATA%\VRCX\`
+
+   (On Windows, paste `%APPDATA%\VRCX\` into File Explorer's address bar)
+
+3. **Restart VRCX**
+
+That's it! The plugin system will load automatically.
+
+### For Developers
+
+If you want to build from source or contribute:
+
+#### Prerequisites
+
+- Node.js (v16 or higher)
+- PowerShell (for build script)
+- Git (optional, for releases)
+
+#### Setup
+
+1. **Clone the repository:**
 
 ```bash
-cd vrcx-plugin-system
+git clone https://github.com/vrcx-plugin-system/vrcx-plugin-system
+cd vrcx-plugin-system/vrcx-plugin-system
+```
+
+2. **Install dependencies:**
+
+```bash
 npm install
 ```
 
-### Build
-
-```bash
-npm run build
-```
-
-Outputs `dist/custom.js` which should be placed in `%APPDATA%\VRCX\`.
-
-### Development
-
-```bash
-npm run watch
-```
-
-Auto-rebuilds on file changes.
-
-### Automated Build & Deploy
+3. **Build and deploy:**
 
 ```powershell
 .\update.ps1
 ```
 
-Complete build pipeline that:
+This runs tests, builds the system, and copies to `%APPDATA%\VRCX\`.
 
-- ✅ Runs tests
-- ✅ Updates build timestamp
-- ✅ Builds core system
-- ✅ Deploys to AppData
-- ✅ Shows detailed build summary with size metrics
+#### Development Workflow
+
+**Watch Mode** (auto-rebuild on changes):
+
+```bash
+npm run watch
+```
+
+**Manual Build Steps:**
+
+```bash
+# Run tests
+npm test
+
+# Build the system
+npm run build
+
+# Copy to VRCX
+copy dist\custom.js %APPDATA%\VRCX\
+```
+
+**Hot Reload:**
+
+After updating `custom.js`, reload VRCX to test changes.
+
+#### Build Script Options
+
+```powershell
+.\update.ps1 --skip-tests     # Skip Jest tests
+.\update.ps1 --skip-deploy    # Don't copy to AppData
+.\update.ps1 --no-timestamp   # Don't update build timestamp
+.\update.ps1 --skip-git       # Skip git operations
+```
+
+#### Build Output
+
+The build script provides a detailed summary:
+
+```
+╔════════════════════════════════════════════════════════════╗
+║                     BUILD SUMMARY                          ║
+╠════════════════════════════════════════════════════════════╣
+
+Core System:
+  TS Size:     41.25 KB
+  JS Size:     41.80 KB
+  Reduction:   -1.3%
+
+Tests:
+  Passed:      59
+  Failed:      0
+  Total:       59
+
+Build: ✓ SUCCESS
+Deploy: ✓ SUCCESS
+```
+
+The script automatically creates a GitHub release with the built `custom.js` file.
 
 ## Architecture
 
