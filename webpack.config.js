@@ -32,7 +32,7 @@ module.exports = (env, argv) => {
               drop_console: false,
             },
             mangle: {
-              keep_classnames: true,
+              keep_classnames: false,
               keep_fnames: true,
             },
             format: {
