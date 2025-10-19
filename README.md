@@ -1,137 +1,396 @@
 # VRCX Plugin System
 
-TypeScript-based plugin management system for VRCX.
+TypeScript-based extensible plugin system for VRCX with hot-reload support, settings management, and comprehensive APIs.
 
 ## Features
 
-- **TypeScript-first**: Full type safety and IDE support
-- **Hot-reloadable**: Load plugins without restarting VRCX
-- **Repository system**: Install plugins from remote repositories
-- **Settings management**: Equicord-style settings with UI integration
-- **Hook system**: Intercept and modify VRCX functions
-- **Event system**: Publish/subscribe event handling
-- **Resource management**: Automatic cleanup on plugin unload
-- **Automatic timestamps**: Build timestamps update based on source file modification times
+- ✅ **TypeScript-first** - Full type safety with IDE autocomplete
+- ✅ **Hot-reload** - Load/reload plugins without restarting VRCX
+- ✅ **Repository system** - Install plugins from remote repositories
+- ✅ **Settings management** - Equicord-style settings with categories and validation
+- ✅ **Dependency resolution** - Required and optional dependencies with timeouts
+- ✅ **Hook system** - Intercept and modify any function
+- ✅ **Event system** - Publish/subscribe pattern for plugin communication
+- ✅ **Resource management** - Automatic cleanup of timers, listeners, observers
+- ✅ **Parallel loading** - Optimized startup with concurrent module fetching
+- ✅ **Testing** - Comprehensive Jest test suite
+- ✅ **Min/max validation** - Built-in setting value clamping
 
 ## Quick Start
 
 ### Installation
 
-1. Clone this repository
-2. Install dependencies:
-
 ```bash
+cd vrcx-plugin-system
 npm install
 ```
 
-3. Build the system:
+### Build
 
 ```bash
 npm run build
 ```
 
-4. Copy `dist/custom.js` to `%APPDATA%\VRCX\`
+Outputs `dist/custom.js` which should be placed in `%APPDATA%\VRCX\`.
 
 ### Development
-
-Watch mode for development:
 
 ```bash
 npm run watch
 ```
 
-Build production version:
+Auto-rebuilds on file changes.
 
-```bash
-npm run build
-```
-
-Clean build:
-
-```bash
-npm run clean
-npm run build
-```
-
-## Building
-
-Run the update script (recommended):
+### Automated Build & Deploy
 
 ```powershell
 .\update.ps1
 ```
 
-Builds and copies `custom.js` to `%APPDATA%\VRCX\`.
+Complete build pipeline that:
 
-**Note:** The build system automatically updates the build timestamp in `src/index.ts` based on the most recent file modification time in the `src/` directory.
+- ✅ Runs tests
+- ✅ Updates build timestamp
+- ✅ Builds core system
+- ✅ Deploys to AppData
+- ✅ Shows detailed build summary with size metrics
 
-### Build Process
+## Architecture
 
-1. **Pre-build**: Runs `update-build.js` to update timestamp
-   - Scans all `.ts` and `.js` files in `src/`
-   - Finds the most recently modified file
-   - Updates `build: "XXXXX"` in `src/index.ts`
-2. **Webpack**: Bundles TypeScript into `dist/custom.js`
-   - Production mode: Minified
-   - Development mode: Non-minified
+### Core Modules
 
-## Plugins Repository
+| Module               | File                | Purpose                                 |
+| -------------------- | ------------------- | --------------------------------------- |
+| **CustomModule**     | `custom-module.ts`  | Base class for all plugins              |
+| **Module**           | `module.ts`         | Base class for core and custom modules  |
+| **ModuleHelpers**    | `module-helpers.ts` | Module loading and lifecycle management |
+| **ModuleRepository** | `repository.ts`     | Repository fetching and management      |
+| **ConfigManager**    | `config.ts`         | Settings and configuration system       |
+| **Utils**            | `utils.ts`          | Utility functions (clipboard, etc.)     |
 
-Plugins live in a separate repository:
-https://github.com/vrcx-plugin-system/plugins
+### Type System
 
-Default plugin URL format:
+All types defined in `src/types/index.ts`:
+
+| Type                 | Purpose                            |
+| -------------------- | ---------------------------------- |
+| `ModuleMetadata`     | Plugin metadata structure          |
+| `SettingDefinition`  | Setting configuration with min/max |
+| `CustomActionButton` | Action button interface            |
+| `ModuleLogger`       | Logging interface                  |
+| `SettingType`        | Enum of setting types              |
+
+## Plugin Development
+
+### Extending CustomModule
+
+```typescript
+class MyPlugin extends CustomModule {
+  constructor() {
+    super({
+      name: 'My Plugin 🎯',
+      description: 'What it does',
+      authors: [{name: 'Me', userId: 'usr_xxx'}],
+      tags: ['Utility'],
+      required_dependencies: ['dialog-api'],
+      optional_dependencies: ['plugin-analyzer']
+    });
+  }
+
+  async load() {
+    this.settings = this.defineSettings({...});
+    this.loaded = true;
+  }
+
+  async start() {
+    this.started = true;
+  }
+
+  async stop() {
+    await super.stop();
+  }
+}
+
+window.customjs.__LAST_PLUGIN_CLASS__ = MyPlugin;
+```
+
+### Settings with Validation
+
+```typescript
+this.settings = this.defineSettings({
+  interval: {
+    type: SettingType.TIMESPAN,
+    description: "Update interval",
+    default: 60000,
+    min: 5000, // 5 seconds minimum
+    max: 3600000, // 1 hour maximum
+  },
+  volume: {
+    type: SettingType.NUMBER,
+    description: "Volume level",
+    default: 50,
+    min: 0,
+    max: 100,
+  },
+});
+```
+
+Values are automatically clamped to min/max when set.
+
+### Resource Management
+
+```typescript
+// All automatically cleaned up on plugin.stop()
+this.registerTimer(setInterval(() => {}, 1000));
+this.registerObserver(new MutationObserver(() => {}));
+this.registerListener(button, "click", () => {});
+this.registerSubscription(unsubscribeFn);
+this.registerPreHook("path.to.function", (args) => {});
+```
+
+### Dialog Helpers
+
+```typescript
+// Automatic fallback to native confirm/alert
+const confirmed = await this.showConfirmDialog(
+  "Title",
+  "Message",
+  "Confirm",
+  "Cancel"
+);
+
+await this.showAlertDialog("Title", "Message", "OK");
+```
+
+## Module Loading
+
+### Parallel Optimization
+
+Modules load in three phases:
+
+1. **Fetch** (parallel) - All module code downloaded simultaneously
+2. **Initialize** (parallel) - All `load()` methods called concurrently
+3. **Start** (sequential with dependencies) - Respects dependency order
+
+### Dependency Resolution
+
+**Required Dependencies:**
+
+- Module waits up to 10 seconds for each
+- Throws error if unavailable
+- Module fails to start if any missing
+
+**Optional Dependencies:**
+
+- Module waits up to 2 seconds for each
+- Logs warning if unavailable
+- Module continues without them
+
+## Testing
+
+### Run Tests
+
+```bash
+npm test
+```
+
+### Test Coverage
+
+```bash
+npm run test:coverage
+```
+
+### Watch Mode
+
+```bash
+npm run test:watch
+```
+
+### Test Suites
+
+| Suite            | File                       | Tests    |
+| ---------------- | -------------------------- | -------- |
+| Module           | `module.test.ts`           | 8 tests  |
+| CustomModule     | `custom-module.test.ts`    | 10 tests |
+| Module Helpers   | `module-helpers.test.ts`   | 12 tests |
+| Utils            | `utils.test.ts`            | 8 tests  |
+| Repository       | `repository.test.ts`       | 7 tests  |
+| Parallel Loading | `parallel-loading.test.ts` | 6 tests  |
+| Lifecycle        | `lifecycle.test.ts`        | 8 tests  |
+
+**Total: 59 tests** ensuring core functionality works correctly.
+
+## Build System
+
+### update.ps1 Features
+
+| Feature              | Description                            |
+| -------------------- | -------------------------------------- |
+| **Testing**          | Runs Jest tests before building        |
+| **Timestamp Update** | Updates build number in `src/index.ts` |
+| **Build**            | Compiles TypeScript with webpack       |
+| **Size Metrics**     | Tracks TS→JS size reduction            |
+| **Deployment**       | Copies to `%APPDATA%\VRCX\`            |
+| **Build Summary**    | Shows detailed table with all metrics  |
+
+### Build Flags
+
+| Flag             | Purpose                     |
+| ---------------- | --------------------------- |
+| `--no-timestamp` | Skip build timestamp update |
+| `--skip-tests`   | Skip Jest test execution    |
+| `--skip-deploy`  | Skip copying to AppData     |
+| `--skip-git`     | Skip git operations         |
+
+### Example Output
 
 ```
-https://github.com/vrcx-plugin-system/plugins/raw/refs/heads/main/dist/{plugin-name}.js
+╔════════════════════════════════════════════════════════════╗
+║                     BUILD SUMMARY                          ║
+╠════════════════════════════════════════════════════════════╣
+
+Core System:
+  TS Size:     41.25 KB
+  JS Size:     41.80 KB
+  Reduction:   -1.3%
+
+Tests:
+  Passed:      59
+  Failed:      0
+  Total:       59
+
+Build: ✓ SUCCESS
+Deploy: ✓ SUCCESS
 ```
-
-Plugins are now written in TypeScript (`src/plugins/*.ts`) and compiled to JavaScript (`dist/*.js`).
-
-## Documentation
-
-- **[Plugin Development](docs/plugins.md)** - Complete plugin guide with examples
-- **[API Reference](docs/api-reference.md)** - Full API documentation
 
 ## Configuration
 
 ### TypeScript (tsconfig.json)
 
-- Target: ES2020
-- Strict mode enabled
-- No source maps (for bundle size)
+```json
+{
+  "target": "ES2020",
+  "module": "ESNext",
+  "strict": true,
+  "moduleResolution": "node"
+}
+```
 
 ### Webpack (webpack.config.js)
 
-- Entry: `src/index.ts`
-- Output: `dist/custom.js`
-- Minification: TerserPlugin (production only)
-- No source maps
+```javascript
+{
+  entry: './src/index.ts',
+  output: 'dist/custom.js',
+  mode: 'production',
+  optimization: {
+    minimize: true
+  }
+}
+```
+
+## Global API
+
+### window.customjs
+
+| Property        | Type                 | Description            |
+| --------------- | -------------------- | ---------------------- |
+| `modules`       | `CustomModule[]`     | All loaded modules     |
+| `repos`         | `ModuleRepository[]` | All repositories       |
+| `configManager` | `ConfigManager`      | Settings manager       |
+| `types`         | `{SettingType}`      | Type enums             |
+| `classes`       | `{CustomModule}`     | Class references       |
+| `sourceUrl`     | `string`             | Core system source URL |
+| `build`         | `number`             | Build timestamp        |
+
+### Functions
+
+| Function                 | Parameters     | Returns                     | Description             |
+| ------------------------ | -------------- | --------------------------- | ----------------------- |
+| `getModule()`            | `id: string`   | `CustomModule \| undefined` | Get module by ID        |
+| `reloadModule()`         | `id: string`   | `Promise<Result>`           | Reload module           |
+| `waitForModule()`        | `id, timeout?` | `Promise<CustomModule>`     | Wait for module to load |
+| `definePluginSettings()` | `def, plugin`  | `ModuleSettings`            | Define plugin settings  |
 
 ## Project Structure
 
 ```
 vrcx-plugin-system/
 ├── src/
-│   ├── index.ts           # Entry point (contains build timestamp)
+│   ├── index.ts              # Entry point, global initialization
 │   ├── modules/
-│   │   ├── plugin.ts      # Plugin base class & manager
-│   │   ├── repo.ts        # Repository management
-│   │   ├── config.ts      # Settings & configuration
-│   │   ├── logger.ts      # Logging system
-│   │   └── utils.ts       # Utility functions
+│   │   ├── module.ts         # Base Module class
+│   │   ├── custom-module.ts  # CustomModule class with APIs
+│   │   ├── module-helpers.ts # Loading and lifecycle
+│   │   ├── repository.ts     # Repository management
+│   │   ├── config.ts         # Settings and config
+│   │   └── utils.ts          # Utility functions
 │   └── types/
-│       └── index.ts       # TypeScript type definitions
+│       └── index.ts          # TypeScript definitions
+├── tests/                    # Jest test suites
 ├── dist/
-│   └── custom.js          # Built output
+│   └── custom.js             # Built output
 ├── docs/
-│   ├── plugins.md         # Plugin development guide
-│   └── api-reference.md   # API documentation
-├── update-build.js        # Timestamp update script
-├── webpack.config.js      # Webpack configuration
-├── tsconfig.json          # TypeScript configuration
-└── package.json           # NPM configuration
+│   ├── api-reference.md      # Complete API docs
+│   └── plugins.md            # Plugin development guide
+├── webpack.config.js
+├── tsconfig.json
+├── jest.config.js
+├── package.json
+└── update.ps1                # Build and deployment script
 ```
+
+## Development Workflow
+
+1. **Edit source**: Modify TypeScript files
+2. **Run tests**: `npm test` to verify changes
+3. **Build**: `npm run build` or use watch mode
+4. **Deploy**: Copy `dist/custom.js` to `%APPDATA%\VRCX\`
+5. **Test in VRCX**: Reload VRCX or use hot-reload
+6. **Iterate**: Repeat until satisfied
+
+### Automated Workflow
+
+```powershell
+.\update.ps1
+```
+
+Does everything automatically with detailed logging.
+
+## Troubleshooting
+
+| Issue                  | Solution                                |
+| ---------------------- | --------------------------------------- |
+| Build fails            | Check TypeScript errors, run `npm test` |
+| Plugin not loading     | Verify class export, check console      |
+| Settings not appearing | Check `defineSettings()` syntax         |
+| Dependencies timeout   | Verify dependency IDs, check load order |
+| Tests failing          | Fix breaking changes, update tests      |
+
+## Performance
+
+### Load Time Optimizations
+
+| Optimization            | Benefit                             |
+| ----------------------- | ----------------------------------- |
+| Parallel fetching       | All modules download simultaneously |
+| Parallel initialization | `load()` methods run concurrently   |
+| Script execution lock   | Prevents race conditions            |
+| Dependency batching     | Groups by dependency requirements   |
+
+### Typical Load Times
+
+- **Fetch 21 modules**: ~2 seconds (parallel)
+- **Initialize**: ~200ms (parallel)
+- **Start with deps**: ~3 seconds (sequential)
+- **Total**: ~5-6 seconds for full system
+
+## Security
+
+- Plugins run in browser context with full access
+- Only install plugins from trusted sources
+- Review plugin code before enabling
+- Use Plugin Analyzer to inspect code
 
 ## Links
 
