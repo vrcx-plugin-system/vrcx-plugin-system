@@ -50,6 +50,7 @@ export class CustomModule extends Module {
   private scriptElement?: HTMLScriptElement;
   private static loadedUrls: Set<string> = new Set();
   private static failedUrls: Set<string> = new Set();
+  private static scriptExecutionLock: Promise<void> = Promise.resolve();
 
   constructor(metadata: Partial<ModuleMetadata> = {}) {
     const moduleUrl = metadata.url || window.customjs?.__currentPluginUrl || null;
@@ -572,7 +573,7 @@ export class CustomModule extends Module {
    */
   static async loadFromUrl(moduleUrl: string, retries: number = 0, maxRetries: number = 3): Promise<CustomModule | null> {
     try {
-      console.log(`%c[CJS|CustomModule] Loading module: ${moduleUrl}`, 'color: #888888');
+      console.log(`%c[CJS|CustomModule] Fetching module: ${moduleUrl}`, 'color: #888888');
 
       const response = await fetch(moduleUrl + "?v=" + Date.now());
       if (!response.ok) {
@@ -580,7 +581,18 @@ export class CustomModule extends Module {
       }
 
       const moduleCode = await response.text();
-      const moduleCountBefore = window.customjs.modules?.length || 0;
+      
+      // Wait for any previous script execution to complete (prevents race conditions)
+      await CustomModule.scriptExecutionLock;
+      
+      // Create a new lock for this execution
+      let releaseLock!: () => void;
+      CustomModule.scriptExecutionLock = new Promise<void>(resolve => {
+        releaseLock = () => resolve();
+      });
+      
+      try {
+        const moduleCountBefore = window.customjs.modules?.length || 0;
 
       // Wrap in IIFE to isolate scope and inject common classes
       const wrappedCode = `(function() { 
@@ -633,10 +645,16 @@ export class CustomModule extends Module {
         (newModule as CustomModule).scriptElement = script;
         CustomModule.loadedUrls.add(moduleUrl);
         console.log(`%c[CJS|CustomModule] ✓ Loaded ${newModule.metadata.name}`, 'color: #888888');
+        releaseLock!(); // Release lock for next module
         return newModule;
       }
 
+      releaseLock!(); // Release lock even on failure
       throw new Error("Module did not register itself");
+      } catch (execError) {
+        releaseLock!(); // Release lock on execution error
+        throw execError;
+      }
     } catch (error) {
       if (retries < maxRetries) {
         console.warn(`%c[CJS|CustomModule] Retry ${retries + 1}/${maxRetries} for: ${moduleUrl}`, 'color: #888888');

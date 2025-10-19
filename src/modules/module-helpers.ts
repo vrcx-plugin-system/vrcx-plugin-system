@@ -177,36 +177,33 @@ export async function loadAllModules(): Promise<void> {
     .filter(([url, enabled]) => enabled)
     .map(([url]) => url);
 
-  console.log(`%c[CJS|ModuleSystem] Loading ${enabledModules.length} modules from config...`, `color: ${logColor}`);
+  console.log(`%c[CJS|ModuleSystem] Fetching ${enabledModules.length} module(s) in parallel...`, `color: ${logColor}`);
 
-  let loadedCount = 0;
-  let failedCount = 0;
+  // Fetch all module code in parallel for faster loading
+  const fetchResults = await Promise.allSettled(
+    enabledModules.map(moduleUrl => CustomModule.loadFromUrl(moduleUrl))
+  );
 
-  for (const moduleUrl of enabledModules) {
-    const module = await CustomModule.loadFromUrl(moduleUrl);
-    if (module) {
-      loadedCount++;
-    } else {
-      failedCount++;
-    }
-  }
+  const loadedCount = fetchResults.filter(r => r.status === 'fulfilled' && r.value).length;
+  const failedCount = fetchResults.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value)).length;
 
-  console.log(`%c[CJS|ModuleSystem] Module code loading complete. Loaded: ${loadedCount}, Failed: ${failedCount}`, `color: ${logColor}`);
+  console.log(`%c[CJS|ModuleSystem] Module code fetched. Loaded: ${loadedCount}, Failed: ${failedCount}`, `color: ${logColor}`);
 
-  // Call load() on all modules
-  console.log(`%c[CJS|ModuleSystem] Calling load() on ${window.customjs.modules.length} modules...`, `color: ${logColor}`);
+  // Call load() on all modules in parallel
+  console.log(`%c[CJS|ModuleSystem] Initializing ${window.customjs.modules.length} module(s) in parallel...`, `color: ${logColor}`);
   
-  for (const module of window.customjs.modules) {
+  await Promise.all(window.customjs.modules.map(async (module) => {
     try {
       if (module.metadata.url && moduleConfig[module.metadata.url] !== undefined) {
         module.enabled = moduleConfig[module.metadata.url];
       }
       
       await module.load();
+      console.log(`%c[CJS|ModuleSystem]   ✓ Initialized ${module.metadata.name}`, `color: ${logColor}`);
     } catch (error) {
-      console.error(`%c[CJS|ModuleSystem] ✗ Error loading ${module.metadata.name}:`, `color: ${logColor}`, error);
+      console.error(`%c[CJS|ModuleSystem]   ✗ Error initializing ${module.metadata.name}:`, `color: ${logColor}`, error);
     }
-  }
+  }));
 
   // Call start() on enabled modules
   await startAllModules();
@@ -225,27 +222,43 @@ export async function startAllModules(): Promise<void> {
   
   console.log(`%c[CJS|ModuleSystem] Starting enabled modules...`, `color: ${logColor}`);
 
-  for (const module of window.customjs.modules) {
+  // Build dependency graph
+  const modulesWithDeps = window.customjs.modules.filter(m => m.enabled && !m.started);
+  const noDeps = modulesWithDeps.filter(m => !(m as any).dependencies || (m as any).dependencies.length === 0);
+  const withDeps = modulesWithDeps.filter(m => (m as any).dependencies && (m as any).dependencies.length > 0);
+  
+  // Start modules without dependencies in parallel
+  if (noDeps.length > 0) {
+    console.log(`%c[CJS|ModuleSystem] Starting ${noDeps.length} modules without dependencies in parallel...`, `color: ${logColor}`);
+    await Promise.all(noDeps.map(async (module) => {
+      try {
+        await module.start();
+        console.log(`%c[CJS|ModuleSystem] ✓ Started ${module.metadata.name}`, `color: ${logColor}`);
+      } catch (error) {
+        console.error(`%c[CJS|ModuleSystem] ✗ Error starting ${module.metadata.name}:`, `color: ${logColor}`, error);
+      }
+    }));
+  }
+  
+  // Start modules with dependencies sequentially (they need to wait for deps)
+  for (const module of withDeps) {
     try {
-      if (module.enabled && !module.started) {
-        // Check and wait for dependencies before starting
-        if ((module as any).dependencies && (module as any).dependencies.length > 0) {
-          console.log(`%c[CJS|ModuleSystem] Waiting for ${(module as any).dependencies.length} dependencies for ${module.metadata.name}...`, `color: ${logColor}`);
-          
-          for (const depId of (module as any).dependencies) {
-            try {
-              await waitForModule(depId, 10000);
-              console.log(`%c[CJS|ModuleSystem]   ✓ Dependency ready: ${depId}`, `color: ${logColor}`);
-            } catch (error) {
-              console.error(`%c[CJS|ModuleSystem]   ✗ Dependency failed: ${depId}`, `color: ${logColor}`, error);
-              throw new Error(`Dependency ${depId} not available for ${module.metadata.name}`);
-            }
+      if ((module as any).dependencies && (module as any).dependencies.length > 0) {
+        console.log(`%c[CJS|ModuleSystem] Waiting for ${(module as any).dependencies.length} dependencies for ${module.metadata.name}...`, `color: ${logColor}`);
+        
+        for (const depId of (module as any).dependencies) {
+          try {
+            await waitForModule(depId, 10000);
+            console.log(`%c[CJS|ModuleSystem]   ✓ Dependency ready: ${depId}`, `color: ${logColor}`);
+          } catch (error) {
+            console.error(`%c[CJS|ModuleSystem]   ✗ Dependency failed: ${depId}`, `color: ${logColor}`, error);
+            throw new Error(`Dependency ${depId} not available for ${module.metadata.name}`);
           }
         }
-        
-        await module.start();
-        console.log(`%c[CJS|ModuleSystem] ✓ Started ${module.metadata.name} (build: ${module.metadata.build})`, `color: ${logColor}`);
       }
+      
+      await module.start();
+      console.log(`%c[CJS|ModuleSystem] ✓ Started ${module.metadata.name}`, `color: ${logColor}`);
     } catch (error) {
       console.error(`%c[CJS|ModuleSystem] ✗ Error starting ${module.metadata.name}:`, `color: ${logColor}`, error);
     }
