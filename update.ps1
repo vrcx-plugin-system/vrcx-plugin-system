@@ -312,6 +312,65 @@ $fileSize = (Get-Item $distFile).Length
 $fileSizeKB = [math]::Round($fileSize / 1KB, 2)
 Write-Host "[SUCCESS] Build output size: $fileSizeKB KB" -ForegroundColor Green
 
+# Build plugins repository
+Write-Host ""
+Write-Host "=== Build Plugins Repository ===" -ForegroundColor Cyan
+
+$PluginsDir = Join-Path $PluginSystemRoot "plugins"
+if (Test-Path $PluginsDir) {
+    Write-Host "Plugins directory found: $PluginsDir" -ForegroundColor Gray
+    
+    # Save current location
+    $CurrentDir = Get-Location
+    
+    try {
+        Set-Location $PluginsDir
+        
+        # Check if node_modules exists
+        if (-not (Test-Path "node_modules")) {
+            Write-Host "Installing plugin dependencies..." -ForegroundColor Yellow
+            npm install
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "[WARNING] Failed to install plugin dependencies" -ForegroundColor Yellow
+            }
+            else {
+                Write-Host "[SUCCESS] Plugin dependencies installed" -ForegroundColor Green
+            }
+        }
+        
+        # Build plugins
+        Write-Host "Building plugins..." -ForegroundColor Yellow
+        npm run build
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "[SUCCESS] Plugins built successfully" -ForegroundColor Green
+            
+            # Check if repo.json was created
+            $repoFile = Join-Path $PluginsDir "dist\repo.json"
+            if (Test-Path $repoFile) {
+                $repoContent = Get-Content $repoFile -Raw | ConvertFrom-Json
+                $pluginCount = $repoContent.plugins.Count
+                Write-Host "[SUCCESS] Repository metadata created: $pluginCount plugins" -ForegroundColor Green
+            }
+        }
+        else {
+            Write-Host "[WARNING] Plugin build failed, continuing anyway..." -ForegroundColor Yellow
+        }
+    }
+    catch {
+        $errorMsg = $_.Exception.Message
+        Write-Host "[WARNING] Error building plugins: $errorMsg" -ForegroundColor Yellow
+    }
+    finally {
+        # Return to original directory
+        Set-Location $CurrentDir
+    }
+}
+else {
+    Write-Host "[WARNING] Plugins directory not found: $PluginsDir" -ForegroundColor Yellow
+    Write-Host "Skipping plugin build..." -ForegroundColor Gray
+}
+
 # Copy to VRCX directory
 Write-Host ""
 Write-Host "=== Deploy ===" -ForegroundColor Cyan
