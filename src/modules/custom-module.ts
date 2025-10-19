@@ -437,6 +437,41 @@ export class CustomModule extends Module {
     return categories;
   }
 
+  /**
+   * Show a confirmation dialog with fallback to native confirm()
+   */
+  async showConfirmDialog(title: string, message: string, confirmText: string = 'OK', cancelText: string = 'Cancel'): Promise<boolean> {
+    try {
+      const dialogApi = (window as any).customjs?.getModule?.('dialog-api');
+      if (dialogApi?.showConfirmDialogAsync) {
+        return await dialogApi.showConfirmDialogAsync(title, message, 'info', confirmText, cancelText);
+      }
+    } catch (error) {
+      this.warn(`Dialog API error, falling back to native confirm: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
+    // Fallback to native confirm
+    return confirm(`${title}\n\n${message}\n\n[${confirmText}] or [${cancelText}]?`);
+  }
+
+  /**
+   * Show an alert dialog with fallback to native alert()
+   */
+  async showAlertDialog(title: string, message: string, confirmText: string = 'OK'): Promise<void> {
+    try {
+      const dialogApi = (window as any).customjs?.getModule?.('dialog-api');
+      if (dialogApi?.showConfirmDialogAsync) {
+        await dialogApi.showConfirmDialogAsync(title, message, 'info', confirmText, '');
+        return;
+      }
+    } catch (error) {
+      this.warn(`Dialog API error, falling back to native alert: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    
+    // Fallback to native alert
+    alert(`${title}\n\n${message}`);
+  }
+
   get(key: string, defaultValue: any = null): any {
     if (!window.customjs?.configManager) {
       this.warn("ConfigManager not available");
