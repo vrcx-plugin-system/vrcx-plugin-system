@@ -15,6 +15,7 @@ import { ModuleRepository, repositoryMetadata, loadRepositories, addRepository, 
 
 // Initialize window.customjs
 window.customjs = {
+  build: 0, // AUTO-GENERATED BUILD TIMESTAMP
   modules: [],
   repos: [],
   subscriptions: new Map(),

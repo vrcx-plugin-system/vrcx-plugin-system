@@ -100,6 +100,7 @@ export interface RepoConfig {
 declare global {
   interface Window {
     customjs: {
+      build: number;
       modules: any[];
       repos: any[];
       subscriptions: Map<string, Set<() => void>>;

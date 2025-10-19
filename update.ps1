@@ -96,6 +96,11 @@ function Get-FileSize {
     return 0
 }
 
+function Get-UnixTimestamp {
+    param([datetime]$Date = (Get-Date))
+    return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End $Date).TotalSeconds)
+}
+
 function Invoke-GitOperation {
     param(
         [string]$RepoPath,
@@ -238,7 +243,13 @@ function Show-BuildSummary {
 # MAIN SCRIPT
 # ============================================================================
 
+# Initialize timestamps for script execution
+$ScriptStartTime = Get-Date
+$ScriptTimestamp = $ScriptStartTime.ToString("yyyy-MM-dd HH:mm:ss")
+$ScriptUnixTimestamp = Get-UnixTimestamp -Date $ScriptStartTime
+
 Write-Section "VRCX Plugin System Build & Update"
+Write-Host "Timestamp: $ScriptTimestamp" -ForegroundColor Gray
 Write-Host "Project: $ProjectDir" -ForegroundColor Gray
 Write-Host "Target: $TargetDir" -ForegroundColor Gray
 Write-Host ""
@@ -325,10 +336,12 @@ if (-not $SkipTests) {
             }
             
             Write-Success "All $($BuildResults.Tests.Passed) tests passed in $([math]::Round($testDuration / 1000, 1))s"
-        } else {
+        }
+        else {
             Write-Warning "No test files found in tests directory, skipping tests"
         }
-    } else {
+    }
+    else {
         Write-Warning "Tests directory not found, skipping tests"
     }
 }
@@ -495,15 +508,14 @@ if (-not $SkipGit -and $hasGit) {
     
     # Commit core system
     Write-Host "--- Core System ---" -ForegroundColor Magenta
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $coreResult = Invoke-GitOperation -RepoPath $ProjectDir -CommitMessage "Update VRCX Plugin System - $timestamp"
+    $coreResult = Invoke-GitOperation -RepoPath $ProjectDir -CommitMessage "Update VRCX Plugin System - $ScriptTimestamp"
     $BuildResults.Core.Committed = $coreResult.Committed
     $BuildResults.Core.Pushed = $coreResult.Pushed
     
     # Commit plugins
     if (Test-Path $PluginsDir) {
         Write-Host "--- Plugins Repository ---" -ForegroundColor Magenta
-        $pluginsResult = Invoke-GitOperation -RepoPath $PluginsDir -CommitMessage "Update plugins - $timestamp"
+        $pluginsResult = Invoke-GitOperation -RepoPath $PluginsDir -CommitMessage "Update plugins - $ScriptTimestamp"
         
         # Update all plugin results
         foreach ($plugin in $BuildResults.Plugins) {
@@ -515,15 +527,10 @@ if (-not $SkipGit -and $hasGit) {
     # Create GitHub release
     if ($hasGh -and $coreResult.Committed) {
         Write-Host "--- GitHub Release ---" -ForegroundColor Magenta
-        $releaseTag = [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds)
+        $releaseTag = $ScriptUnixTimestamp
         $releaseTitle = "Build $releaseTag"
         $releaseNotes = @"
-Automated build - $timestamp
-
-## Components
-- Core System: $($BuildResults.Core.JsSize) KB
-- Plugins: $($BuildResults.Plugins.Count) modules
-- Tests: $($BuildResults.Tests.Passed)/$($BuildResults.Tests.Total) passed
+Automated build - $ScriptTimestamp
 
 ## Installation
 Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in
