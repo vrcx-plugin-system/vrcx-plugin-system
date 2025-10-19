@@ -20,6 +20,18 @@ TypeScript-based extensible plugin system for VRCX with hot-reload support, sett
 
 ### For Users
 
+#### Option 1: One-Click Install (Recommended)
+
+Run this command in PowerShell:
+
+```powershell
+Invoke-WebRequest -Uri "https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js" -OutFile "$env:APPDATA\VRCX\custom.js"
+```
+
+Then restart VRCX. Done! ✅
+
+#### Option 2: Manual Download
+
 1. **Download the latest release:**
 
    Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js)
