@@ -168,7 +168,8 @@ function Show-BuildSummary {
     # Core module
     $coreReduction = if ($BuildResults.Core.TsSize -gt 0) {
         [math]::Round((1 - ($BuildResults.Core.JsSize / $BuildResults.Core.TsSize)) * 100, 1)
-    } else { 0 }
+    }
+    else { 0 }
     
     $tableData += [PSCustomObject]@{
         Component = "Core System"
@@ -191,7 +192,8 @@ function Show-BuildSummary {
     $totalJsSize = ($BuildResults.Plugins | Measure-Object -Property JsSize -Sum).Sum
     $pluginReduction = if ($totalTsSize -gt 0) {
         [math]::Round((1 - ($totalJsSize / $totalTsSize)) * 100, 1)
-    } else { 0 }
+    }
+    else { 0 }
     
     $tableData += [PSCustomObject]@{
         Component = "Plugins ($($pluginStats.Built)/$($pluginStats.Total))"
@@ -281,40 +283,54 @@ else {
 
 # Run tests
 if (-not $SkipTests) {
-    Write-Section "Tests"
-    Write-Info "Running test suite..."
-    $testStart = Get-Date
-    
-    $testOutput = npm test 2>&1 | Out-String
-    $testDuration = ((Get-Date) - $testStart).TotalMilliseconds
-    
-    # Parse test results
-    $BuildResults.Tests.Duration = $testDuration
-    
-    if ($testOutput -match "Tests:\s+(\d+)\s+passed,\s+(\d+)\s+total") {
-        $BuildResults.Tests.Passed = [int]$matches[1]
-        $BuildResults.Tests.Total = [int]$matches[2]
-        $BuildResults.Tests.Failed = 0
+    # Check if tests directory exists
+    $testsDir = Join-Path $ProjectDir "tests"
+    if (Test-Path $testsDir) {
+        $testFiles = Get-ChildItem $testsDir -Filter "*.test.ts" -ErrorAction SilentlyContinue
+        if ($testFiles.Count -gt 0) {
+            Write-Section "Tests"
+            Write-Info "Running test suite..."
+            $testStart = Get-Date
+            
+            $testOutput = npm test 2>&1 | Out-String
+            $testDuration = ((Get-Date) - $testStart).TotalMilliseconds
+            
+            # Parse test results
+            $BuildResults.Tests.Duration = $testDuration
+            
+            if ($testOutput -match "Tests:\s+(\d+)\s+passed,\s+(\d+)\s+total") {
+                $BuildResults.Tests.Passed = [int]$matches[1]
+                $BuildResults.Tests.Total = [int]$matches[2]
+                $BuildResults.Tests.Failed = 0
+            }
+            elseif ($testOutput -match "Tests:\s+(\d+)\s+failed,\s+(\d+)\s+passed,\s+(\d+)\s+total") {
+                $BuildResults.Tests.Failed = [int]$matches[1]
+                $BuildResults.Tests.Passed = [int]$matches[2]
+                $BuildResults.Tests.Total = [int]$matches[3]
+            }
+            else {
+                # Fallback: count from output
+                $BuildResults.Tests.Passed = 0
+                $BuildResults.Tests.Total = 0
+                $BuildResults.Tests.Failed = 0
+            }
+            
+            if ($LASTEXITCODE -ne 0) {
+                Write-Failure "Tests failed"
+                if ($BuildResults.Tests.Total -gt 0) {
+                    Write-Host "  Failed: $($BuildResults.Tests.Failed), Passed: $($BuildResults.Tests.Passed)" -ForegroundColor Red
+                }
+                Show-BuildSummary
+                exit 1
+            }
+            
+            Write-Success "All $($BuildResults.Tests.Passed) tests passed in $([math]::Round($testDuration / 1000, 1))s"
+        } else {
+            Write-Warning "No test files found in tests directory, skipping tests"
+        }
+    } else {
+        Write-Warning "Tests directory not found, skipping tests"
     }
-    elseif ($testOutput -match "Tests:\s+(\d+)\s+failed,\s+(\d+)\s+passed,\s+(\d+)\s+total") {
-        $BuildResults.Tests.Failed = [int]$matches[1]
-        $BuildResults.Tests.Passed = [int]$matches[2]
-        $BuildResults.Tests.Total = [int]$matches[3]
-    }
-    else {
-        # Fallback: count from output
-        $BuildResults.Tests.Passed = 0
-        $BuildResults.Tests.Total = 0
-        $BuildResults.Tests.Failed = 0
-    }
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Failure "Tests failed ($($BuildResults.Tests.Failed) failed, $($BuildResults.Tests.Passed) passed)"
-        Show-BuildSummary
-        exit 1
-    }
-    
-    Write-Success "All $($BuildResults.Tests.Passed) tests passed in $([math]::Round($testDuration / 1000, 1))s"
 }
 else {
     Write-Warning "Tests skipped"
@@ -345,7 +361,6 @@ if (Test-Path $distFile) {
     # Calculate source TS size
     $tsFiles = Get-ChildItem -Path (Join-Path $ProjectDir "src") -Recurse -Filter "*.ts"
     $tsTotalSize = ($tsFiles | Measure-Object -Property Length -Sum).Sum
-    
     $BuildResults.Core.Built = $true
     $BuildResults.Core.TsSize = [math]::Round($tsTotalSize / 1KB, 2)
     $BuildResults.Core.JsSize = Get-FileSize $distFile
