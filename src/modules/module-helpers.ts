@@ -212,7 +212,7 @@ export async function loadAllModules(): Promise<void> {
 }
 
 /**
- * Start all enabled modules
+ * Start all enabled modules (with dependency resolution)
  */
 export async function startAllModules(): Promise<void> {
   const logColor = '#4caf50';
@@ -222,6 +222,21 @@ export async function startAllModules(): Promise<void> {
   for (const module of window.customjs.modules) {
     try {
       if (module.enabled && !module.started) {
+        // Check and wait for dependencies before starting
+        if ((module as any).dependencies && (module as any).dependencies.length > 0) {
+          console.log(`%c[CJS|ModuleSystem] Waiting for ${(module as any).dependencies.length} dependencies for ${module.metadata.name}...`, `color: ${logColor}`);
+          
+          for (const depId of (module as any).dependencies) {
+            try {
+              await waitForModule(depId, 10000);
+              console.log(`%c[CJS|ModuleSystem]   ✓ Dependency ready: ${depId}`, `color: ${logColor}`);
+            } catch (error) {
+              console.error(`%c[CJS|ModuleSystem]   ✗ Dependency failed: ${depId}`, `color: ${logColor}`, error);
+              throw new Error(`Dependency ${depId} not available for ${module.metadata.name}`);
+            }
+          }
+        }
+        
         await module.start();
         console.log(`%c[CJS|ModuleSystem] ✓ Started ${module.metadata.name} (build: ${module.metadata.build})`, `color: ${logColor}`);
       }
