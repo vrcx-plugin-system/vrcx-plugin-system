@@ -43,7 +43,8 @@ export class CustomActionButton {
  * CustomModule class for user-installed modules (plugins)
  */
 export class CustomModule extends Module {
-  dependencies: string[] = [];
+  required_dependencies: string[] = [];
+  optional_dependencies: string[] = [];
   actionButtons: CustomActionButton[] = [];
   settings?: any;
   categories?: any;
@@ -80,7 +81,8 @@ export class CustomModule extends Module {
       tags: metadata.tags || [],
     });
 
-    this.dependencies = (metadata as any).dependencies || [];
+    this.required_dependencies = (metadata as any).required_dependencies || [];
+    this.optional_dependencies = (metadata as any).optional_dependencies || [];
 
     // Automatically register with global modules array
     if (!window.customjs.modules) {
@@ -553,9 +555,16 @@ export class CustomModule extends Module {
           metadata.tags = tagsMatch[1].split(',').map(t => t.trim().replace(/["']/g, ''));
         }
         
-        const depsMatch = superArgs.match(/dependencies:\s*\[([\s\S]*?)\]/);
-        if (depsMatch) {
-          metadata.dependencies = depsMatch[1].split(',')
+        const reqDepsMatch = superArgs.match(/required_dependencies:\s*\[([\s\S]*?)\]/);
+        if (reqDepsMatch) {
+          metadata.required_dependencies = reqDepsMatch[1].split(',')
+            .map(d => d.trim().replace(/["']/g, ''))
+            .filter(d => d.length > 0);
+        }
+        
+        const optDepsMatch = superArgs.match(/optional_dependencies:\s*\[([\s\S]*?)\]/);
+        if (optDepsMatch) {
+          metadata.optional_dependencies = optDepsMatch[1].split(',')
             .map(d => d.trim().replace(/["']/g, ''))
             .filter(d => d.length > 0);
         }

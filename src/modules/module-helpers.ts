@@ -224,8 +224,14 @@ export async function startAllModules(): Promise<void> {
 
   // Build dependency graph
   const modulesWithDeps = window.customjs.modules.filter(m => m.enabled && !m.started);
-  const noDeps = modulesWithDeps.filter(m => !(m as any).dependencies || (m as any).dependencies.length === 0);
-  const withDeps = modulesWithDeps.filter(m => (m as any).dependencies && (m as any).dependencies.length > 0);
+  const noDeps = modulesWithDeps.filter(m => {
+    const reqDeps = (m as any).required_dependencies || [];
+    return reqDeps.length === 0;
+  });
+  const withDeps = modulesWithDeps.filter(m => {
+    const reqDeps = (m as any).required_dependencies || [];
+    return reqDeps.length > 0;
+  });
   
   // Start modules without dependencies in parallel
   if (noDeps.length > 0) {
@@ -243,16 +249,33 @@ export async function startAllModules(): Promise<void> {
   // Start modules with dependencies sequentially (they need to wait for deps)
   for (const module of withDeps) {
     try {
-      if ((module as any).dependencies && (module as any).dependencies.length > 0) {
-        console.log(`%c[CJS|ModuleSystem] Waiting for ${(module as any).dependencies.length} dependencies for ${module.metadata.name}...`, `color: ${logColor}`);
+      const requiredDeps = (module as any).required_dependencies || [];
+      const optionalDeps = (module as any).optional_dependencies || [];
+      
+      if (requiredDeps.length > 0) {
+        console.log(`%c[CJS|ModuleSystem] Waiting for ${requiredDeps.length} required dependencies for ${module.metadata.name}...`, `color: ${logColor}`);
         
-        for (const depId of (module as any).dependencies) {
+        for (const depId of requiredDeps) {
           try {
             await waitForModule(depId, 10000);
-            console.log(`%c[CJS|ModuleSystem]   ✓ Dependency ready: ${depId}`, `color: ${logColor}`);
+            console.log(`%c[CJS|ModuleSystem]   ✓ Required dependency ready: ${depId}`, `color: ${logColor}`);
           } catch (error) {
-            console.error(`%c[CJS|ModuleSystem]   ✗ Dependency failed: ${depId}`, `color: ${logColor}`, error);
-            throw new Error(`Dependency ${depId} not available for ${module.metadata.name}`);
+            console.error(`%c[CJS|ModuleSystem]   ✗ Required dependency failed: ${depId}`, `color: ${logColor}`, error);
+            throw new Error(`Required dependency ${depId} not available for ${module.metadata.name}`);
+          }
+        }
+      }
+      
+      if (optionalDeps.length > 0) {
+        console.log(`%c[CJS|ModuleSystem] Checking ${optionalDeps.length} optional dependencies for ${module.metadata.name}...`, `color: ${logColor}`);
+        
+        for (const depId of optionalDeps) {
+          try {
+            await waitForModule(depId, 2000); // Shorter timeout for optional deps
+            console.log(`%c[CJS|ModuleSystem]   ✓ Optional dependency ready: ${depId}`, `color: ${logColor}`);
+          } catch (error) {
+            console.warn(`%c[CJS|ModuleSystem]   ⚠ Optional dependency not available: ${depId}`, `color: ${logColor}`);
+            // Don't throw - optional dependencies are not required
           }
         }
       }

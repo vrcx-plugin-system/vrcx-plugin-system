@@ -340,6 +340,7 @@ if (-not $SkipTests) {
             
             $testOutput = npm test 2>&1 | Out-String
             $testDuration = ((Get-Date) - $testStart).TotalMilliseconds
+            $testExitCode = $LASTEXITCODE
             
             # Parse test results
             $BuildResults.Tests.Duration = $testDuration
@@ -361,7 +362,8 @@ if (-not $SkipTests) {
                 $BuildResults.Tests.Failed = 0
             }
             
-            if ($LASTEXITCODE -ne 0) {
+            # Check if tests actually failed (not just non-zero exit code from npm)
+            if ($BuildResults.Tests.Failed -gt 0) {
                 Write-Failure "Tests failed"
                 if ($BuildResults.Tests.Total -gt 0) {
                     Write-Host "  Failed: $($BuildResults.Tests.Failed), Passed: $($BuildResults.Tests.Passed)" -ForegroundColor Red
@@ -370,7 +372,12 @@ if (-not $SkipTests) {
                 exit 1
             }
             
-            Write-Success "All $($BuildResults.Tests.Passed) tests passed in $([math]::Round($testDuration / 1000, 1))s"
+            if ($BuildResults.Tests.Passed -gt 0) {
+                Write-Success "All $($BuildResults.Tests.Passed) tests passed in $([math]::Round($testDuration / 1000, 1))s"
+            }
+            else {
+                Write-Warning "No tests found or executed"
+            }
         }
         else {
             Write-Warning "No test files found in tests directory, skipping tests"

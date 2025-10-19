@@ -100,6 +100,7 @@ export interface RepoConfig {
 declare global {
   interface Window {
     customjs: {
+      sourceUrl: string;
       build: number;
       modules: any[];
       repos: any[];
