@@ -12,9 +12,7 @@ TypeScript-based extensible plugin system for VRCX with hot-reload support, sett
 - ✅ **Hook system** - Intercept and modify any function
 - ✅ **Event system** - Publish/subscribe pattern for plugin communication
 - ✅ **Resource management** - Automatic cleanup of timers, listeners, observers
-- ✅ **Parallel loading** - Optimized startup with concurrent module fetching
 - ✅ **Testing** - Comprehensive Jest test suite
-- ✅ **Min/max validation** - Built-in setting value clamping
 
 ## Installation
 
@@ -45,6 +43,12 @@ Then restart VRCX. Done! ✅
 3. **Restart VRCX**
 
 That's it! The plugin system will load automatically.
+
+## Screenshots
+
+|                     Plugin Manager UI                     |                       Context Menu                        |                     User Context Menu                      |                     Plugin Settings UI                     |
+| :-------------------------------------------------------: | :-------------------------------------------------------: | :--------------------------------------------------------: | :--------------------------------------------------------: |
+| ![Plugin Manager UI](https://files.catbox.moe/nb6p1h.png) | ![User Context Menu](https://files.catbox.moe/l1xzll.png) | ![Confirmation Modal](https://files.catbox.moe/emjn86.png) | ![Plugin Settings UI](https://files.catbox.moe/qm35bw.png) |
 
 ### For Developers
 
