@@ -70,6 +70,7 @@ describe('CustomModule', () => {
   describe('Dependency Management', () => {
     test('should store dependencies', () => {
       const module = new CustomModule({
+        id: 'test-mod',
         name: 'Test Module',
         dependencies: ['dep-a', 'dep-b'],
       } as any);
@@ -79,8 +80,9 @@ describe('CustomModule', () => {
 
     test('should handle empty dependencies', () => {
       const module = new CustomModule({
+        id: 'test-mod',
         name: 'Test Module',
-      });
+      } as any);
 
       expect(module.dependencies).toEqual([]);
     });
@@ -89,8 +91,9 @@ describe('CustomModule', () => {
   describe('Action Buttons', () => {
     test('should store action buttons as property', () => {
       const module = new CustomModule({
+        id: 'test-mod',
         name: 'Test Module',
-      });
+      } as any);
 
       module.actionButtons = [
         {
@@ -108,8 +111,9 @@ describe('CustomModule', () => {
   describe('Settings Management', () => {
     test('should define settings with SettingType', () => {
       const module = new CustomModule({
+        id: 'test-mod',
         name: 'Test Module',
-      });
+      } as any);
 
       const mockDefineSettings = jest.fn().mockReturnValue({ store: {} });
       (window as any).customjs.definePluginSettings = mockDefineSettings;
@@ -125,4 +129,3 @@ describe('CustomModule', () => {
     });
   });
 });
-

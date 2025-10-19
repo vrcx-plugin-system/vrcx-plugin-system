@@ -87,10 +87,13 @@ describe('Module Helper Functions', () => {
 
   describe('getAllLoadedModules()', () => {
     test('should return all modules', () => {
-      const module1 = new CustomModule({ id: 'module-1', name: 'Module 1' } as any);
-      const module2 = new CustomModule({ id: 'module-2', name: 'Module 2' } as any);
+      // Clear any modules from previous tests
+      (window as any).customjs.modules = [];
       
-      (window as any).customjs.modules.push(module1, module2);
+      const module1 = new CustomModule({ id: 'get-all-test-1', name: 'Module 1' } as any);
+      const module2 = new CustomModule({ id: 'get-all-test-2', name: 'Module 2' } as any);
+      
+      (window as any).customjs.modules = [module1, module2];
 
       const all = getAllLoadedModules();
       expect(all.length).toBe(2);
@@ -99,6 +102,7 @@ describe('Module Helper Functions', () => {
     });
 
     test('should return empty array when no modules', () => {
+      (window as any).customjs.modules = [];
       const all = getAllLoadedModules();
       expect(all).toEqual([]);
     });

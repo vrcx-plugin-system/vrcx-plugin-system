@@ -48,8 +48,8 @@ export class CustomModule extends Module {
   settings?: any;
   categories?: any;
   private scriptElement?: HTMLScriptElement;
-  private static loadedUrls: Set<string> = new Set();
-  private static failedUrls: Set<string> = new Set();
+  static loadedUrls: Set<string> = new Set();
+  static failedUrls: Set<string> = new Set();
   private static scriptExecutionLock: Promise<void> = Promise.resolve();
 
   constructor(metadata: Partial<ModuleMetadata> = {}) {

@@ -265,6 +265,18 @@ else {
     }
 }
 
+# Run tests
+Write-Host ""
+Write-Host "=== Tests ===" -ForegroundColor Cyan
+Write-Host "Running test suite..." -ForegroundColor Yellow
+npm test
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "[FAILURE] Tests failed" -ForegroundColor Red
+    Write-Host "Fix the failing tests before building." -ForegroundColor Yellow
+    exit 1
+}
+Write-Host "[SUCCESS] All tests passed" -ForegroundColor Green
+
 # Build the project
 Write-Host ""
 Write-Host "=== Build ===" -ForegroundColor Cyan

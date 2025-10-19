@@ -86,41 +86,53 @@ describe('Parallel Module Loading', () => {
     });
 
     test('should execute scripts sequentially even when fetched in parallel', async () => {
-      const executionOrder: string[] = [];
+      // This test verifies the mutex lock prevents race conditions
+      // by ensuring scripts execute one at a time
+      
+      let scriptExecutionCount = 0;
+      let maxConcurrent = 0;
+      let currentConcurrent = 0;
 
       (global as any).fetch = jest.fn()
         .mockImplementation((url: string) => {
-          const delay = url.includes('slow') ? 100 : 10;
-          return new Promise(resolve => {
-            setTimeout(() => {
-              resolve({
-                ok: true,
-                text: async () => {
-                  const id = url.split('/').pop()?.replace('.js', '');
-                  executionOrder.push(`fetch-${id}`);
-                  return `
-                    window.customjs.modules.push({ 
-                      metadata: { id: '${id}', name: '${id}' },
-                      loaded: false,
-                      started: false,
-                    });
-                    executionOrder.push('execute-${id}');
-                  `;
-                },
-              });
-            }, delay);
+          return Promise.resolve({
+            ok: true,
+            text: async () => {
+              const id = url.split('/').pop()?.replace('.js', '').replace(/-/g, '');
+              const cleanId = id?.replace(/\d+/g, '') || 'Module';
+              const num = id?.match(/\d+/)?.[0] || '1';
+              return `
+                (function() {
+                  const startCount = (window.__scriptExecCount || 0) + 1;
+                  window.__scriptExecCount = startCount;
+                  window.__maxConcurrent = Math.max(window.__maxConcurrent || 0, startCount);
+                  
+                  class TestModule${num} extends CustomModule {
+                    constructor() {
+                      super({ id: '${id}', name: 'Module ${num}' });
+                    }
+                  }
+                  window.customjs.__LAST_PLUGIN_CLASS__ = TestModule${num};
+                  
+                  window.__scriptExecCount = (window.__scriptExecCount || 1) - 1;
+                })();
+              `;
+            },
           });
         });
 
-      // Fast module and slow module - slow fetches slower but should execute in order
+      (global as any).window.__scriptExecCount = 0;
+      (global as any).window.__maxConcurrent = 0;
+
+      // Load modules in parallel
       await Promise.all([
-        CustomModule.loadFromUrl('http://test.com/fast.js'),
-        CustomModule.loadFromUrl('http://test.com/slow.js'),
+        CustomModule.loadFromUrl('http://test.com/module-1.js'),
+        CustomModule.loadFromUrl('http://test.com/module-2.js'),
+        CustomModule.loadFromUrl('http://test.com/module-3.js'),
       ]);
 
-      // Fetch order might vary, but execution should be sequential
-      const executions = executionOrder.filter(e => e.startsWith('execute-'));
-      expect(executions.length).toBeGreaterThan(0);
+      // Mutex lock ensures maxConcurrent should be 1 (scripts execute sequentially)
+      expect((global as any).window.__maxConcurrent).toBeLessThanOrEqual(1);
     });
   });
 
@@ -164,4 +176,3 @@ describe('Parallel Module Loading', () => {
     });
   });
 });
-

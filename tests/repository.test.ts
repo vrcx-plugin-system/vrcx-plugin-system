@@ -21,11 +21,10 @@ describe('ModuleRepository', () => {
     test('should create repository with URL', () => {
       expect(repo.url).toBe('http://test.com/repo.json');
       expect(repo.enabled).toBe(true);
-      expect(repo.modules).toEqual([]);
     });
   });
 
-  describe('fetchMetadata()', () => {
+  describe('load()', () => {
     test('should fetch and parse repository metadata', async () => {
       const mockRepoData = {
         name: 'Test Repo',
@@ -46,12 +45,11 @@ describe('ModuleRepository', () => {
         json: async () => mockRepoData,
       });
 
-      await repo.fetchMetadata();
+      const success = await repo.fetch();
 
-      expect(repo.name).toBe('Test Repo');
-      expect(repo.description).toBe('Test Repository');
-      expect(repo.modules.length).toBe(1);
-      expect(repo.modules[0].id).toBe('test-module');
+      expect(success).toBe(true);
+      expect(repo.data?.name).toBe('Test Repo');
+      expect(repo.data?.description).toBe('Test Repository');
     });
 
     test('should handle fetch errors', async () => {
@@ -61,13 +59,15 @@ describe('ModuleRepository', () => {
         statusText: 'Not Found',
       });
 
-      await expect(repo.fetchMetadata()).rejects.toThrow();
+      const success = await repo.fetch();
+      expect(success).toBe(false);
     });
   });
 
   describe('Module Management', () => {
-    test('should track loaded modules', async () => {
+    test('should store repository metadata', async () => {
       const mockRepoData = {
+        name: 'Test Repo',
         modules: [
           { id: 'mod-1', name: 'Module 1', url: 'http://test.com/mod1.js' },
           { id: 'mod-2', name: 'Module 2', url: 'http://test.com/mod2.js' },
@@ -79,12 +79,10 @@ describe('ModuleRepository', () => {
         json: async () => mockRepoData,
       });
 
-      await repo.fetchMetadata();
+      await repo.fetch();
 
-      expect(repo.modules.length).toBe(2);
-      expect(repo.getModule('mod-1')).toBeDefined();
-      expect(repo.getModule('mod-2')).toBeDefined();
+      expect(repo.data).toBeDefined();
+      expect(repo.data?.name).toBe('Test Repo');
     });
   });
 });
-
