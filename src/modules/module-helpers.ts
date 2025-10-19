@@ -56,13 +56,19 @@ export async function loadModule(moduleUrl: string): Promise<{success: boolean; 
     const module = await CustomModule.loadFromUrl(moduleUrl);
 
     if (module) {
+      // Check config to determine if module should be enabled
+      const config = getModuleConfig();
+      const shouldBeEnabled = config[moduleUrl] !== undefined ? config[moduleUrl] : true;
+      
+      module.enabled = shouldBeEnabled;
+      
       await module.load();
+      
       if (module.enabled) {
         await module.start();
       }
       
       // Save to config
-      const config = getModuleConfig();
       config[moduleUrl] = module.enabled;
       saveModuleConfig(config);
       
