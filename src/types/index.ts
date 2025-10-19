@@ -1,12 +1,25 @@
 // Type definitions for VRCX Plugin System
 
-export interface PluginMetadata {
+/**
+ * Author information for modules and plugins
+ */
+export interface ModuleAuthor {
+  name: string;
+  description?: string;
+  userId?: string;
+  avatarUrl?: string;
+}
+
+/**
+ * Metadata for both core modules and plugins
+ */
+export interface ModuleMetadata {
   id: string;
   name: string;
   description: string;
-  author: string;
+  authors: ModuleAuthor[];
   build: string;
-  url: string | null;
+  url?: string | null;
   tags?: string[];
 }
 
@@ -53,11 +66,14 @@ export interface PluginConfig {
   [url: string]: boolean;
 }
 
+/**
+ * Plugin metadata for repository system
+ */
 export interface PluginRepoMetadata {
   id: string;
   name: string;
   description: string;
-  author: string;
+  authors: ModuleAuthor[];
   build: string;
   url: string;
   enabled?: boolean;
@@ -67,7 +83,7 @@ export interface PluginRepoMetadata {
 export interface PluginRepoData {
   name: string;
   description: string;
-  author: string;
+  authors: ModuleAuthor[];
   build: string;
   url: string;
   plugins: PluginRepoMetadata[];
@@ -76,6 +92,10 @@ export interface PluginRepoData {
 export interface RepoConfig {
   [repoUrl: string]: boolean;
 }
+
+// Backwards compatibility: Keep old type names as aliases
+/** @deprecated Use ModuleMetadata instead */
+export type PluginMetadata = ModuleMetadata;
 
 // Global window type augmentation
 declare global {

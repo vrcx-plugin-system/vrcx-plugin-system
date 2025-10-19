@@ -1,4 +1,18 @@
-import { LogOptions } from '../types';
+import { LogOptions, ModuleMetadata } from '../types';
+
+export const loggerMetadata: ModuleMetadata = {
+  id: "logger",
+  name: "Logger System",
+  description: "Logging system with VRCX integration and notification support",
+  authors: [
+    {
+      name: "Bluscream",
+      description: "Core Maintainer",
+    }
+  ],
+  build: "1760765304",
+  tags: ["Core", "Logging"],
+};
 
 /**
  * Logger class for VRCX Plugin System

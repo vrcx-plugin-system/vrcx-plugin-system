@@ -1,4 +1,18 @@
-import { SettingDefinition, PluginConfig } from '../types';
+import { SettingDefinition, PluginConfig, ModuleMetadata } from '../types';
+
+export const configMetadata: ModuleMetadata = {
+  id: "config",
+  name: "Configuration Manager",
+  description: "Settings and configuration management system",
+  authors: [
+    {
+      name: "Bluscream",
+      description: "Core Maintainer",
+    }
+  ],
+  build: "1760765304",
+  tags: ["Core", "Configuration"],
+};
 
 // Setting type enum
 export const SettingType = Object.freeze({

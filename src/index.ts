@@ -5,11 +5,11 @@
  * This file is bundled into a single custom.js for VRCX
  */
 
-import { Logger } from './modules/logger';
-import { utils } from './modules/utils';
-import { ConfigManager, SettingsStore, SettingType, definePluginSettings } from './modules/config';
-import { Plugin, PluginLoader, PluginManager } from './modules/plugin';
-import { PluginRepo, PluginRepoManager } from './modules/repo';
+import { Logger, loggerMetadata } from './modules/logger';
+import { utils, utilsMetadata } from './modules/utils';
+import { ConfigManager, SettingsStore, SettingType, definePluginSettings, configMetadata } from './modules/config';
+import { Plugin, PluginLoader, PluginManager, pluginModuleMetadata } from './modules/plugin';
+import { PluginRepo, PluginRepoManager, repoMetadata } from './modules/repo';
 
 // Show dev tools
 // if (window.AppApi?.ShowDevTools) {
@@ -18,7 +18,7 @@ import { PluginRepo, PluginRepoManager } from './modules/repo';
 
 // Initialize window.customjs
 window.customjs = {
-  build: "0",
+  build: "1760846413",
   logColors: {
     CustomJS: "#00ff88",
     PluginLoader: "#2196f3",
@@ -37,7 +37,15 @@ window.customjs = {
   },
   functions: {},
   events: {},
+  coreModules: new Map(),
 };
+
+// Register core module metadata
+window.customjs.coreModules!.set('logger', loggerMetadata);
+window.customjs.coreModules!.set('utils', utilsMetadata);
+window.customjs.coreModules!.set('config', configMetadata);
+window.customjs.coreModules!.set('plugin', pluginModuleMetadata);
+window.customjs.coreModules!.set('repo', repoMetadata);
 
 // Create system logger
 window.customjs.systemLogger = new Logger("");

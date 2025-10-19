@@ -1,8 +1,14 @@
 # VRCX Plugin System Update Script
 # This script builds the TypeScript project and copies the bundled file to VRCX
+# 
+# Usage: .\update.ps1 [build-args...]
+# Example: .\update.ps1 --no-timestamp --dev
 
-# Set error action preference
-$ErrorActionPreference = "Stop"
+# $ErrorActionPreference = "Stop";
+param(
+    [Parameter(ValueFromRemainingArguments = $true)]
+    [string[]]$BuildArgs
+)
 
 # Define paths - update these to match your setup
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -21,7 +27,7 @@ function Update-PluginVersionAndBuild {
     )
     
     if (-not (Test-Path $PluginPath)) {
-        Write-Host "✗ Plugin file not found: $PluginPath" -ForegroundColor Red
+        Write-Host "[FAILURE] Plugin file not found: $PluginPath" -ForegroundColor Red
         return $false
     }
     
@@ -52,13 +58,13 @@ function Update-PluginVersionAndBuild {
         }
         
         $newVersion = "$major.$minor.$patch"
-        Write-Host "  Version: $oldVersion → $newVersion" -ForegroundColor Cyan
+        Write-Host "  Version: $oldVersion -> $newVersion" -ForegroundColor Cyan
         
         # Update the version in content
         $content = $content -replace 'version:\s*"\d+\.\d+\.\d+"', "version: `"$newVersion`""
     }
     else {
-        Write-Host "  ⚠ Version pattern not found in file" -ForegroundColor Yellow
+        Write-Host "  [WARNING] Version pattern not found in file" -ForegroundColor Yellow
     }
     
     # Get the file's last modified time and convert to Unix timestamp
@@ -73,17 +79,18 @@ function Update-PluginVersionAndBuild {
         $content = $content -replace 'build:\s*"\d+"', "build: `"$unixTimestamp`""
     }
     else {
-        Write-Host "  ⚠ Build pattern not found in file" -ForegroundColor Yellow
+        Write-Host "  [WARNING] Build pattern not found in file" -ForegroundColor Yellow
     }
     
     # Write the updated content back to the file
     try {
         Set-Content -Path $PluginPath -Value $content -NoNewline
-        Write-Host "✓ Plugin version and build updated successfully" -ForegroundColor Green
+        Write-Host "[SUCCESS] Plugin version and build updated successfully" -ForegroundColor Green
         return $true
     }
     catch {
-        Write-Host "✗ Failed to update plugin file: $($_.Exception.Message)" -ForegroundColor Red
+        $errorMsg = $_.Exception.Message
+        Write-Host "[FAILURE] Failed to update plugin file: $errorMsg" -ForegroundColor Red
         return $false
     }
 }
@@ -106,7 +113,7 @@ function Commit-AndPushChanges {
     
     # Check if we're in a git repository
     if (-not (Test-Path ".git")) {
-        Write-Host "⚠ Not a git repository at: $RepositoryPath" -ForegroundColor Yellow
+        Write-Host "[WARNING] Not a git repository at: $RepositoryPath" -ForegroundColor Yellow
         Set-Location $originalLocation
         return $false
     }
@@ -128,14 +135,14 @@ function Commit-AndPushChanges {
         }
         
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "⚠ Failed to switch to '$BranchName' branch" -ForegroundColor Red
+            Write-Host "[WARNING] Failed to switch to '$BranchName' branch" -ForegroundColor Red
             Set-Location $originalLocation
             return $false
         }
-        Write-Host "✓ On '$BranchName' branch" -ForegroundColor Green
+        Write-Host "[SUCCESS] On '$BranchName' branch" -ForegroundColor Green
     }
     else {
-        Write-Host "✓ Already on '$BranchName' branch" -ForegroundColor Green
+        Write-Host "[SUCCESS] Already on '$BranchName' branch" -ForegroundColor Green
     }
     
     # Check for changes
@@ -143,46 +150,46 @@ function Commit-AndPushChanges {
     $status = git status --porcelain 2>$null
     
     if ([string]::IsNullOrWhiteSpace($status)) {
-        Write-Host "✓ No changes to commit" -ForegroundColor Green
+        Write-Host "[SUCCESS] No changes to commit" -ForegroundColor Green
         Set-Location $originalLocation
         return $false
     }
     
-    Write-Host "✓ Changes detected" -ForegroundColor Green
+    Write-Host "[SUCCESS] Changes detected" -ForegroundColor Green
     
     # Stage all changes
     Write-Host "Staging changes..." -ForegroundColor Yellow
     $stageOutput = git add -A 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "⚠ Failed to stage changes" -ForegroundColor Red
+        Write-Host "[WARNING] Failed to stage changes" -ForegroundColor Red
         Write-Host "Error: $stageOutput" -ForegroundColor Red
         Set-Location $originalLocation
         return $false
     }
-    Write-Host "✓ Changes staged" -ForegroundColor Green
+    Write-Host "[SUCCESS] Changes staged" -ForegroundColor Green
     
     # Commit changes
     Write-Host "Committing changes..." -ForegroundColor Yellow
     $commitOutput = git commit -m $CommitMessage 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "⚠ Failed to commit changes" -ForegroundColor Red
+        Write-Host "[WARNING] Failed to commit changes" -ForegroundColor Red
         Write-Host "Error: $commitOutput" -ForegroundColor Red
         Set-Location $originalLocation
         return $false
     }
-    Write-Host "✓ Changes committed" -ForegroundColor Green
+    Write-Host "[SUCCESS] Changes committed" -ForegroundColor Green
     
     # Push to remote
     Write-Host "Pushing to remote '$BranchName' branch..." -ForegroundColor Yellow
     $pushOutput = git push origin $BranchName 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "⚠ Failed to push changes" -ForegroundColor Yellow
+        Write-Host "[WARNING] Failed to push changes" -ForegroundColor Yellow
         Write-Host "Error: $pushOutput" -ForegroundColor Yellow
         Write-Host "You may need to set up the remote or push manually" -ForegroundColor Yellow
         Set-Location $originalLocation
         return $false
     }
-    Write-Host "✓ Changes pushed to GitHub" -ForegroundColor Green
+    Write-Host "[SUCCESS] Changes pushed to GitHub" -ForegroundColor Green
     
     # Return to original location
     Set-Location $originalLocation
@@ -206,10 +213,10 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Node.js not found"
     }
-    Write-Host "✓ Node.js version: $nodeVersion" -ForegroundColor Green
+    Write-Host "[SUCCESS] Node.js version: $nodeVersion" -ForegroundColor Green
 }
 catch {
-    Write-Host "✗ Node.js is not installed or not in PATH" -ForegroundColor Red
+    Write-Host "[FAILURE] Node.js is not installed or not in PATH" -ForegroundColor Red
     Write-Host "Please install Node.js from https://nodejs.org/" -ForegroundColor Yellow
     exit 1
 }
@@ -221,10 +228,10 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "npm not found"
     }
-    Write-Host "✓ npm version: $npmVersion" -ForegroundColor Green
+    Write-Host "[SUCCESS] npm version: $npmVersion" -ForegroundColor Green
 }
 catch {
-    Write-Host "✗ npm is not installed or not in PATH" -ForegroundColor Red
+    Write-Host "[FAILURE] npm is not installed or not in PATH" -ForegroundColor Red
     exit 1
 }
 
@@ -235,13 +242,13 @@ if (-not (Test-Path "node_modules")) {
     Write-Host "node_modules not found, installing dependencies..." -ForegroundColor Yellow
     npm install
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "✗ npm install failed" -ForegroundColor Red
+        Write-Host "[FAILURE] npm install failed" -ForegroundColor Red
         exit 1
     }
-    Write-Host "✓ Dependencies installed successfully" -ForegroundColor Green
+    Write-Host "[SUCCESS] Dependencies installed successfully" -ForegroundColor Green
 }
 else {
-    Write-Host "✓ node_modules exists" -ForegroundColor Green
+    Write-Host "[SUCCESS] node_modules exists" -ForegroundColor Green
     
     # Optional: Check if package.json changed and reinstall if needed
     $packageJsonTime = (Get-Item "package.json").LastWriteTime
@@ -251,33 +258,45 @@ else {
         Write-Host "package.json is newer than node_modules, reinstalling..." -ForegroundColor Yellow
         npm install
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "✗ npm install failed" -ForegroundColor Red
+            Write-Host "[FAILURE] npm install failed" -ForegroundColor Red
             exit 1
         }
-        Write-Host "✓ Dependencies reinstalled successfully" -ForegroundColor Green
+        Write-Host "[SUCCESS] Dependencies reinstalled successfully" -ForegroundColor Green
     }
 }
 
 # Build the project
 Write-Host ""
 Write-Host "=== Build ===" -ForegroundColor Cyan
-Write-Host "Building TypeScript project..." -ForegroundColor Yellow
-npm run build
+
+# Show build arguments if any
+if ($BuildArgs -and $BuildArgs.Count -gt 0) {
+    $argsString = $BuildArgs -join ' '
+    Write-Host "Build arguments: $argsString" -ForegroundColor Gray
+    Write-Host "Building TypeScript project with arguments..." -ForegroundColor Yellow
+    npm run build -- $BuildArgs
+}
+else {
+    Write-Host "Building TypeScript project..." -ForegroundColor Yellow
+    npm run build
+}
+
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "✗ Build failed" -ForegroundColor Red
+    Write-Host "[FAILURE] Build failed" -ForegroundColor Red
     exit 1
 }
-Write-Host "✓ Build completed successfully" -ForegroundColor Green
+Write-Host "[SUCCESS] Build completed successfully" -ForegroundColor Green
 
 # Verify build output exists
 $distFile = Join-Path $ProjectDir "dist\$BundledFile"
 if (-not (Test-Path $distFile)) {
-    Write-Host "✗ Build output not found: $distFile" -ForegroundColor Red
+    Write-Host "[FAILURE] Build output not found: $distFile" -ForegroundColor Red
     exit 1
 }
 
 $fileSize = (Get-Item $distFile).Length
-Write-Host "✓ Build output size: $([math]::Round($fileSize / 1KB, 2)) KB" -ForegroundColor Green
+$fileSizeKB = [math]::Round($fileSize / 1KB, 2)
+Write-Host "[SUCCESS] Build output size: $fileSizeKB KB" -ForegroundColor Green
 
 # Copy to VRCX directory
 Write-Host ""
@@ -285,7 +304,7 @@ Write-Host "=== Deploy ===" -ForegroundColor Cyan
 
 # Check if target directory exists
 if (-not (Test-Path $TargetDir)) {
-    Write-Host "✗ Target directory does not exist: $TargetDir" -ForegroundColor Red
+    Write-Host "[FAILURE] Target directory does not exist: $TargetDir" -ForegroundColor Red
     Write-Host "Please ensure VRCX is installed" -ForegroundColor Yellow
     exit 1
 }
@@ -296,10 +315,11 @@ Write-Host "Copying $BundledFile to VRCX directory..." -ForegroundColor Yellow
 # Try to write to target file with error handling
 try {
     Copy-Item $distFile $targetFile -Force
-    Write-Host "✓ $BundledFile deployed successfully" -ForegroundColor Green
+    Write-Host "[SUCCESS] $BundledFile deployed successfully" -ForegroundColor Green
 }
 catch {
-    Write-Host "⚠ Failed to copy $BundledFile directly: $($_.Exception.Message)" -ForegroundColor Yellow
+    $errorMsg = $_.Exception.Message
+    Write-Host "[WARNING] Failed to copy $BundledFile directly: $errorMsg" -ForegroundColor Yellow
     Write-Host "The file may be in use by VRCX. Trying alternative approach..." -ForegroundColor Yellow
     
     # Try using a temporary file and then moving it
@@ -307,11 +327,12 @@ catch {
     try {
         Copy-Item $distFile $tempFile -Force
         Move-Item $tempFile $targetFile -Force
-        Write-Host "✓ $BundledFile deployed successfully (via temp file)" -ForegroundColor Green
+        Write-Host "[SUCCESS] $BundledFile deployed successfully (via temp file)" -ForegroundColor Green
     }
     catch {
-        Write-Host "⚠ Still unable to update $BundledFile. Please close VRCX and try again." -ForegroundColor Red
-        Write-Host "Error: $($_.Exception.Message)" -ForegroundColor Red
+        $errorMsg = $_.Exception.Message
+        Write-Host "[WARNING] Still unable to update $BundledFile. Please close VRCX and try again." -ForegroundColor Red
+        Write-Host "Error: $errorMsg" -ForegroundColor Red
         
         # Clean up temp file if it exists
         if (Test-Path $tempFile) {
@@ -327,10 +348,11 @@ if (Test-Path $logsDir) {
     Write-Host "Clearing logs directory..." -ForegroundColor Yellow
     try {
         Get-ChildItem $logsDir -Filter "*.log" | Remove-Item -Force -ErrorAction Stop
-        Write-Host "✓ Logs cleared successfully" -ForegroundColor Green
+        Write-Host "[SUCCESS] Logs cleared successfully" -ForegroundColor Green
     }
     catch {
-        Write-Host "⚠ Failed to clear some logs (may be in use): $($_.Exception.Message)" -ForegroundColor Yellow
+        $errorMsg = $_.Exception.Message
+        Write-Host "[WARNING] Failed to clear some logs (may be in use): $errorMsg" -ForegroundColor Yellow
     }
 }
 
@@ -347,13 +369,13 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "Git not found"
     }
-    Write-Host "✓ Git version: $gitVersion" -ForegroundColor Green
+    Write-Host "[SUCCESS] Git version: $gitVersion" -ForegroundColor Green
 }
 catch {
-    Write-Host "⚠ Git is not installed or not in PATH, skipping commit/push" -ForegroundColor Yellow
+    Write-Host "[WARNING] Git is not installed or not in PATH, skipping commit/push" -ForegroundColor Yellow
     Write-Host ""
     Write-Host "=== Script Completed ===" -ForegroundColor Cyan
-    Write-Host "✓ Build and deployment finished successfully!" -ForegroundColor Green
+    Write-Host "[SUCCESS] Build and deployment finished successfully!" -ForegroundColor Green
     Write-Host ""
     Write-Host "You can now restart VRCX to load the updated plugin system." -ForegroundColor Yellow
     Write-Host ""
@@ -367,12 +389,13 @@ $ghAvailable = $false
 try {
     $ghVersion = gh --version 2>$null
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "✓ GitHub CLI version: $($ghVersion.Split("`n")[0])" -ForegroundColor Green
+        $ghVersionFirstLine = $ghVersion.Split("`n")[0]
+        Write-Host "[SUCCESS] GitHub CLI version: $ghVersionFirstLine" -ForegroundColor Green
         $ghAvailable = $true
     }
 }
 catch {
-    Write-Host "⚠ GitHub CLI not installed, releases will be skipped" -ForegroundColor Yellow
+    Write-Host "[WARNING] GitHub CLI not installed, releases will be skipped" -ForegroundColor Yellow
 }
 
 # Commit changes from within the vrcx-plugin-system submodule
@@ -412,15 +435,17 @@ if ($ghAvailable -and $hasChanges) {
     $unixTime = $unixTime
     $releaseTag = "$unixTime"
     $releaseTitle = "VRCX Plugin System Build - $unixTime"
+    $releaseDateTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $releaseNotes = @"
-Automated build and release of VRCX Plugin System at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+Automated build and release of VRCX Plugin System at $releaseDateTime
 
 ## Installation
 Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in `%APPDATA%\VRCX\`
 "@
     
     Write-Host "Creating release '$releaseTag'..." -ForegroundColor Yellow
-    Write-Host "Asset: $(Join-Path $ProjectDir 'dist\custom.js')" -ForegroundColor Gray
+    $assetPathDisplay = Join-Path $ProjectDir 'dist\custom.js'
+    Write-Host "Asset: $assetPathDisplay" -ForegroundColor Gray
     
     # Create release with the built file as asset
     $assetPath = Join-Path $ProjectDir "dist\custom.js"
@@ -432,24 +457,24 @@ Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/re
             2>&1 | Out-Host
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "✓ GitHub release created successfully!" -ForegroundColor Green
+            Write-Host "[SUCCESS] GitHub release created successfully!" -ForegroundColor Green
         }
         else {
-            Write-Host "⚠ Failed to create GitHub release" -ForegroundColor Yellow
+            Write-Host "[WARNING] Failed to create GitHub release" -ForegroundColor Yellow
         }
     }
     else {
-        Write-Host "⚠ Asset file not found: $assetPath" -ForegroundColor Yellow
+        Write-Host "[WARNING] Asset file not found: $assetPath" -ForegroundColor Yellow
     }
 }
 elseif (-not $hasChanges) {
     Write-Host ""
-    Write-Host "✓ No changes to commit or release" -ForegroundColor Green
+    Write-Host "[SUCCESS] No changes to commit or release" -ForegroundColor Green
 }
 
 Write-Host ""
 Write-Host "=== Script Completed ===" -ForegroundColor Cyan
-Write-Host "✓ Build, deployment, and version control finished successfully!" -ForegroundColor Green
+Write-Host "[SUCCESS] Build, deployment, and version control finished successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "You can now restart VRCX to load the updated plugin system." -ForegroundColor Yellow
 Write-Host ""

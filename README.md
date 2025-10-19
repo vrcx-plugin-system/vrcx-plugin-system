@@ -1,155 +1,79 @@
 # VRCX Plugin System
 
-TypeScript-based plugin management system for VRCX with runtime plugin loading and Equicord-inspired UI.
+TypeScript-based plugin management system for VRCX.
+
+## Features
+
+- **TypeScript-first**: Full type safety and IDE support
+- **Hot-reloadable**: Load plugins without restarting VRCX
+- **Repository system**: Install plugins from remote repositories
+- **Settings management**: Equicord-style settings with UI integration
+- **Hook system**: Intercept and modify VRCX functions
+- **Event system**: Publish/subscribe event handling
+- **Resource management**: Automatic cleanup on plugin unload
+- **Automatic timestamps**: Build timestamps update based on source file modification times
 
 ## Quick Start
 
+### Installation
+
+1. Clone this repository
+2. Install dependencies:
+
 ```bash
-# Install dependencies
 npm install
-
-# Build for production
-npm run build
-
-# Deploy to VRCX
-.\update.ps1
 ```
 
-## Project Structure
-
-```
-vrcx-plugin-system/
-├── src/                    # TypeScript source
-│   ├── index.ts           # Entry point & bootstrap
-│   ├── modules/           # Core modules
-│   │   ├── config.ts     # Settings & config management
-│   │   ├── logger.ts     # Multi-output logging system
-│   │   ├── plugin.ts     # Plugin base class & loader
-│   │   └── utils.ts      # Utility functions
-│   └── types/            # TypeScript type definitions
-├── dist/                  # Build output (gitignored)
-│   └── custom.js         # Bundled output
-├── docs/                  # Documentation
-├── package.json          # Dependencies
-├── tsconfig.json         # TypeScript config
-├── webpack.config.js     # Build config
-└── update.ps1            # Build & deploy script
-```
-
-## Core Features
-
-### Plugin System
-
-- **Remote Loading**: Plugins loaded from GitHub at runtime
-- **Resource Management**: Auto-cleanup of timers, listeners, observers
-- **Hook System**: Pre/post/void/replace hooks for function interception
-- **Event System**: Pub/sub event bus for plugin communication
-- **Settings**: Equicord-inspired reactive settings with categories
-- **UI Integration**: Plugin Manager with visual settings editor
-
-### Logger
-
-Multi-target logging with console, VRCX UI, VR overlays, and desktop notifications.
-
-```javascript
-logger.log("Console message");
-logger.showSuccess("UI toast");
-logger.notifyDesktop("Desktop notification");
-logger.addFeed({
-  /* feed entry */
-});
-```
-
-### Config Manager
-
-Persistent settings with localStorage backend and VRChat config.json sync.
-
-```javascript
-configManager.get("key", defaultValue);
-configManager.set("key", value);
-configManager.exportToVRChatConfig();
-```
-
-### Utilities
-
-Common helpers for time formatting, clipboard, color manipulation, and VRCX integration.
-
-```javascript
-utils.timeToText(ms); // "5m 30s"
-utils.copyToClipboard(text);
-utils.saveBio(bio);
-utils.hexToRgba("#ff0000", 0.5);
-```
-
-## Plugin Development
-
-Plugins are plain JavaScript files extending `window.customjs.Plugin`:
-
-```javascript
-class MyPlugin extends window.customjs.Plugin {
-  constructor() {
-    super({
-      name: "My Plugin",
-      description: "What it does",
-      author: "Your Name",
-      version: "1.0.0",
-    });
-  }
-
-  async load() {
-    // Initial setup, define settings, register hooks
-  }
-
-  async start() {
-    // Start timers, modify DOM
-  }
-
-  async onLogin(user) {
-    // User-specific initialization
-  }
-}
-
-window.customjs.__LAST_PLUGIN_CLASS__ = MyPlugin;
-```
-
-### Custom Action Buttons
-
-Plugins can define custom buttons for the Plugin Manager UI:
-
-```javascript
-getActionButtons() {
-  return [
-    {
-      label: "Refresh Data",
-      color: "success",       // primary, success, warning, danger, info
-      icon: "ri-refresh-line",
-      title: "Reload data from API",
-      callback: async () => {
-        await this.refreshData();
-      },
-    },
-  ];
-}
-```
-
-See **[Plugin Development Guide](docs/plugins.md)** for complete documentation.
-
-## Build System
+3. Build the system:
 
 ```bash
-npm run build      # Production (minified)
-npm run build:dev  # Development (unminified)
-npm run watch      # Auto-rebuild on changes
-npm run clean      # Clean build artifacts
+npm run build
 ```
 
-### Deploy to VRCX
+4. Copy `dist/custom.js` to `%APPDATA%\VRCX\`
+
+### Development
+
+Watch mode for development:
+
+```bash
+npm run watch
+```
+
+Build production version:
+
+```bash
+npm run build
+```
+
+Clean build:
+
+```bash
+npm run clean
+npm run build
+```
+
+## Building
+
+Run the update script (recommended):
 
 ```powershell
 .\update.ps1
 ```
 
 Builds and copies `custom.js` to `%APPDATA%\VRCX\`.
+
+**Note:** The build system automatically updates the build timestamp in `src/index.ts` based on the most recent file modification time in the `src/` directory.
+
+### Build Process
+
+1. **Pre-build**: Runs `update-build.js` to update timestamp
+   - Scans all `.ts` and `.js` files in `src/`
+   - Finds the most recently modified file
+   - Updates `build: "XXXXX"` in `src/index.ts`
+2. **Webpack**: Bundles TypeScript into `dist/custom.js`
+   - Production mode: Minified
+   - Development mode: Non-minified
 
 ## Plugins Repository
 
@@ -179,9 +103,35 @@ Plugins are now written in TypeScript (`src/plugins/*.ts`) and compiled to JavaS
 
 ### Webpack (webpack.config.js)
 
-- Single bundle output: `dist/custom.js`
-- Minified in production mode
-- Browser target (web)
+- Entry: `src/index.ts`
+- Output: `dist/custom.js`
+- Minification: TerserPlugin (production only)
+- No source maps
+
+## Project Structure
+
+```
+vrcx-plugin-system/
+├── src/
+│   ├── index.ts           # Entry point (contains build timestamp)
+│   ├── modules/
+│   │   ├── plugin.ts      # Plugin base class & manager
+│   │   ├── repo.ts        # Repository management
+│   │   ├── config.ts      # Settings & configuration
+│   │   ├── logger.ts      # Logging system
+│   │   └── utils.ts       # Utility functions
+│   └── types/
+│       └── index.ts       # TypeScript type definitions
+├── dist/
+│   └── custom.js          # Built output
+├── docs/
+│   ├── plugins.md         # Plugin development guide
+│   └── api-reference.md   # API documentation
+├── update-build.js        # Timestamp update script
+├── webpack.config.js      # Webpack configuration
+├── tsconfig.json          # TypeScript configuration
+└── package.json           # NPM configuration
+```
 
 ## Links
 
@@ -191,4 +141,4 @@ Plugins are now written in TypeScript (`src/plugins/*.ts`) and compiled to JavaS
 
 ## License
 
-MIT License
+MIT

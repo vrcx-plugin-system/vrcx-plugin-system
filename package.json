@@ -4,7 +4,9 @@
   "description": "VRCX Plugin System - TypeScript-based plugin manager",
   "main": "dist/custom.js",
   "scripts": {
+    "prebuild": "node build.js",
     "build": "webpack --mode production",
+    "prebuild:dev": "node update-build.js",
     "build:dev": "webpack --mode development",
     "watch": "webpack --mode development --watch",
     "clean": "rimraf dist"

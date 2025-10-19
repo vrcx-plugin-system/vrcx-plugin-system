@@ -1,4 +1,18 @@
-import { PluginRepoData, PluginRepoMetadata, RepoConfig } from '../types';
+import { PluginRepoData, PluginRepoMetadata, RepoConfig, ModuleMetadata } from '../types';
+
+export const repoMetadata: ModuleMetadata = {
+  id: "repo",
+  name: "Repository Manager",
+  description: "Plugin repository management and fetching system",
+  authors: [
+    {
+      name: "Bluscream",
+      description: "Core Maintainer",
+    }
+  ],
+  build: "1760765304",
+  tags: ["Core", "Repository"],
+};
 
 /**
  * PluginRepo - Represents a plugin repository

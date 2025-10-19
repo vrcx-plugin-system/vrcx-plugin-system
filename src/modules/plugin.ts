@@ -1,12 +1,26 @@
-import { PluginMetadata, ResourceTracking, PluginConfig, PluginRepoMetadata } from '../types';
+import { ModuleMetadata, ResourceTracking, PluginConfig, PluginRepoMetadata, ModuleAuthor } from '../types';
 import { Logger } from './logger';
 import { PluginRepoManager } from './repo';
+
+export const pluginModuleMetadata: ModuleMetadata = {
+  id: "plugin",
+  name: "Plugin System",
+  description: "Core plugin management system with lifecycle, hooks, and resource tracking",
+  authors: [
+    {
+      name: "Bluscream",
+      description: "Core Maintainer",
+    }
+  ],
+  build: "1760765304",
+  tags: ["Core", "Plugin"],
+};
 
 /**
  * Base Plugin class for VRCX plugins
  */
 export class Plugin {
-  metadata: PluginMetadata;
+  metadata: ModuleMetadata;
   loaded: boolean = false;
   started: boolean = false;
   enabled: boolean = false;
@@ -15,7 +29,7 @@ export class Plugin {
   resources: ResourceTracking;
   logColor: string;
 
-  constructor(metadata: Partial<PluginMetadata> = {}) {
+  constructor(metadata: Partial<ModuleMetadata> = {}) {
     // Get URL from metadata or from global scope (set by PluginManager)
     const pluginUrl = metadata.url || window.customjs?.__currentPluginUrl || null;
 
@@ -33,14 +47,17 @@ export class Plugin {
       );
     }
 
+    // Authors is required and must be an array
+    const authors = metadata.authors || [{ name: "Unknown" }];
+
     this.metadata = {
       id: pluginId,
       name: metadata.name || pluginId,
       description: metadata.description || "",
-      author: metadata.author || "Unknown",
-      build: metadata.build || (metadata as any).version || "0",
+      authors: authors,
+      build: metadata.build || "0",
       url: pluginUrl,
-      tags: (metadata as any).tags || [],
+      tags: metadata.tags || [],
     };
 
     this.dependencies = (metadata as any).dependencies || [];
@@ -543,7 +560,7 @@ export class PluginLoader {
         metadata.className = classNameMatch[1];
       }
 
-      // Extract constructor metadata (name, description, author, version, build, tags, dependencies)
+      // Extract constructor metadata (name, description, authors, build, tags, dependencies)
       const constructorMatch = sourceCode.match(/constructor\s*\(\s*\)\s*{[\s\S]*?super\s*\(\s*{([\s\S]*?)}\s*\)/);
       if (constructorMatch) {
         const superArgs = constructorMatch[1];
@@ -556,9 +573,21 @@ export class PluginLoader {
         const descMatch = superArgs.match(/description:\s*["'](.+?)["']/s);
         if (descMatch) metadata.description = descMatch[1].replace(/\s+/g, ' ').trim();
         
-        // Extract author
-        const authorMatch = superArgs.match(/author:\s*["'](.+?)["']/);
-        if (authorMatch) metadata.author = authorMatch[1];
+        // Extract authors
+        const authorsMatch = superArgs.match(/authors:\s*\[([\s\S]*?)\]/);
+        if (authorsMatch) {
+          try {
+            // Parse authors array
+            metadata.authors = [];
+            const authorsCode = authorsMatch[1];
+            const authorMatches = authorsCode.matchAll(/\{\s*name:\s*["']([^"']+)["']/g);
+            for (const match of authorMatches) {
+              metadata.authors.push({ name: match[1] });
+            }
+          } catch (e) {
+            metadata.authors = [{ name: "Unknown" }];
+          }
+        }
         
         // Extract build
         const buildMatch = superArgs.match(/build:\s*["'](.+?)["']/);

@@ -2,7 +2,24 @@
  * Utility functions for VRCX Plugin System
  */
 
+import { ModuleMetadata, ModuleAuthor } from '../types';
+
+export const utilsMetadata: ModuleMetadata = {
+  id: "utils",
+  name: "Utility Functions",
+  description: "Core utility functions for VRCX Plugin System",
+  authors: [
+    {
+      name: "Bluscream",
+      description: "Core Maintainer",
+    }
+  ],
+  build: "1760765304",
+  tags: ["Core", "Utility"],
+};
+
 export const utils = {
+  metadata: utilsMetadata,
   /**
    * Check if a value is empty (null, undefined, or empty string)
    */
