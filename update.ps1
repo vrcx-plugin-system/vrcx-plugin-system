@@ -351,8 +351,11 @@ if (Test-Path $PluginsDir) {
             $repoFile = Join-Path $PluginsDir "dist\repo.json"
             if (Test-Path $repoFile) {
                 $repoContent = Get-Content $repoFile -Raw | ConvertFrom-Json
-                $pluginCount = $repoContent.plugins.Count
-                Write-Host "[SUCCESS] Repository metadata created: $pluginCount plugins" -ForegroundColor Green
+                $pluginCount = $repoContent.modules.Count
+                Write-Host "[SUCCESS] Repository metadata created: $pluginCount modules" -ForegroundColor Green
+            }
+            else {
+                Write-Host "[WARNING] repo.json was not created" -ForegroundColor Yellow
             }
         }
         else {
