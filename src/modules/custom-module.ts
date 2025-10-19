@@ -86,12 +86,6 @@ export class CustomModule extends Module {
       window.customjs.modules = [];
     }
     window.customjs.modules.push(this);
-    
-    // Also add to legacy plugins array for backwards compatibility
-    if (!window.customjs.plugins) {
-      window.customjs.plugins = [];
-    }
-    window.customjs.plugins.push(this);
 
     // Initialize subscription tracking for this module
     if (!window.customjs.subscriptions) {
@@ -594,7 +588,8 @@ export class CustomModule extends Module {
         window.customjs.__currentPluginUrl = "${moduleUrl}";
         
         const { CustomModule, Logger, CustomActionButton } = window.customjs.classes;
-        const { SettingType, definePluginSettings, utils } = window.customjs;
+        const { definePluginSettings, utils } = window.customjs;
+        const SettingType = window.customjs.types.SettingType;
         
         ${moduleCode}
         
@@ -670,12 +665,6 @@ export class CustomModule extends Module {
     const index = window.customjs.modules.indexOf(this);
     if (index > -1) {
       window.customjs.modules.splice(index, 1);
-    }
-
-    // Also remove from legacy plugins array
-    const pluginIndex = window.customjs.plugins.indexOf(this);
-    if (pluginIndex > -1) {
-      window.customjs.plugins.splice(pluginIndex, 1);
     }
 
     // Remove from loaded URLs

@@ -16,7 +16,6 @@ import { ModuleRepository, repositoryMetadata, loadRepositories, addRepository, 
 // Initialize window.customjs
 window.customjs = {
   modules: [],
-  plugins: [],
   repos: [],
   subscriptions: new Map(),
   hooks: {
@@ -29,6 +28,7 @@ window.customjs = {
   events: {},
   coreModules: new Map(),
   classes: {} as any,
+  types: {} as any,
 };
 
 // Register core module metadata
@@ -58,8 +58,12 @@ window.customjs.classes = {
 
 // Export utilities and helpers
 window.customjs.utils = utils;
-window.customjs.SettingType = SettingType;
 window.customjs.definePluginSettings = definePluginSettings;
+
+// Export types
+window.customjs.types = {
+  SettingType,
+};
 
 // Export helper functions
 window.customjs.getModule = getModule;
@@ -117,13 +121,15 @@ async function exposeElementPlus() {
 }
 
 // Start login monitoring
+let hasTriggeredLogin = false;
+
 function startLoginMonitoring(): void {
   const setupWatch = () => {
     if (window.$pinia?.user?.$subscribe) {
       window.$pinia.user.$subscribe(() => {
         const currentUser = (window.$pinia!.user as any).currentUser;
-        if (currentUser && currentUser.id && !(window.customjs as any).hasTriggeredLogin) {
-          (window.customjs as any).hasTriggeredLogin = true;
+        if (currentUser && currentUser.id && !hasTriggeredLogin) {
+          hasTriggeredLogin = true;
           triggerModuleLogin(currentUser);
         }
       });

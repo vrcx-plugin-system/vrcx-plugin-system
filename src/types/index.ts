@@ -101,7 +101,6 @@ declare global {
   interface Window {
     customjs: {
       modules: any[];
-      plugins: any[];
       repos: any[];
       subscriptions: Map<string, Set<() => void>>;
       hooks: {
@@ -125,7 +124,9 @@ declare global {
       };
       systemLogger?: any;
       configManager?: any;
-      SettingType?: any;
+      types: {
+        SettingType: any;
+      };
       definePluginSettings?: Function;
       utils?: Record<string, any>;
       getModule?: (idOrUrl: string) => any;

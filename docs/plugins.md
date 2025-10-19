@@ -19,7 +19,7 @@ class MyPlugin extends window.customjs.classes.Plugin {
     // Setup: define settings, register hooks
     this.settings = this.defineSettings({
       enabled: {
-        type: window.customjs.SettingType.BOOLEAN,
+        type: window.customjs.types.SettingType.BOOLEAN,
         description: "Enable feature",
         default: true,
       },
@@ -115,20 +115,20 @@ Equicord-inspired reactive settings:
 ```javascript
 this.settings = this.defineSettings({
   apiKey: {
-    type: window.customjs.SettingType.STRING,
+    type: window.customjs.types.SettingType.STRING,
     description: "Your API key",
     category: "authentication",
     placeholder: "Enter key...",
     default: "",
   },
   volume: {
-    type: window.customjs.SettingType.SLIDER,
+    type: window.customjs.types.SettingType.SLIDER,
     description: "Volume level",
     default: 0.5,
     markers: [0, 0.25, 0.5, 0.75, 1],
   },
   mode: {
-    type: window.customjs.SettingType.SELECT,
+    type: window.customjs.types.SettingType.SELECT,
     description: "Operating mode",
     options: [
       { label: "Auto", value: "auto", default: true },
@@ -136,7 +136,7 @@ this.settings = this.defineSettings({
     ],
   },
   template: {
-    type: window.customjs.SettingType.STRING,
+    type: window.customjs.types.SettingType.STRING,
     description: "Bio template",
     default: "Playtime: {playtime}",
     variables: {

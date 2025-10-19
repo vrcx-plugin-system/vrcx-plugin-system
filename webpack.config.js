@@ -29,13 +29,17 @@ module.exports = (env, argv) => {
         new TerserPlugin({
           terserOptions: {
             compress: {
-              drop_console: false, // Keep console statements
+              drop_console: false,
+            },
+            mangle: {
+              keep_classnames: true,
+              keep_fnames: true,
             },
             format: {
-              comments: false, // Remove comments
+              comments: false,
             },
           },
-          extractComments: false, // Don't extract comments to separate file
+          extractComments: false,
         }),
       ],
     },

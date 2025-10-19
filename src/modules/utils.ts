@@ -27,6 +27,21 @@ export const utils = {
   },
 
   /**
+   * Decode Unicode escape sequences in a string (e.g., \u{1F504} → 🔄)
+   */
+  decodeUnicode(str: string): string {
+    if (!str) return str;
+    try {
+      return str.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (match, code) => {
+        return String.fromCodePoint(parseInt(code, 16));
+      });
+    } catch (err) {
+      console.error("decodeUnicode failed:", err);
+      return str;
+    }
+  },
+
+  /**
    * Convert milliseconds to human-readable text
    */
   timeToText(ms: number): string {

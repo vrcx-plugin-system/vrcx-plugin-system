@@ -195,6 +195,22 @@ export abstract class Module {
     }
   }
 
+  /**
+   * Get decoded display name (with emojis properly rendered)
+   */
+  getDisplayName(): string {
+    const utils = window.customjs?.utils;
+    return utils?.decodeUnicode ? utils.decodeUnicode(this.metadata.name) : this.metadata.name;
+  }
+
+  /**
+   * Get decoded description (with emojis properly rendered)
+   */
+  getDisplayDescription(): string {
+    const utils = window.customjs?.utils;
+    return utils?.decodeUnicode ? utils.decodeUnicode(this.metadata.description) : this.metadata.description;
+  }
+
   // Logging methods
   log(message: string, ...args: any[]): void {
     this.logger.logInfo(message);
