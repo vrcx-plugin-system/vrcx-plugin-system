@@ -273,8 +273,25 @@ Write-Host "=== Build ===" -ForegroundColor Cyan
 if ($BuildArgs -and $BuildArgs.Count -gt 0) {
     $argsString = $BuildArgs -join ' '
     Write-Host "Build arguments: $argsString" -ForegroundColor Gray
-    Write-Host "Building TypeScript project with arguments..." -ForegroundColor Yellow
-    npm run build -- $BuildArgs
+    
+    # Check if --no-timestamp flag is present
+    $hasNoTimestamp = $BuildArgs -contains '--no-timestamp' -or $BuildArgs -contains '--skip-timestamp'
+    
+    if ($hasNoTimestamp) {
+        Write-Host "Building TypeScript project (skipping timestamp update)..." -ForegroundColor Yellow
+        # Run prebuild with the flag, then build without args
+        npm run prebuild -- --no-timestamp
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[FAILURE] Prebuild failed" -ForegroundColor Red
+            exit 1
+        }
+        npm run build
+    }
+    else {
+        Write-Host "Building TypeScript project with arguments..." -ForegroundColor Yellow
+        # Pass other arguments to build (webpack will receive them)
+        npm run build -- $BuildArgs
+    }
 }
 else {
     Write-Host "Building TypeScript project..." -ForegroundColor Yellow

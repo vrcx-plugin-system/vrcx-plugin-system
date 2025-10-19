@@ -59,7 +59,7 @@ function getMostRecentModificationTime(dir) {
  */
 function updateBuildTimestamp() {
   try {
-    console.log("🔄 Updating build timestamp...");
+    console.log("[INFO] Updating build timestamp...");
 
     // Get most recent modification time from all source files
     const mostRecentTime = getMostRecentModificationTime(SRC_DIR);
@@ -81,21 +81,21 @@ function updateBuildTimestamp() {
 
         const date = new Date(mostRecentTime);
         console.log(
-          `✓ Build timestamp updated: ${oldTimestamp} → ${unixTimestamp}`
+          `[OK] Build timestamp updated: ${oldTimestamp} -> ${unixTimestamp}`
         );
         console.log(`  Last modified: ${date.toLocaleString()}`);
         return true;
       } else {
-        console.log(`✓ Build timestamp already current: ${unixTimestamp}`);
+        console.log(`[OK] Build timestamp already current: ${unixTimestamp}`);
         return false;
       }
     } else {
-      console.warn("⚠ No build timestamp found in index.ts");
+      console.warn("[!] No build timestamp found in index.ts");
       return false;
     }
   } catch (error) {
-    console.error(`❌ Failed to update build timestamp: ${error.message}`);
-    console.warn("⚠ Continuing build despite timestamp update failure...");
+    console.error(`[X] Failed to update build timestamp: ${error.message}`);
+    console.warn("[!] Continuing build despite timestamp update failure...");
     return false;
   }
 }
@@ -104,7 +104,9 @@ function updateBuildTimestamp() {
 console.log("=== VRCX Plugin System Build Timestamp Update ===\n");
 
 if (skipTimestamp) {
-  console.log("⏭ Skipping build timestamp update (--no-timestamp flag set)");
+  console.log(
+    "[SKIP] Skipping build timestamp update (--no-timestamp flag set)"
+  );
 } else {
   updateBuildTimestamp();
 }
