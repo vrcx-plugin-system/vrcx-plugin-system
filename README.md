@@ -2,21 +2,7 @@
 
 TypeScript-based extensible plugin system for VRCX with hot-reload support, settings management, and comprehensive APIs.
 
-## Features
-
-- ✅ **TypeScript-first** - Full type safety with IDE autocomplete
-- ✅ **Hot-reload** - Load/reload plugins without restarting VRCX
-- ✅ **Repository system** - Install plugins from remote repositories
-- ✅ **Settings management** - Equicord-style settings with categories and validation
-- ✅ **Dependency resolution** - Required and optional dependencies with timeouts
-- ✅ **Hook system** - Intercept and modify any function
-- ✅ **Event system** - Publish/subscribe pattern for plugin communication
-- ✅ **Resource management** - Automatic cleanup of timers, listeners, observers
-- ✅ **Testing** - Comprehensive Jest test suite
-
 ## Installation
-
-### For Users
 
 #### Option 1: One-Click Install (Recommended)
 
@@ -49,6 +35,18 @@ That's it! The plugin system will load automatically.
 |                     Plugin Manager UI                     |                       Context Menu                        |                     User Context Menu                      |                     Plugin Settings UI                     |
 | :-------------------------------------------------------: | :-------------------------------------------------------: | :--------------------------------------------------------: | :--------------------------------------------------------: |
 | ![Plugin Manager UI](https://files.catbox.moe/nb6p1h.png) | ![User Context Menu](https://files.catbox.moe/l1xzll.png) | ![Confirmation Modal](https://files.catbox.moe/emjn86.png) | ![Plugin Settings UI](https://files.catbox.moe/qm35bw.png) |
+
+## Features
+
+- ✅ **TypeScript-first** - Full type safety with IDE autocomplete
+- ✅ **Hot-reload** - Load/reload plugins without restarting VRCX
+- ✅ **Repository system** - Install plugins from remote repositories
+- ✅ **Settings management** - Equicord-style settings with categories and validation
+- ✅ **Dependency resolution** - Required and optional dependencies with timeouts
+- ✅ **Hook system** - Intercept and modify any function
+- ✅ **Event system** - Publish/subscribe pattern for plugin communication
+- ✅ **Resource management** - Automatic cleanup of timers, listeners, observers
+- ✅ **Testing** - Comprehensive Jest test suite
 
 ### For Developers
 
