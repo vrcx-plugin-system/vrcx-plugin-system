@@ -1,4 +1,6 @@
-// Type definitions for VRCX Plugin System
+/**
+ * Type definitions for VRCX Plugin System
+ */
 
 /**
  * Author information for modules and plugins
@@ -11,14 +13,14 @@ export interface ModuleAuthor {
 }
 
 /**
- * Metadata for both core modules and plugins
+ * Metadata for both core modules and custom modules
  */
 export interface ModuleMetadata {
   id: string;
   name: string;
   description: string;
   authors: ModuleAuthor[];
-  build?: string;  // Optional - managed by repo.json or build system
+  build?: string;
   url?: string | null;
   tags?: string[];
 }
@@ -67,7 +69,7 @@ export interface PluginConfig {
 }
 
 /**
- * Plugin metadata for repository system
+ * Module metadata for repository system
  */
 export interface PluginRepoMetadata {
   id: string;
@@ -78,6 +80,7 @@ export interface PluginRepoMetadata {
   url: string;
   enabled?: boolean;
   tags?: string[];
+  repository?: any;
 }
 
 export interface PluginRepoData {
@@ -93,23 +96,13 @@ export interface RepoConfig {
   [repoUrl: string]: boolean;
 }
 
-// Backwards compatibility: Keep old type names as aliases
-/** @deprecated Use ModuleMetadata instead */
-export type PluginMetadata = ModuleMetadata;
-
 // Global window type augmentation
 declare global {
   interface Window {
     customjs: {
-      logColors: {
-        CustomJS: string;
-        PluginLoader: string;
-        PluginManager: string;
-        Plugin: string;
-        Config: string;
-        Utils: string;
-      };
+      modules: any[];
       plugins: any[];
+      repos: any[];
       subscriptions: Map<string, Set<() => void>>;
       hooks: {
         pre: Record<string, Array<{plugin: any; callback: Function}>>;
@@ -124,20 +117,25 @@ declare global {
         Logger: any;
         ConfigManager: any;
         SettingsStore: any;
-        Plugin: any;
-        PluginLoader: any;
-        PluginManager: any;
+        Module: any;
+        CoreModule: any;
+        CustomModule: any;
         CustomActionButton: any;
-        PluginRepo: any;
-        PluginRepoManager: any;
+        ModuleRepository: any;
       };
       systemLogger?: any;
       configManager?: any;
       SettingType?: any;
       definePluginSettings?: Function;
-      pluginManager?: any;
-      repoManager?: any;
       utils?: Record<string, any>;
+      getModule?: (idOrUrl: string) => any;
+      waitForModule?: (moduleId: string, timeout?: number) => Promise<any>;
+      getRepo?: (url: string) => any;
+      loadModule?: (url: string) => Promise<{success: boolean; message?: string; module?: any}>;
+      unloadModule?: (idOrUrl: string) => Promise<{success: boolean; message?: string}>;
+      reloadModule?: (idOrUrl: string) => Promise<{success: boolean; message?: string}>;
+      addRepository?: (url: string, saveConfig?: boolean) => Promise<{success: boolean; message: string; repo?: any}>;
+      removeRepository?: (url: string) => boolean;
       __currentPluginUrl?: string;
       __LAST_PLUGIN_CLASS__?: any;
     };

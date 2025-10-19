@@ -1,6 +1,6 @@
 /**
- * VRCX Plugin System v3.0
- * TypeScript-based plugin management system for VRCX
+ * VRCX Module System v3.1
+ * TypeScript-based module management system for VRCX
  * 
  * This file is bundled into a single custom.js for VRCX
  */
@@ -8,25 +8,16 @@
 import { Logger, loggerMetadata } from './modules/logger';
 import { utils, utilsMetadata } from './modules/utils';
 import { ConfigManager, SettingsStore, SettingType, definePluginSettings, configMetadata } from './modules/config';
-import { Plugin, PluginLoader, PluginManager, CustomActionButton, pluginModuleMetadata } from './modules/plugin';
-import { PluginRepo, PluginRepoManager, repoMetadata } from './modules/repo';
-
-// Show dev tools
-// if (window.AppApi?.ShowDevTools) {
-//   window.AppApi.ShowDevTools();
-// }
+import { Module, CoreModule, moduleMetadata } from './modules/module';
+import { CustomModule, CustomActionButton, customModuleMetadata } from './modules/custom-module';
+import { getModule, loadModule, unloadModule, reloadModule, waitForModule, getAllLoadedModules, loadAllModules, startAllModules, stopAllModules, triggerModuleLogin } from './modules/module-helpers';
+import { ModuleRepository, repositoryMetadata, loadRepositories, addRepository, removeRepository, getRepository, getAllRepositories, getEnabledRepositories, getAllModules, findModuleByUrl, findModuleById } from './modules/repository';
 
 // Initialize window.customjs
 window.customjs = {
-  logColors: {
-    CustomJS: "#00ff88",
-    PluginLoader: "#2196f3",
-    PluginManager: "#4caf50",
-    Plugin: "#888888",
-    Config: "#ff9800",
-    Utils: "#9c27b0",
-  },
+  modules: [],
   plugins: [],
+  repos: [],
   subscriptions: new Map(),
   hooks: {
     pre: {},
@@ -44,12 +35,13 @@ window.customjs = {
 window.customjs.coreModules!.set('logger', loggerMetadata);
 window.customjs.coreModules!.set('utils', utilsMetadata);
 window.customjs.coreModules!.set('config', configMetadata);
-window.customjs.coreModules!.set('plugin', pluginModuleMetadata);
-window.customjs.coreModules!.set('repo', repoMetadata);
+window.customjs.coreModules!.set('module', moduleMetadata);
+window.customjs.coreModules!.set('custom-module', customModuleMetadata);
+window.customjs.coreModules!.set('repository', repositoryMetadata);
 
 // Create system logger
 window.customjs.systemLogger = new Logger("");
-window.customjs.systemLogger.log(`Starting Plugin System!`);
+window.customjs.systemLogger.log(`Starting Module System v3.1!`);
 window.customjs.systemLogger.log(`Cache buster: ${Date.now()}`);
 
 // Export all core classes to global scope under classes namespace
@@ -57,12 +49,11 @@ window.customjs.classes = {
   Logger,
   ConfigManager,
   SettingsStore,
-  Plugin,
-  PluginLoader,
-  PluginManager,
+  Module,
+  CoreModule,
+  CustomModule,
   CustomActionButton,
-  PluginRepo,
-  PluginRepoManager,
+  ModuleRepository,
 };
 
 // Export utilities and helpers
@@ -70,7 +61,15 @@ window.customjs.utils = utils;
 window.customjs.SettingType = SettingType;
 window.customjs.definePluginSettings = definePluginSettings;
 
-// Note: We don't export to global window scope - plugins get these via destructuring in the loader
+// Export helper functions
+window.customjs.getModule = getModule;
+window.customjs.waitForModule = waitForModule;
+window.customjs.loadModule = loadModule;
+window.customjs.unloadModule = unloadModule;
+window.customjs.reloadModule = reloadModule;
+window.customjs.getRepo = getRepository;
+window.customjs.addRepository = addRepository;
+window.customjs.removeRepository = removeRepository;
 
 // Initialize ConfigManager
 window.customjs.configManager = new ConfigManager();
@@ -91,11 +90,9 @@ async function exposeElementPlus() {
     const checkInterval = setInterval(() => {
       attempts++;
       
-      // Check if Vue app is loaded with global properties
       if ((window as any).$app?.config?.globalProperties) {
         const globalProps = (window as any).$app.config.globalProperties;
         
-        // Expose $message and $notify directly to window for easier access
         if (globalProps.$message || globalProps.$notify) {
           if (globalProps.$message) {
             (window as any).ElMessage = globalProps.$message;
@@ -110,7 +107,6 @@ async function exposeElementPlus() {
         }
       }
       
-      // Timeout after max attempts - proceed anyway
       if (attempts >= maxAttempts) {
         clearInterval(checkInterval);
         window.customjs.systemLogger.logWarn("Element Plus not detected yet, will use Vue global properties fallback");
@@ -120,32 +116,61 @@ async function exposeElementPlus() {
   });
 }
 
-// Bootstrap function: Initialize core modules, then start plugin system
-async function bootstrapPluginSystem() {
+// Start login monitoring
+function startLoginMonitoring(): void {
+  const setupWatch = () => {
+    if (window.$pinia?.user?.$subscribe) {
+      window.$pinia.user.$subscribe(() => {
+        const currentUser = (window.$pinia!.user as any).currentUser;
+        if (currentUser && currentUser.id && !(window.customjs as any).hasTriggeredLogin) {
+          (window.customjs as any).hasTriggeredLogin = true;
+          triggerModuleLogin(currentUser);
+        }
+      });
+    } else {
+      setTimeout(setupWatch, 500);
+    }
+  };
+
+  setTimeout(setupWatch, 100);
+}
+
+// Bootstrap function: Initialize core modules, then start module system
+async function bootstrapModuleSystem() {
   try {
     // Step 1: Initialize ConfigManager
     await initializeConfigManager();
 
-    window.customjs.systemLogger.log("Core modules loaded, initializing plugin system...");
+    window.customjs.systemLogger.log("Core modules loaded, initializing module system...");
 
     // Step 2: Wait for Element Plus to be available
     await exposeElementPlus();
 
-    // Step 3: Instantiate PluginManager and load plugins
-    window.customjs.pluginManager = new PluginManager();
-    await window.customjs.pluginManager.loadAllPlugins();
+    // Step 3: Initialize repository system and load repositories
+    window.customjs.systemLogger.log("Loading repositories...");
+    await loadRepositories();
+    
+    const enabledRepos = getEnabledRepositories();
+    const allModules = getAllModules();
+    window.customjs.systemLogger.log(`✓ Loaded ${enabledRepos.length} repositories with ${allModules.length} modules`);
 
-    window.customjs.systemLogger.log("✓ Plugin system fully initialized");
-    window.customjs.systemLogger.showSuccess("VRCX Plugin System loaded successfully");
+    // Step 4: Load all enabled modules
+    await loadAllModules();
+
+    // Step 5: Start login monitoring
+    startLoginMonitoring();
+
+    window.customjs.systemLogger.log("✓ Module system fully initialized");
+    window.customjs.systemLogger.showSuccess("VRCX Module System loaded successfully");
   } catch (error) {
     window.customjs.systemLogger.logError("Bootstrap failed:", error);
-    window.customjs.systemLogger.showError(`Failed to initialize plugin system: ${(error as Error).message}`);
+    window.customjs.systemLogger.showError(`Failed to initialize module system: ${(error as Error).message}`);
   }
 }
 
 // Wait for DOM ready, then bootstrap
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", bootstrapPluginSystem);
+  document.addEventListener("DOMContentLoaded", bootstrapModuleSystem);
 } else {
-  bootstrapPluginSystem();
+  bootstrapModuleSystem();
 }

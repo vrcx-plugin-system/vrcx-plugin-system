@@ -19,11 +19,10 @@ export const loggerMetadata: ModuleMetadata = {
  */
 export class Logger {
   private context: string;
-  private logColor: string;
+  private logColor: string = '#9c27b0';
 
   constructor(context: string = "CJS") {
     this.context = context;
-    this.logColor = (window as any).customjs?.logColors?.Plugin || '#888888';
   }
 
   /**
