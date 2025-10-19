@@ -18,7 +18,7 @@ import { PluginRepo, PluginRepoManager, repoMetadata } from './modules/repo';
 
 // Initialize window.customjs
 window.customjs = {
-  build: "1760846563",
+  build: "1760847209",
   logColors: {
     CustomJS: "#00ff88",
     PluginLoader: "#2196f3",
