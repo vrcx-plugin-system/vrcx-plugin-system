@@ -316,6 +316,8 @@ Write-Host "[SUCCESS] Build output size: $fileSizeKB KB" -ForegroundColor Green
 Write-Host ""
 Write-Host "=== Build Plugins Repository ===" -ForegroundColor Cyan
 
+# Get the parent directory (vrcx-plugin-system root)
+$PluginSystemRoot = Split-Path -Parent $ProjectDir
 $PluginsDir = Join-Path $PluginSystemRoot "plugins"
 if (Test-Path $PluginsDir) {
     Write-Host "Plugins directory found: $PluginsDir" -ForegroundColor Gray
