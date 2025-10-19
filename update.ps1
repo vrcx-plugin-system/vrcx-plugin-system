@@ -152,7 +152,7 @@ function Invoke-GitOperation {
             Write-Warning "Not a git repository: $RepoPath"
             return @{ Committed = $false; Pushed = $false }
         }
-        
+    
         # Ensure on correct branch
         $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
         if ($currentBranch -ne $BranchName) {
@@ -164,7 +164,7 @@ function Invoke-GitOperation {
                 git checkout -b $BranchName 2>&1 | Out-Null
             }
         }
-        
+    
         # Check for changes
         $status = git status --porcelain 2>$null
         if ([string]::IsNullOrWhiteSpace($status)) {
@@ -508,10 +508,10 @@ if (-not $SkipDeploy) {
         Write-Warning "Please ensure VRCX is installed"
         exit 1
     }
-    
+
     $targetFile = Join-Path $TargetDir "custom.js"
     Write-Info "Copying custom.js to VRCX directory..."
-    
+
     try {
         Copy-Item $distFile $targetFile -Force
         Write-Success "Deployed to VRCX successfully"
@@ -519,7 +519,7 @@ if (-not $SkipDeploy) {
     catch {
         Write-Warning "Failed to copy directly: $($_.Exception.Message)"
         Write-Info "Trying alternative approach..."
-        
+    
         $tempFile = "$targetFile.tmp"
         try {
             Copy-Item $distFile $tempFile -Force
@@ -535,7 +535,7 @@ if (-not $SkipDeploy) {
             exit 1
         }
     }
-    
+
     # Clear logs
     $logsDir = Join-Path $TargetDir "logs"
     if (Test-Path $logsDir) {
@@ -588,7 +588,7 @@ Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/re
 %APPDATA%\VRCX\
 ```
 "@
-        
+    
         $assetPath = Join-Path $ProjectDir "dist\custom.js"
         if (Test-Path $assetPath) {
             gh release create $releaseTag $assetPath `
@@ -596,7 +596,7 @@ Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/re
                 --notes $releaseNotes `
                 --target $Branch `
                 2>&1 | Out-Null
-            
+        
             if ($LASTEXITCODE -eq 0) {
                 Write-Success "GitHub release created: $releaseTag"
             }
