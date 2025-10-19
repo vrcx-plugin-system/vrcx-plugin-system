@@ -5,7 +5,7 @@ Complete guide for creating VRCX plugins.
 ## Quick Start
 
 ```javascript
-class MyPlugin extends window.customjs.Plugin {
+class MyPlugin extends window.customjs.classes.Plugin {
   constructor() {
     super({
       name: "My Plugin",
@@ -77,23 +77,25 @@ window.customjs.__LAST_PLUGIN_CLASS__ = MyPlugin;
 
 ### Custom Action Buttons
 
-Add buttons to Plugin Manager UI:
+Add buttons to Plugin Manager UI in your constructor:
 
 ```javascript
-getActionButtons() {
-  return [
-    {
-      label: "Update Now",
-      color: "success",        // primary|success|warning|danger|info
-      icon: "ri-refresh-line", // Remix Icon class
-      title: "Tooltip text",
+constructor() {
+  super({ name: "My Plugin", ... });
+  
+  this.actionButtons = [
+    new CustomActionButton({
+      title: "Update Now",
+      color: "success",              // primary|success|warning|danger|info
+      icon: "ri-refresh-line",       // Remix Icon class
+      description: "Tooltip text",   // Hover tooltip
       callback: async () => {
         await this.doUpdate();
         this.logger.showSuccess("Updated!");
       },
-    },
-    {
-      label: "Clear Cache",
+    }),
+    new CustomActionButton({
+      title: "Clear Cache",
       color: "danger",
       icon: "ri-delete-bin-line",
       callback: async () => {
@@ -101,7 +103,7 @@ getActionButtons() {
           this.clearCache();
         }
       },
-    },
+    }),
   ];
 }
 ```

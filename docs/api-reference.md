@@ -34,20 +34,18 @@ async toggle()    // Toggle state
 
 ### Custom Action Buttons
 
-```javascript
-getActionButtons(): Array<ButtonDefinition>
-```
-
-**ButtonDefinition:**
+Define custom action buttons in your plugin's constructor:
 
 ```javascript
-{
-  label: string,          // Button text
-  color: string,          // primary|success|warning|danger|info
-  icon?: string,          // Remix Icon class (e.g., "ri-refresh-line")
-  title?: string,         // Tooltip
-  callback: async () => void  // Click handler
-}
+this.actionButtons = [
+  new CustomActionButton({
+    title: string,          // Button text
+    color?: string,         // primary|success|warning|danger|info (default: primary)
+    icon?: string,          // Remix Icon class (e.g., "ri-refresh-line")
+    description?: string,   // Tooltip/hover text
+    callback: async () => void  // Click handler
+  })
+];
 ```
 
 ### Resource Management

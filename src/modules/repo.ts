@@ -43,13 +43,13 @@ export class PluginRepo {
       const repoData: PluginRepoData = await response.json();
       
       // Validate required fields
-      if (!repoData.name || !repoData.plugins || !Array.isArray(repoData.plugins)) {
+      if (!repoData.name || !repoData.modules || !Array.isArray(repoData.modules)) {
         throw new Error('Invalid repository format');
       }
 
       this.data = repoData;
       this.loaded = true;
-      this.log(`✓ Repository loaded: ${repoData.name} (${repoData.plugins.length} plugins)`);
+      this.log(`✓ Repository loaded: ${repoData.name} (${repoData.modules.length} modules)`);
       
       return true;
     } catch (error: any) {
@@ -59,10 +59,22 @@ export class PluginRepo {
   }
 
   /**
-   * Get all plugins from this repository
+   * Get all modules from this repository
    */
   getPlugins(): PluginRepoMetadata[] {
-    return this.data?.plugins || [];
+    const modules = this.data?.modules || [];
+    
+    // If module has no authors, use repo authors as fallback
+    if (this.data?.authors) {
+      return modules.map(module => {
+        if (!module.authors || module.authors.length === 0 || !module.authors[0].name) {
+          return { ...module, authors: this.data!.authors };
+        }
+        return module;
+      });
+    }
+    
+    return modules;
   }
 
   /**
@@ -103,11 +115,9 @@ export class PluginRepoManager {
   constructor() {
     this.logColor = window.customjs?.logColors?.PluginManager || '#4caf50';
     
-    // Register in global namespace
+    // Register instance in global namespace
     window.customjs = window.customjs || {} as any;
     window.customjs.repoManager = this;
-    window.customjs.PluginRepoManager = PluginRepoManager;
-    window.customjs.PluginRepo = PluginRepo;
   }
 
   /**

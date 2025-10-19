@@ -16,6 +16,31 @@ export const pluginModuleMetadata: ModuleMetadata = {
 };
 
 /**
+ * Custom action button for Plugin Manager UI
+ */
+export class CustomActionButton {
+  title: string;
+  color: "primary" | "success" | "warning" | "danger" | "info";
+  icon?: string;
+  description?: string;
+  callback: () => void | Promise<void>;
+
+  constructor(config: {
+    title: string;
+    color?: "primary" | "success" | "warning" | "danger" | "info";
+    icon?: string;
+    description?: string;
+    callback: () => void | Promise<void>;
+  }) {
+    this.title = config.title;
+    this.color = config.color || "primary";
+    this.icon = config.icon;
+    this.description = config.description;
+    this.callback = config.callback;
+  }
+}
+
+/**
  * Base Plugin class for VRCX plugins
  */
 export class Plugin {
@@ -27,6 +52,7 @@ export class Plugin {
   logger: Logger;
   resources: ResourceTracking;
   logColor: string;
+  actionButtons: CustomActionButton[] = [];
 
   constructor(metadata: Partial<ModuleMetadata> = {}) {
     // Get URL from metadata or from global scope (set by PluginManager)
@@ -453,8 +479,9 @@ export class PluginLoader {
         window.customjs = window.customjs || {};
         window.customjs.__currentPluginUrl = "${pluginUrl}";
         
-        // Destructure commonly used classes from window.customjs for plugin use
-        const { Plugin, Logger, SettingType, definePluginSettings, utils } = window.customjs;
+        // Destructure commonly used classes and utilities from window.customjs for plugin use
+        const { Plugin, Logger, CustomActionButton } = window.customjs.classes;
+        const { SettingType, definePluginSettings, utils } = window.customjs;
         
         ${pluginCode}
         
@@ -1297,13 +1324,16 @@ export class PluginManager {
       logAndNotifyAll(msg: string): void { this.log(msg, "info"); }
     }
 
-    (window.customjs as any).Logger = FallbackLogger;
+    if (!window.customjs.classes) {
+      (window.customjs as any).classes = {};
+    }
+    (window.customjs as any).classes.Logger = FallbackLogger;
     console.log("%c[CJS|PluginManager] ✓ Fallback Logger class registered", `color: ${this.logColor}`);
   }
 
   async loadAllPlugins(): Promise<void> {
     // Ensure Logger exists (provide fallback if loading failed)
-    if (!window.customjs.Logger) {
+    if (!window.customjs.classes?.Logger) {
       console.warn(
         "%c[CJS|PluginManager] Logger failed to load, using fallback console logger",
         `color: ${this.logColor}`

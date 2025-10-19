@@ -8,7 +8,7 @@
 import { Logger, loggerMetadata } from './modules/logger';
 import { utils, utilsMetadata } from './modules/utils';
 import { ConfigManager, SettingsStore, SettingType, definePluginSettings, configMetadata } from './modules/config';
-import { Plugin, PluginLoader, PluginManager, pluginModuleMetadata } from './modules/plugin';
+import { Plugin, PluginLoader, PluginManager, CustomActionButton, pluginModuleMetadata } from './modules/plugin';
 import { PluginRepo, PluginRepoManager, repoMetadata } from './modules/repo';
 
 // Show dev tools
@@ -37,6 +37,7 @@ window.customjs = {
   functions: {},
   events: {},
   coreModules: new Map(),
+  classes: {} as any,
 };
 
 // Register core module metadata
@@ -51,18 +52,23 @@ window.customjs.systemLogger = new Logger("");
 window.customjs.systemLogger.log(`Starting Plugin System!`);
 window.customjs.systemLogger.log(`Cache buster: ${Date.now()}`);
 
-// Export all core classes to global scope
-window.customjs.Logger = Logger;
+// Export all core classes to global scope under classes namespace
+window.customjs.classes = {
+  Logger,
+  ConfigManager,
+  SettingsStore,
+  Plugin,
+  PluginLoader,
+  PluginManager,
+  CustomActionButton,
+  PluginRepo,
+  PluginRepoManager,
+};
+
+// Export utilities and helpers
 window.customjs.utils = utils;
-window.customjs.ConfigManager = ConfigManager;
-window.customjs.SettingsStore = SettingsStore;
 window.customjs.SettingType = SettingType;
 window.customjs.definePluginSettings = definePluginSettings;
-window.customjs.Plugin = Plugin;
-window.customjs.PluginLoader = PluginLoader;
-window.customjs.PluginManager = PluginManager;
-window.customjs.PluginRepo = PluginRepo;
-window.customjs.PluginRepoManager = PluginRepoManager;
 
 // Note: We don't export to global window scope - plugins get these via destructuring in the loader
 

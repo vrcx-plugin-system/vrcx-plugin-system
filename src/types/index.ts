@@ -86,7 +86,7 @@ export interface PluginRepoData {
   authors: ModuleAuthor[];
   build: string;
   url: string;
-  plugins: PluginRepoMetadata[];
+  modules: PluginRepoMetadata[];
 }
 
 export interface RepoConfig {
@@ -120,20 +120,23 @@ declare global {
       functions: Record<string, Function>;
       events: Record<string, Array<Function>>;
       coreModules?: Map<string, any>;
-      Logger?: any;
+      classes: {
+        Logger: any;
+        ConfigManager: any;
+        SettingsStore: any;
+        Plugin: any;
+        PluginLoader: any;
+        PluginManager: any;
+        CustomActionButton: any;
+        PluginRepo: any;
+        PluginRepoManager: any;
+      };
       systemLogger?: any;
       configManager?: any;
-      ConfigManager?: any;
       SettingType?: any;
-      SettingsStore?: any;
       definePluginSettings?: Function;
       pluginManager?: any;
-      PluginManager?: any;
-      Plugin?: any;
-      PluginLoader?: any;
       repoManager?: any;
-      PluginRepoManager?: any;
-      PluginRepo?: any;
       utils?: Record<string, any>;
       __currentPluginUrl?: string;
       __LAST_PLUGIN_CLASS__?: any;
