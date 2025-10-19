@@ -1,573 +1,525 @@
 # VRCX Plugin System Update Script
-# This script builds the TypeScript project and copies the bundled file to VRCX
-# 
-# Usage: .\update.ps1 [build-args...]
-# Example: .\update.ps1 --no-timestamp --dev
+# Builds, tests, and deploys the plugin system with detailed reporting
+# Usage: .\update.ps1 [--no-timestamp] [--skip-tests] [--skip-deploy] [--skip-git]
 
-# $ErrorActionPreference = "Stop";
 param(
-    [Parameter(ValueFromRemainingArguments = $true)]
-    [string[]]$BuildArgs
+    [switch]$NoTimestamp,
+    [switch]$SkipTests,
+    [switch]$SkipDeploy,
+    [switch]$SkipGit
 )
 
-# Define paths - update these to match your setup
+$ErrorActionPreference = "Stop"
+
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
+
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$PluginSystemRoot = Split-Path -Parent $ProjectDir
+$PluginsDir = Join-Path $PluginSystemRoot "plugins"
 $TargetDir = "$env:APPDATA\VRCX"
-$BundledFile = "custom.js"
 $Branch = "main"
 
-function Get-UnixTime {
-    return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds)
+# Build results tracking
+$BuildResults = @{
+    Core    = @{
+        Path      = "dist\custom.js"
+        Built     = $false
+        TsSize    = 0
+        JsSize    = 0
+        Committed = $false
+        Pushed    = $false
+    }
+    Plugins = @()
+    Tests   = @{
+        Passed   = 0
+        Failed   = 0
+        Total    = 0
+        Duration = 0
+    }
 }
 
-function Update-PluginVersionAndBuild {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$PluginPath
-    )
+# ============================================================================
+# UTILITY FUNCTIONS
+# ============================================================================
+
+function Write-Section {
+    param([string]$Title)
+    Write-Host ""
+    Write-Host "=== $Title ===" -ForegroundColor Cyan
+}
+
+function Write-Success {
+    param([string]$Message)
+    Write-Host "[SUCCESS] $Message" -ForegroundColor Green
+}
+
+function Write-Failure {
+    param([string]$Message)
+    Write-Host "[FAILURE] $Message" -ForegroundColor Red
+}
+
+function Write-Warning {
+    param([string]$Message)
+    Write-Host "[WARNING] $Message" -ForegroundColor Yellow
+}
+
+function Write-Info {
+    param([string]$Message)
+    Write-Host "$Message" -ForegroundColor Yellow
+}
+
+function Test-Command {
+    param([string]$Command, [string]$Name)
     
-    if (-not (Test-Path $PluginPath)) {
-        Write-Host "[FAILURE] Plugin file not found: $PluginPath" -ForegroundColor Red
-        return $false
-    }
-    
-    Write-Host "Updating version and build for: $PluginPath" -ForegroundColor Yellow
-    
-    # Read the file content
-    $content = Get-Content $PluginPath -Raw
-    
-    # Find the version number
-    if ($content -match 'version:\s*"(\d+)\.(\d+)\.(\d+)"') {
-        $major = [int]$matches[1]
-        $minor = [int]$matches[2]
-        $patch = [int]$matches[3]
-        $oldVersion = "$major.$minor.$patch"
-        
-        # Increment the patch version with rollover
-        $patch++
-        if ($patch -gt 9) {
-            $patch = 0
-            $minor++
-            if ($minor -gt 9) {
-                $minor = 0
-                $major++
-                if ($major -gt 9) {
-                    $major = 0  # Complete rollover
-                }
-            }
-        }
-        
-        $newVersion = "$major.$minor.$patch"
-        Write-Host "  Version: $oldVersion -> $newVersion" -ForegroundColor Cyan
-        
-        # Update the version in content
-        $content = $content -replace 'version:\s*"\d+\.\d+\.\d+"', "version: `"$newVersion`""
-    }
-    else {
-        Write-Host "  [WARNING] Version pattern not found in file" -ForegroundColor Yellow
-    }
-    
-    # Get the file's last modified time and convert to Unix timestamp
-    $fileInfo = Get-Item $PluginPath
-    $lastModified = $fileInfo.LastWriteTime
-    $unixTimestamp = [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End $lastModified).TotalSeconds)
-    
-    Write-Host "  Build: $unixTimestamp (Last Modified: $lastModified)" -ForegroundColor Cyan
-    
-    # Update the build in content
-    if ($content -match 'build:\s*"\d+"') {
-        $content = $content -replace 'build:\s*"\d+"', "build: `"$unixTimestamp`""
-    }
-    else {
-        Write-Host "  [WARNING] Build pattern not found in file" -ForegroundColor Yellow
-    }
-    
-    # Write the updated content back to the file
+    Write-Info "Checking for $Name..."
     try {
-        Set-Content -Path $PluginPath -Value $content -NoNewline
-        Write-Host "[SUCCESS] Plugin version and build updated successfully" -ForegroundColor Green
+        $version = & $Command --version 2>$null
+        if ($LASTEXITCODE -ne 0) { throw "$Name not found" }
+        $versionLine = if ($version -is [array]) { $version[0] } else { $version }
+        Write-Success "$Name version: $versionLine"
         return $true
     }
     catch {
-        $errorMsg = $_.Exception.Message
-        Write-Host "[FAILURE] Failed to update plugin file: $errorMsg" -ForegroundColor Red
+        Write-Failure "$Name is not installed or not in PATH"
         return $false
     }
 }
 
-$unixTime = Get-UnixTime
+function Get-FileSize {
+    param([string]$Path)
+    if (Test-Path $Path) {
+        $size = (Get-Item $Path).Length
+        return [math]::Round($size / 1KB, 2)
+    }
+    return 0
+}
 
-function Commit-AndPushChanges {
+function Invoke-GitOperation {
     param(
-        [string]$RepositoryPath,
+        [string]$RepoPath,
         [string]$CommitMessage,
         [string]$BranchName = $Branch
     )
     
-    # Save current location
     $originalLocation = Get-Location
+    Set-Location $RepoPath
     
-    # Navigate to the repository
-    Write-Host "Navigating to repository: $RepositoryPath" -ForegroundColor Gray
-    Set-Location $RepositoryPath
-    
-    # Check if we're in a git repository
-    if (-not (Test-Path ".git")) {
-        Write-Host "[WARNING] Not a git repository at: $RepositoryPath" -ForegroundColor Yellow
-        Set-Location $originalLocation
-        return $false
-    }
-    
-    # Get or create the target branch
-    Write-Host "Setting up '$BranchName' branch..." -ForegroundColor Yellow
-    $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
-    
-    if ($currentBranch -ne $BranchName) {
-        # Check if branch exists
-        $branchExists = git rev-parse --verify $BranchName 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "Switching to existing '$BranchName' branch..." -ForegroundColor Yellow
-            git checkout $BranchName 2>&1 | Out-Null
-        }
-        else {
-            Write-Host "Creating new '$BranchName' branch..." -ForegroundColor Yellow
-            git checkout -b $BranchName 2>&1 | Out-Null
+    try {
+        # Verify git repo
+        if (-not (Test-Path ".git")) {
+            Write-Warning "Not a git repository: $RepoPath"
+            return @{ Committed = $false; Pushed = $false }
         }
         
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[WARNING] Failed to switch to '$BranchName' branch" -ForegroundColor Red
-            Set-Location $originalLocation
-            return $false
+        # Ensure on correct branch
+        $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
+        if ($currentBranch -ne $BranchName) {
+            $branchExists = git rev-parse --verify $BranchName 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                git checkout $BranchName 2>&1 | Out-Null
+            }
+            else {
+                git checkout -b $BranchName 2>&1 | Out-Null
+            }
         }
-        Write-Host "[SUCCESS] On '$BranchName' branch" -ForegroundColor Green
+        
+        # Check for changes
+        $status = git status --porcelain 2>$null
+        if ([string]::IsNullOrWhiteSpace($status)) {
+            Write-Success "No changes to commit"
+            return @{ Committed = $false; Pushed = $false }
+        }
+        
+        # Stage, commit, push
+        git add -A 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to stage changes"
+            return @{ Committed = $false; Pushed = $false }
+        }
+        
+        git commit -m $CommitMessage 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to commit changes"
+            return @{ Committed = $false; Pushed = $false }
+        }
+        
+        git push origin $BranchName 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to push changes"
+            return @{ Committed = $true; Pushed = $false }
+        }
+        
+        Write-Success "Changes committed and pushed"
+        return @{ Committed = $true; Pushed = $true }
+    }
+    finally {
+        Set-Location $originalLocation
+    }
+}
+
+function Show-BuildSummary {
+    Write-Section "Build Summary"
+    
+    # Create table data
+    $tableData = @()
+    
+    # Core module
+    $tableData += [PSCustomObject]@{
+        Component = "Core System"
+        Built     = if ($BuildResults.Core.Built) { "✓" } else { "✗" }
+        Committed = if ($BuildResults.Core.Committed) { "✓" } else { "✗" }
+        Pushed    = if ($BuildResults.Core.Pushed) { "✓" } else { "✗" }
+        Size      = "$($BuildResults.Core.JsSize) KB"
+    }
+    
+    # Plugins
+    $pluginStats = @{
+        Total  = $BuildResults.Plugins.Count
+        Built  = ($BuildResults.Plugins | Where-Object { $_.Built }).Count
+        Failed = ($BuildResults.Plugins | Where-Object { -not $_.Built }).Count
+    }
+    
+    $tableData += [PSCustomObject]@{
+        Component = "Plugins ($($pluginStats.Built)/$($pluginStats.Total))"
+        Built     = if ($pluginStats.Built -gt 0) { "✓" } else { "✗" }
+        Committed = if ($BuildResults.Core.Committed) { "✓" } else { "✗" }
+        Pushed    = if ($BuildResults.Core.Pushed) { "✓" } else { "✗" }
+        Size      = "$(($BuildResults.Plugins | Measure-Object -Property JsSize -Sum).Sum) KB"
+    }
+    
+    # Tests
+    if ($BuildResults.Tests.Total -gt 0) {
+        $tableData += [PSCustomObject]@{
+            Component = "Tests ($($BuildResults.Tests.Passed)/$($BuildResults.Tests.Total))"
+            Built     = if ($BuildResults.Tests.Failed -eq 0) { "✓" } else { "✗" }
+            Committed = "-"
+            Pushed    = "-"
+            Size      = "$([math]::Round($BuildResults.Tests.Duration / 1000, 1))s"
+        }
+    }
+    
+    # Display table
+    $tableData | Format-Table -AutoSize
+    
+    Write-Host ""
+    if ($BuildResults.Core.Built -and $pluginStats.Built -eq $pluginStats.Total) {
+        Write-Success "All components built successfully!"
+    }
+    elseif ($BuildResults.Core.Built) {
+        Write-Warning "Core built, but $($pluginStats.Failed) plugin(s) failed"
     }
     else {
-        Write-Host "[SUCCESS] Already on '$BranchName' branch" -ForegroundColor Green
+        Write-Failure "Build incomplete"
     }
-    
-    # Check for changes
-    Write-Host "Checking for changes..." -ForegroundColor Yellow
-    $status = git status --porcelain 2>$null
-    
-    if ([string]::IsNullOrWhiteSpace($status)) {
-        Write-Host "[SUCCESS] No changes to commit" -ForegroundColor Green
-        Set-Location $originalLocation
-        return $false
-    }
-    
-    Write-Host "[SUCCESS] Changes detected" -ForegroundColor Green
-    
-    # Stage all changes
-    Write-Host "Staging changes..." -ForegroundColor Yellow
-    $stageOutput = git add -A 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[WARNING] Failed to stage changes" -ForegroundColor Red
-        Write-Host "Error: $stageOutput" -ForegroundColor Red
-        Set-Location $originalLocation
-        return $false
-    }
-    Write-Host "[SUCCESS] Changes staged" -ForegroundColor Green
-    
-    # Commit changes
-    Write-Host "Committing changes..." -ForegroundColor Yellow
-    $commitOutput = git commit -m $CommitMessage 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[WARNING] Failed to commit changes" -ForegroundColor Red
-        Write-Host "Error: $commitOutput" -ForegroundColor Red
-        Set-Location $originalLocation
-        return $false
-    }
-    Write-Host "[SUCCESS] Changes committed" -ForegroundColor Green
-    
-    # Push to remote
-    Write-Host "Pushing to remote '$BranchName' branch..." -ForegroundColor Yellow
-    $pushOutput = git push origin $BranchName 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[WARNING] Failed to push changes" -ForegroundColor Yellow
-        Write-Host "Error: $pushOutput" -ForegroundColor Yellow
-        Write-Host "You may need to set up the remote or push manually" -ForegroundColor Yellow
-        Set-Location $originalLocation
-        return $false
-    }
-    Write-Host "[SUCCESS] Changes pushed to GitHub" -ForegroundColor Green
-    
-    # Return to original location
-    Set-Location $originalLocation
-    return $true
 }
 
-Write-Host "=== VRCX Plugin System Build & Update Script ===" -ForegroundColor Cyan
-Write-Host "Unix Time: $unixTime" -ForegroundColor Gray
-Write-Host "Project Directory: $ProjectDir" -ForegroundColor Gray
-Write-Host "Target Directory: $TargetDir" -ForegroundColor Gray
+# ============================================================================
+# MAIN SCRIPT
+# ============================================================================
+
+Write-Section "VRCX Plugin System Build & Update"
+Write-Host "Project: $ProjectDir" -ForegroundColor Gray
+Write-Host "Target: $TargetDir" -ForegroundColor Gray
 Write-Host ""
 
-# Change to project directory
-Write-Host "Changing to project directory..." -ForegroundColor Yellow
 Set-Location $ProjectDir
 
-# Check if Node.js is available
-Write-Host "Checking for Node.js..." -ForegroundColor Yellow
-try {
-    $nodeVersion = node --version 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Node.js not found"
-    }
-    Write-Host "[SUCCESS] Node.js version: $nodeVersion" -ForegroundColor Green
-}
-catch {
-    Write-Host "[FAILURE] Node.js is not installed or not in PATH" -ForegroundColor Red
-    Write-Host "Please install Node.js from https://nodejs.org/" -ForegroundColor Yellow
-    exit 1
-}
+# Check prerequisites
+Write-Section "Prerequisites"
+if (-not (Test-Command "node" "Node.js")) { exit 1 }
+if (-not (Test-Command "npm" "npm")) { exit 1 }
+$hasGit = Test-Command "git" "Git"
+$hasGh = Test-Command "gh" "GitHub CLI"
 
-# Check if npm is available
-Write-Host "Checking for npm..." -ForegroundColor Yellow
-try {
-    $npmVersion = npm --version 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        throw "npm not found"
-    }
-    Write-Host "[SUCCESS] npm version: $npmVersion" -ForegroundColor Green
-}
-catch {
-    Write-Host "[FAILURE] npm is not installed or not in PATH" -ForegroundColor Red
-    exit 1
-}
-
-# Check if node_modules exists, install dependencies if needed
-Write-Host ""
-Write-Host "=== Dependency Check ===" -ForegroundColor Cyan
+# Install/update dependencies
+Write-Section "Dependencies"
 if (-not (Test-Path "node_modules")) {
-    Write-Host "node_modules not found, installing dependencies..." -ForegroundColor Yellow
-    npm install
+    Write-Info "Installing dependencies..."
+    npm install | Out-Host
     if ($LASTEXITCODE -ne 0) {
-        Write-Host "[FAILURE] npm install failed" -ForegroundColor Red
+        Write-Failure "npm install failed"
         exit 1
     }
-    Write-Host "[SUCCESS] Dependencies installed successfully" -ForegroundColor Green
+    Write-Success "Dependencies installed"
 }
 else {
-    Write-Host "[SUCCESS] node_modules exists" -ForegroundColor Green
-    
-    # Optional: Check if package.json changed and reinstall if needed
     $packageJsonTime = (Get-Item "package.json").LastWriteTime
     $nodeModulesTime = (Get-Item "node_modules").LastWriteTime
     
     if ($packageJsonTime -gt $nodeModulesTime) {
-        Write-Host "package.json is newer than node_modules, reinstalling..." -ForegroundColor Yellow
-        npm install
+        Write-Info "package.json is newer, reinstalling..."
+        npm install | Out-Host
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "[FAILURE] npm install failed" -ForegroundColor Red
+            Write-Failure "npm install failed"
             exit 1
         }
-        Write-Host "[SUCCESS] Dependencies reinstalled successfully" -ForegroundColor Green
+        Write-Success "Dependencies reinstalled"
+    }
+    else {
+        Write-Success "Dependencies up to date"
     }
 }
 
 # Run tests
-Write-Host ""
-Write-Host "=== Tests ===" -ForegroundColor Cyan
-Write-Host "Running test suite..." -ForegroundColor Yellow
-npm test
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[FAILURE] Tests failed" -ForegroundColor Red
-    Write-Host "Fix the failing tests before building." -ForegroundColor Yellow
-    exit 1
-}
-Write-Host "[SUCCESS] All tests passed" -ForegroundColor Green
-
-# Build the project
-Write-Host ""
-Write-Host "=== Build ===" -ForegroundColor Cyan
-
-# Show build arguments if any
-if ($BuildArgs -and $BuildArgs.Count -gt 0) {
-    $argsString = $BuildArgs -join ' '
-    Write-Host "Build arguments: $argsString" -ForegroundColor Gray
+if (-not $SkipTests) {
+    Write-Section "Tests"
+    Write-Info "Running test suite..."
+    $testStart = Get-Date
     
-    # Check if --no-timestamp flag is present
-    $hasNoTimestamp = $BuildArgs -contains '--no-timestamp' -or $BuildArgs -contains '--skip-timestamp'
+    $testOutput = npm test 2>&1 | Out-String
+    $testDuration = ((Get-Date) - $testStart).TotalMilliseconds
     
-    if ($hasNoTimestamp) {
-        Write-Host "Building TypeScript project (skipping timestamp update)..." -ForegroundColor Yellow
-        # Set environment variable for build.js to read
-        $env:SKIP_TIMESTAMP = "true"
-        npm run build
-        Remove-Item Env:\SKIP_TIMESTAMP -ErrorAction SilentlyContinue
+    # Parse test results
+    $BuildResults.Tests.Duration = $testDuration
+    
+    if ($testOutput -match "Tests:\s+(\d+)\s+passed,\s+(\d+)\s+total") {
+        $BuildResults.Tests.Passed = [int]$matches[1]
+        $BuildResults.Tests.Total = [int]$matches[2]
+        $BuildResults.Tests.Failed = 0
+    }
+    elseif ($testOutput -match "Tests:\s+(\d+)\s+failed,\s+(\d+)\s+passed,\s+(\d+)\s+total") {
+        $BuildResults.Tests.Failed = [int]$matches[1]
+        $BuildResults.Tests.Passed = [int]$matches[2]
+        $BuildResults.Tests.Total = [int]$matches[3]
     }
     else {
-        Write-Host "Building TypeScript project with arguments..." -ForegroundColor Yellow
-        # Pass other arguments to build (webpack will receive them)
-        npm run build -- $BuildArgs
+        # Fallback: count from output
+        $BuildResults.Tests.Passed = 0
+        $BuildResults.Tests.Total = 0
+        $BuildResults.Tests.Failed = 0
     }
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Failure "Tests failed ($($BuildResults.Tests.Failed) failed, $($BuildResults.Tests.Passed) passed)"
+        Show-BuildSummary
+        exit 1
+    }
+    
+    Write-Success "All $($BuildResults.Tests.Passed) tests passed in $([math]::Round($testDuration / 1000, 1))s"
 }
 else {
-    Write-Host "Building TypeScript project..." -ForegroundColor Yellow
-    npm run build
+    Write-Warning "Tests skipped"
+}
+
+# Build core system
+Write-Section "Build Core System"
+Write-Info "Building TypeScript project..."
+
+if ($NoTimestamp) {
+    $env:SKIP_TIMESTAMP = "true"
+}
+
+npm run build | Out-Host
+
+if ($NoTimestamp) {
+    Remove-Item Env:\SKIP_TIMESTAMP -ErrorAction SilentlyContinue
 }
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "[FAILURE] Build failed" -ForegroundColor Red
-    exit 1
-}
-Write-Host "[SUCCESS] Build completed successfully" -ForegroundColor Green
-
-# Verify build output exists
-$distFile = Join-Path $ProjectDir "dist\$BundledFile"
-if (-not (Test-Path $distFile)) {
-    Write-Host "[FAILURE] Build output not found: $distFile" -ForegroundColor Red
+    Write-Failure "Core build failed"
+    Show-BuildSummary
     exit 1
 }
 
-$fileSize = (Get-Item $distFile).Length
-$fileSizeKB = [math]::Round($fileSize / 1KB, 2)
-Write-Host "[SUCCESS] Build output size: $fileSizeKB KB" -ForegroundColor Green
+$distFile = Join-Path $ProjectDir "dist\custom.js"
+if (Test-Path $distFile) {
+    $BuildResults.Core.Built = $true
+    $BuildResults.Core.JsSize = Get-FileSize $distFile
+    Write-Success "Core built successfully ($($BuildResults.Core.JsSize) KB)"
+}
+else {
+    Write-Failure "Build output not found"
+    exit 1
+}
 
-# Build plugins repository
-Write-Host ""
-Write-Host "=== Build Plugins Repository ===" -ForegroundColor Cyan
+# Build plugins
+Write-Section "Build Plugins"
 
-# Get the parent directory (vrcx-plugin-system root)
-$PluginSystemRoot = Split-Path -Parent $ProjectDir
-$PluginsDir = Join-Path $PluginSystemRoot "plugins"
 if (Test-Path $PluginsDir) {
-    Write-Host "Plugins directory found: $PluginsDir" -ForegroundColor Gray
-    
-    # Save current location
-    $CurrentDir = Get-Location
+    $currentDir = Get-Location
+    Set-Location $PluginsDir
     
     try {
-        Set-Location $PluginsDir
-        
-        # Check if node_modules exists
+        # Install plugin dependencies if needed
         if (-not (Test-Path "node_modules")) {
-            Write-Host "Installing plugin dependencies..." -ForegroundColor Yellow
-            npm install
-            if ($LASTEXITCODE -ne 0) {
-                Write-Host "[WARNING] Failed to install plugin dependencies" -ForegroundColor Yellow
-            }
-            else {
-                Write-Host "[SUCCESS] Plugin dependencies installed" -ForegroundColor Green
-            }
+            Write-Info "Installing plugin dependencies..."
+            npm install | Out-Host
         }
         
         # Build plugins
-        Write-Host "Building plugins..." -ForegroundColor Yellow
-        npm run build
+        Write-Info "Building plugins..."
+        $buildOutput = npm run build 2>&1 | Out-String
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Host "[SUCCESS] Plugins built successfully" -ForegroundColor Green
+            # Parse build output for plugin stats
+            if ($buildOutput -match "Success:\s+(\d+)") {
+                $successCount = [int]$matches[1]
+                Write-Success "$successCount plugins built successfully"
+            }
             
-            # Check if repo.json was created
+            # Check repo.json
             $repoFile = Join-Path $PluginsDir "dist\repo.json"
             if (Test-Path $repoFile) {
                 $repoContent = Get-Content $repoFile -Raw | ConvertFrom-Json
                 $pluginCount = $repoContent.modules.Count
-                Write-Host "[SUCCESS] Repository metadata created: $pluginCount modules" -ForegroundColor Green
-            }
-            else {
-                Write-Host "[WARNING] repo.json was not created" -ForegroundColor Yellow
+                
+                # Track each plugin
+                foreach ($module in $repoContent.modules) {
+                    $pluginFile = Join-Path $PluginsDir "dist\$($module.id).js"
+                    $BuildResults.Plugins += @{
+                        Name      = $module.name
+                        Id        = $module.id
+                        Path      = "dist\$($module.id).js"
+                        Built     = (Test-Path $pluginFile)
+                        JsSize    = (Get-FileSize $pluginFile)
+                        Committed = $false
+                        Pushed    = $false
+                    }
+                }
+                
+                Write-Success "Repository metadata created: $pluginCount modules"
             }
         }
         else {
-            Write-Host "[WARNING] Plugin build failed, continuing anyway..." -ForegroundColor Yellow
+            Write-Warning "Plugin build failed"
         }
     }
-    catch {
-        $errorMsg = $_.Exception.Message
-        Write-Host "[WARNING] Error building plugins: $errorMsg" -ForegroundColor Yellow
-    }
     finally {
-        # Return to original directory
-        Set-Location $CurrentDir
+        Set-Location $currentDir
     }
 }
 else {
-    Write-Host "[WARNING] Plugins directory not found: $PluginsDir" -ForegroundColor Yellow
-    Write-Host "Skipping plugin build..." -ForegroundColor Gray
+    Write-Warning "Plugins directory not found, skipping..."
 }
 
-# Copy to VRCX directory
-Write-Host ""
-Write-Host "=== Deploy ===" -ForegroundColor Cyan
-
-# Check if target directory exists
-if (-not (Test-Path $TargetDir)) {
-    Write-Host "[FAILURE] Target directory does not exist: $TargetDir" -ForegroundColor Red
-    Write-Host "Please ensure VRCX is installed" -ForegroundColor Yellow
-    exit 1
-}
-
-$targetFile = Join-Path $TargetDir $BundledFile
-Write-Host "Copying $BundledFile to VRCX directory..." -ForegroundColor Yellow
-
-# Try to write to target file with error handling
-try {
-    Copy-Item $distFile $targetFile -Force
-    Write-Host "[SUCCESS] $BundledFile deployed successfully" -ForegroundColor Green
-}
-catch {
-    $errorMsg = $_.Exception.Message
-    Write-Host "[WARNING] Failed to copy $BundledFile directly: $errorMsg" -ForegroundColor Yellow
-    Write-Host "The file may be in use by VRCX. Trying alternative approach..." -ForegroundColor Yellow
+# Deploy to VRCX
+if (-not $SkipDeploy) {
+    Write-Section "Deploy to VRCX"
     
-    # Try using a temporary file and then moving it
-    $tempFile = "$targetFile.tmp"
-    try {
-        Copy-Item $distFile $tempFile -Force
-        Move-Item $tempFile $targetFile -Force
-        Write-Host "[SUCCESS] $BundledFile deployed successfully (via temp file)" -ForegroundColor Green
-    }
-    catch {
-        $errorMsg = $_.Exception.Message
-        Write-Host "[WARNING] Still unable to update $BundledFile. Please close VRCX and try again." -ForegroundColor Red
-        Write-Host "Error: $errorMsg" -ForegroundColor Red
-        
-        # Clean up temp file if it exists
-        if (Test-Path $tempFile) {
-            Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-        }
+    if (-not (Test-Path $TargetDir)) {
+        Write-Failure "Target directory does not exist: $TargetDir"
+        Write-Warning "Please ensure VRCX is installed"
         exit 1
     }
-}
-
-# Clear logs directory (optional)
-$logsDir = Join-Path $TargetDir "logs"
-if (Test-Path $logsDir) {
-    Write-Host "Clearing logs directory..." -ForegroundColor Yellow
+    
+    $targetFile = Join-Path $TargetDir "custom.js"
+    Write-Info "Copying custom.js to VRCX directory..."
+    
     try {
-        Get-ChildItem $logsDir -Filter "*.log" | Remove-Item -Force -ErrorAction Stop
-        Write-Host "[SUCCESS] Logs cleared successfully" -ForegroundColor Green
+        Copy-Item $distFile $targetFile -Force
+        Write-Success "Deployed to VRCX successfully"
     }
     catch {
-        $errorMsg = $_.Exception.Message
-        Write-Host "[WARNING] Failed to clear some logs (may be in use): $errorMsg" -ForegroundColor Yellow
+        Write-Warning "Failed to copy directly: $($_.Exception.Message)"
+        Write-Info "Trying alternative approach..."
+        
+        $tempFile = "$targetFile.tmp"
+        try {
+            Copy-Item $distFile $tempFile -Force
+            Move-Item $tempFile $targetFile -Force
+            Write-Success "Deployed via temp file"
+        }
+        catch {
+            Write-Failure "Unable to deploy. Please close VRCX and try again."
+            if (Test-Path $tempFile) {
+                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+            }
+            Show-BuildSummary
+            exit 1
+        }
     }
-}
-
-Write-Host ""
-Write-Host "=== Git Commit & Push ===" -ForegroundColor Cyan
-
-# Navigate to the parent directory (vrcx-plugin-system)
-$PluginSystemRoot = Split-Path -Parent $ProjectDir
-
-# Check if git is available
-Write-Host "Checking for Git..." -ForegroundColor Yellow
-try {
-    $gitVersion = git --version 2>$null
-    if ($LASTEXITCODE -ne 0) {
-        throw "Git not found"
-    }
-    Write-Host "[SUCCESS] Git version: $gitVersion" -ForegroundColor Green
-}
-catch {
-    Write-Host "[WARNING] Git is not installed or not in PATH, skipping commit/push" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "=== Script Completed ===" -ForegroundColor Cyan
-    Write-Host "[SUCCESS] Build and deployment finished successfully!" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "You can now restart VRCX to load the updated plugin system." -ForegroundColor Yellow
-    Write-Host ""
-    Set-Location $ProjectDir
-    exit 0
-}
-
-# Check if gh CLI is available
-Write-Host "Checking for GitHub CLI..." -ForegroundColor Yellow
-$ghAvailable = $false
-try {
-    $ghVersion = gh --version 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        $ghVersionFirstLine = $ghVersion.Split("`n")[0]
-        Write-Host "[SUCCESS] GitHub CLI version: $ghVersionFirstLine" -ForegroundColor Green
-        $ghAvailable = $true
-    }
-}
-catch {
-    Write-Host "[WARNING] GitHub CLI not installed, releases will be skipped" -ForegroundColor Yellow
-}
-
-# Commit changes from within the vrcx-plugin-system submodule
-Write-Host ""
-Write-Host "--- Plugin System Core (Submodule) ---" -ForegroundColor Cyan
-
-# Create commit message with timestamp
-$timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-$commitMessage = @"
-Update VRCX Plugin System - $timestamp
-"@
-
-# Commit and push from the project directory
-$hasChanges = Commit-AndPushChanges -RepositoryPath $ProjectDir -CommitMessage $commitMessage -BranchName $Branch
-
-# Also commit and push the parent plugins repository
-Write-Host ""
-Write-Host "--- Plugins Repository (Parent Repo) ---" -ForegroundColor Cyan
-
-$pluginsRepoPath = Join-Path $PluginSystemRoot "plugins"
-Write-Host "Plugins repo path: $pluginsRepoPath" -ForegroundColor Gray
-
-# Create commit message for plugins
-$pluginsCommitMessage = @"
-Update plugins - $timestamp
-"@
-
-# Commit and push plugins repo changes
-$hasPluginsChanges = Commit-AndPushChanges -RepositoryPath $pluginsRepoPath -CommitMessage $pluginsCommitMessage -BranchName $Branch
-
-# Create GitHub Release if gh CLI is available and there were changes
-if ($ghAvailable -and $hasChanges) {
-    Write-Host ""
-    Write-Host "=== GitHub Release ===" -ForegroundColor Cyan
     
-    # Generate release tag based on Unix time
-    $unixTime = $unixTime
-    $releaseTag = "$unixTime"
-    $releaseTitle = "VRCX Plugin System Build - $unixTime"
-    $releaseDateTime = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
-    $releaseNotes = @"
-Automated build and release of VRCX Plugin System at $releaseDateTime
+    # Clear logs
+    $logsDir = Join-Path $TargetDir "logs"
+    if (Test-Path $logsDir) {
+        try {
+            Get-ChildItem $logsDir -Filter "*.log" | Remove-Item -Force -ErrorAction SilentlyContinue
+            Write-Success "Logs cleared"
+        }
+        catch {
+            Write-Warning "Some logs could not be cleared (in use)"
+        }
+    }
+}
+else {
+    Write-Warning "Deployment skipped"
+}
+
+# Git operations
+if (-not $SkipGit -and $hasGit) {
+    Write-Section "Git Operations"
+    
+    # Commit core system
+    Write-Host "--- Core System ---" -ForegroundColor Magenta
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $coreResult = Invoke-GitOperation -RepoPath $ProjectDir -CommitMessage "Update VRCX Plugin System - $timestamp"
+    $BuildResults.Core.Committed = $coreResult.Committed
+    $BuildResults.Core.Pushed = $coreResult.Pushed
+    
+    # Commit plugins
+    if (Test-Path $PluginsDir) {
+        Write-Host "--- Plugins Repository ---" -ForegroundColor Magenta
+        $pluginsResult = Invoke-GitOperation -RepoPath $PluginsDir -CommitMessage "Update plugins - $timestamp"
+        
+        # Update all plugin results
+        foreach ($plugin in $BuildResults.Plugins) {
+            $plugin.Committed = $pluginsResult.Committed
+            $plugin.Pushed = $pluginsResult.Pushed
+        }
+    }
+    
+    # Create GitHub release
+    if ($hasGh -and $coreResult.Committed) {
+        Write-Host "--- GitHub Release ---" -ForegroundColor Magenta
+        $releaseTag = [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End (Get-Date)).TotalSeconds)
+        $releaseTitle = "Build $releaseTag"
+        $releaseNotes = @"
+Automated build - $timestamp
+
+## Components
+- Core System: $($BuildResults.Core.JsSize) KB
+- Plugins: $($BuildResults.Plugins.Count) modules
+- Tests: $($BuildResults.Tests.Passed)/$($BuildResults.Tests.Total) passed
 
 ## Installation
-Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in `%APPDATA%\VRCX\`
+Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in ``%APPDATA%\VRCX\``
 "@
-    
-    Write-Host "Creating release '$releaseTag'..." -ForegroundColor Yellow
-    $assetPathDisplay = Join-Path $ProjectDir 'dist\custom.js'
-    Write-Host "Asset: $assetPathDisplay" -ForegroundColor Gray
-    
-    # Create release with the built file as asset
-    $assetPath = Join-Path $ProjectDir "dist\custom.js"
-    if (Test-Path $assetPath) {
-        gh release create $releaseTag $assetPath `
-            --title $releaseTitle `
-            --notes $releaseNotes `
-            --target $Branch `
-            2>&1 | Out-Host
         
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "[SUCCESS] GitHub release created successfully!" -ForegroundColor Green
+        $assetPath = Join-Path $ProjectDir "dist\custom.js"
+        if (Test-Path $assetPath) {
+            gh release create $releaseTag $assetPath `
+                --title $releaseTitle `
+                --notes $releaseNotes `
+                --target $Branch `
+                2>&1 | Out-Null
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "GitHub release created: $releaseTag"
+            }
+            else {
+                Write-Warning "Failed to create GitHub release"
+            }
         }
-        else {
-            Write-Host "[WARNING] Failed to create GitHub release" -ForegroundColor Yellow
-        }
+    }
+}
+else {
+    if ($SkipGit) {
+        Write-Warning "Git operations skipped"
     }
     else {
-        Write-Host "[WARNING] Asset file not found: $assetPath" -ForegroundColor Yellow
+        Write-Warning "Git not available, skipping version control"
     }
 }
-elseif (-not $hasChanges) {
-    Write-Host ""
-    Write-Host "[SUCCESS] No changes to commit or release" -ForegroundColor Green
-}
+
+# Show final summary
+Show-BuildSummary
 
 Write-Host ""
-Write-Host "=== Script Completed ===" -ForegroundColor Cyan
-Write-Host "[SUCCESS] Build, deployment, and version control finished successfully!" -ForegroundColor Green
+Write-Success "Build process completed!"
 Write-Host ""
-Write-Host "You can now restart VRCX to load the updated plugin system." -ForegroundColor Yellow
+Write-Info "You can now restart VRCX to load the updated plugin system."
 Write-Host ""
 
-# Return to original directory
 Set-Location $ProjectDir
