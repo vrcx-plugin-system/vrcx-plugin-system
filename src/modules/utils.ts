@@ -57,6 +57,60 @@ export const utils = {
   },
 
   /**
+   * Parse timespan string to milliseconds
+   * Supports formats: "1h 20m", "00:50.100", "5000" (direct ms)
+   */
+  parseTimespan(input: string | number): number {
+    if (typeof input === 'number') return input;
+    if (!input) return 0;
+
+    input = input.trim();
+
+    // Direct milliseconds (just a number)
+    if (/^\d+$/.test(input)) {
+      return parseInt(input, 10);
+    }
+
+    // Format: "00:50.100" (MM:SS.mmm)
+    const timeMatch = input.match(/^(\d+):(\d+)(?:\.(\d+))?$/);
+    if (timeMatch) {
+      const minutes = parseInt(timeMatch[1], 10);
+      const seconds = parseInt(timeMatch[2], 10);
+      const milliseconds = timeMatch[3] ? parseInt(timeMatch[3].padEnd(3, '0'), 10) : 0;
+      return (minutes * 60 * 1000) + (seconds * 1000) + milliseconds;
+    }
+
+    // Format: "1h 20m 30s" or variations
+    let total = 0;
+    const parts = input.match(/(\d+)\s*([dhms])/gi);
+    if (parts) {
+      parts.forEach(part => {
+        const match = part.match(/(\d+)\s*([dhms])/i);
+        if (match) {
+          const value = parseInt(match[1], 10);
+          const unit = match[2].toLowerCase();
+          switch (unit) {
+            case 'd': total += value * 24 * 60 * 60 * 1000; break;
+            case 'h': total += value * 60 * 60 * 1000; break;
+            case 'm': total += value * 60 * 1000; break;
+            case 's': total += value * 1000; break;
+          }
+        }
+      });
+      return total;
+    }
+
+    return 0;
+  },
+
+  /**
+   * Format milliseconds to timespan display (e.g., "1h 20m")
+   */
+  formatTimespan(ms: number): string {
+    return utils.timeToText(ms);
+  },
+
+  /**
    * Get formatted timestamp
    */
   getTimestamp(now: Date | null = null): string {

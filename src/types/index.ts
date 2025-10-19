@@ -50,7 +50,7 @@ export interface LogOptions {
   webhook?: boolean;
 }
 
-export type SettingTypeValue = 'string' | 'number' | 'bigint' | 'boolean' | 'select' | 'slider' | 'component' | 'custom';
+export type SettingTypeValue = 'string' | 'number' | 'bigint' | 'boolean' | 'select' | 'slider' | 'timespan' | 'component' | 'custom';
 
 export interface SettingDefinition {
   type: SettingTypeValue;

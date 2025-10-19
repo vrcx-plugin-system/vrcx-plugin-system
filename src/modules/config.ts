@@ -21,6 +21,7 @@ export const SettingType = Object.freeze({
   BOOLEAN: 'boolean' as const,
   SELECT: 'select' as const,
   SLIDER: 'slider' as const,
+  TIMESPAN: 'timespan' as const,
   COMPONENT: 'component' as const,
   CUSTOM: 'custom' as const,
 });
