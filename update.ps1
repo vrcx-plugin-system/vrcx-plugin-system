@@ -101,6 +101,41 @@ function Get-UnixTimestamp {
     return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End $Date).TotalSeconds)
 }
 
+function Update-BuildTimestamp {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$FilePath,
+        [Parameter(Mandatory = $true)]
+        [long]$Timestamp
+    )
+    
+    if (-not (Test-Path $FilePath)) {
+        Write-Warning "File not found: $FilePath"
+        return $false
+    }
+    
+    try {
+        $content = Get-Content $FilePath -Raw
+        $pattern = '(build:\s*)\d+'
+        $replacement = "`${1}$Timestamp"
+        
+        if ($content -match $pattern) {
+            $newContent = $content -replace $pattern, $replacement
+            Set-Content -Path $FilePath -Value $newContent -NoNewline
+            Write-Success "Updated build timestamp to $Timestamp"
+            return $true
+        }
+        else {
+            Write-Warning "Build timestamp pattern not found in $FilePath"
+            return $false
+        }
+    }
+    catch {
+        Write-Failure "Failed to update build timestamp: $_"
+        return $false
+    }
+}
+
 function Invoke-GitOperation {
     param(
         [string]$RepoPath,
@@ -347,6 +382,14 @@ if (-not $SkipTests) {
 }
 else {
     Write-Warning "Tests skipped"
+}
+
+# Update build timestamp
+Write-Section "Update Build Timestamp"
+$indexTsPath = Join-Path $ProjectDir "src\index.ts"
+$timestampUpdated = Update-BuildTimestamp -FilePath $indexTsPath -Timestamp $ScriptUnixTimestamp
+if (-not $timestampUpdated) {
+    Write-Warning "Build timestamp not updated, continuing anyway..."
 }
 
 # Build core system
