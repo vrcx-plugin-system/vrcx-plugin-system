@@ -10,7 +10,6 @@ export const repoMetadata: ModuleMetadata = {
       description: "Core Maintainer",
     }
   ],
-  build: "1760765304",
   tags: ["Core", "Repository"],
 };
 

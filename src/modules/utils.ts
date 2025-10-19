@@ -14,7 +14,6 @@ export const utilsMetadata: ModuleMetadata = {
       description: "Core Maintainer",
     }
   ],
-  build: "1760765304",
   tags: ["Core", "Utility"],
 };
 

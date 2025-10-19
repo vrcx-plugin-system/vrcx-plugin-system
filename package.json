@@ -6,7 +6,7 @@
   "scripts": {
     "prebuild": "node build.js",
     "build": "webpack --mode production",
-    "prebuild:dev": "node update-build.js",
+    "prebuild:dev": "node build.js",
     "build:dev": "webpack --mode development",
     "watch": "webpack --mode development --watch",
     "clean": "rimraf dist"

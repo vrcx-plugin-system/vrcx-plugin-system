@@ -18,7 +18,6 @@ import { PluginRepo, PluginRepoManager, repoMetadata } from './modules/repo';
 
 // Initialize window.customjs
 window.customjs = {
-  build: "1760847325",
   logColors: {
     CustomJS: "#00ff88",
     PluginLoader: "#2196f3",
@@ -49,7 +48,7 @@ window.customjs.coreModules!.set('repo', repoMetadata);
 
 // Create system logger
 window.customjs.systemLogger = new Logger("");
-window.customjs.systemLogger.log(`Starting Plugin System (Build: ${window.customjs.build})!`);
+window.customjs.systemLogger.log(`Starting Plugin System!`);
 window.customjs.systemLogger.log(`Cache buster: ${Date.now()}`);
 
 // Export all core classes to global scope

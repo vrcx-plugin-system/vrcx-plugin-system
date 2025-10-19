@@ -18,7 +18,7 @@ export interface ModuleMetadata {
   name: string;
   description: string;
   authors: ModuleAuthor[];
-  build: string;
+  build?: string;  // Optional - managed by repo.json or build system
   url?: string | null;
   tags?: string[];
 }
@@ -101,7 +101,6 @@ export type PluginMetadata = ModuleMetadata;
 declare global {
   interface Window {
     customjs: {
-      build: string;
       logColors: {
         CustomJS: string;
         PluginLoader: string;

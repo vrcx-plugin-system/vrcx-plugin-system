@@ -10,7 +10,6 @@ export const configMetadata: ModuleMetadata = {
       description: "Core Maintainer",
     }
   ],
-  build: "1760765304",
   tags: ["Core", "Configuration"],
 };
 
@@ -295,13 +294,12 @@ export function definePluginSettings(definition: Record<string, SettingDefinitio
  * ConfigManager - Manages plugin configuration storage
  */
 export class ConfigManager {
-  build: string = "1728935100";
   keyPrefix: string = "customjs";
   vrchatConfigPath: string = "%APPDATA%\\..\\LocalLow\\VRChat\\VRChat\\config.json";
 
   constructor() {
     console.log(
-      `[CJS|ConfigManager] ConfigManager (build: ${this.build}) initialized - Equicord-inspired settings system`
+      `[CJS|ConfigManager] ConfigManager initialized - Equicord-inspired settings system`
     );
   }
 
