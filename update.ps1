@@ -279,13 +279,10 @@ if ($BuildArgs -and $BuildArgs.Count -gt 0) {
     
     if ($hasNoTimestamp) {
         Write-Host "Building TypeScript project (skipping timestamp update)..." -ForegroundColor Yellow
-        # Run prebuild with the flag, then build without args
-        npm run prebuild -- --no-timestamp
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "[FAILURE] Prebuild failed" -ForegroundColor Red
-            exit 1
-        }
+        # Set environment variable for build.js to read
+        $env:SKIP_TIMESTAMP = "true"
         npm run build
+        Remove-Item Env:\SKIP_TIMESTAMP -ErrorAction SilentlyContinue
     }
     else {
         Write-Host "Building TypeScript project with arguments..." -ForegroundColor Yellow

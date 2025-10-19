@@ -14,7 +14,8 @@ const SRC_DIR = path.join(__dirname, "src");
 const INDEX_FILE = path.join(SRC_DIR, "index.ts");
 const skipTimestamp =
   process.argv.includes("--no-timestamp") ||
-  process.argv.includes("--skip-timestamp");
+  process.argv.includes("--skip-timestamp") ||
+  process.env.SKIP_TIMESTAMP === "true";
 
 /**
  * Get the most recent modification time from all source files
