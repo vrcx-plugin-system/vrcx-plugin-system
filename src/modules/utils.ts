@@ -32,15 +32,16 @@ export const utils = {
   decodeUnicode(str: string): string {
     if (!str) return str;
     try {
-      // Handle \u{XXXX} format
-      str = str.replace(/\\u\{([0-9A-Fa-f]+)\}/g, (match, code) => {
-        return String.fromCodePoint(parseInt(code, 16));
+      // Handle both \u{XXXX} and \uXXXX formats in one pass
+      return str.replace(/\\u\{?([0-9A-Fa-f]+)\}?/g, (match, code) => {
+        try {
+          const codePoint = parseInt(code, 16);
+          if (isNaN(codePoint)) return match;
+          return String.fromCodePoint(codePoint);
+        } catch {
+          return match; // Keep original if conversion fails
+        }
       });
-      // Handle \uXXXX format (4 hex digits)
-      str = str.replace(/\\u([0-9A-Fa-f]{4})/g, (match, code) => {
-        return String.fromCodePoint(parseInt(code, 16));
-      });
-      return str;
     } catch (err) {
       console.error("decodeUnicode failed:", err);
       return str;
