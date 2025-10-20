@@ -17,7 +17,7 @@ import { EventRegistry, eventSystemMetadata } from './modules/events';
 // Initialize window.customjs
 window.customjs = {
   sourceUrl: 'https://github.com/vrcx-plugin-system/vrcx-plugin-system/raw/refs/heads/main/src/index.ts',
-  build: 1760974853, // AUTO-GENERATED BUILD TIMESTAMP
+  build: 1760975018, // AUTO-GENERATED BUILD TIMESTAMP
   modules: [],
   repos: [],
   subscriptions: new Map(),
@@ -80,6 +80,82 @@ window.customjs.reloadModule = reloadModule;
 window.customjs.getRepo = getRepository;
 window.customjs.addRepository = addRepository;
 window.customjs.removeRepository = removeRepository;
+
+// Emergency panic function - completely disables and removes the entire system
+window.customjs.panic = async () => {
+  try {
+    console.warn("%c[CJS] 🚨 PANIC MODE ACTIVATED - Shutting down all modules...", "color: #ff0000; font-weight: bold; font-size: 14px");
+    
+    // 1. Stop all modules
+    const modules = [...window.customjs.modules];
+    for (const module of modules) {
+      try {
+        await module.stop();
+        console.log(`%c[CJS|Panic] ✓ Stopped: ${module.metadata.name}`, "color: #ff9800");
+      } catch (error) {
+        console.error(`[CJS|Panic] Failed to stop ${module.metadata.name}:`, error);
+      }
+    }
+    
+    // 2. Unload all modules
+    for (const module of modules) {
+      try {
+        await module.unload();
+        console.log(`%c[CJS|Panic] ✓ Unloaded: ${module.metadata.name}`, "color: #ff9800");
+      } catch (error) {
+        console.error(`[CJS|Panic] Failed to unload ${module.metadata.name}:`, error);
+      }
+    }
+    
+    // 3. Clear all event listeners
+    if (window.customjs.eventRegistry) {
+      (window.customjs.eventRegistry as any).events?.clear();
+      (window.customjs.eventRegistry as any).wildcardListeners?.clear();
+      console.log("%c[CJS|Panic] ✓ Cleared all event listeners", "color: #ff9800");
+    }
+    
+    // 4. Clear all hooks
+    window.customjs.hooks.pre = {};
+    window.customjs.hooks.post = {};
+    window.customjs.hooks.void = {};
+    window.customjs.hooks.replace = {};
+    console.log("%c[CJS|Panic] ✓ Cleared all hooks", "color: #ff9800");
+    
+    // 5. Clear all subscriptions
+    window.customjs.subscriptions.clear();
+    console.log("%c[CJS|Panic] ✓ Cleared all subscriptions", "color: #ff9800");
+    
+    // 6. Clear modules and repos
+    window.customjs.modules = [];
+    window.customjs.coreModules.clear();
+    window.customjs.repos = [];
+    console.log("%c[CJS|Panic] ✓ Cleared modules and repositories", "color: #ff9800");
+    
+    // 7. Clear functions
+    window.customjs.functions = {};
+    console.log("%c[CJS|Panic] ✓ Cleared all registered functions", "color: #ff9800");
+    
+    console.warn("%c[CJS] 🚨 PANIC COMPLETE - System disabled. Reload page to restart.", "color: #ff0000; font-weight: bold; font-size: 14px");
+    
+    // Show notification
+    if (window.AppApi?.DesktopNotification) {
+      window.AppApi.DesktopNotification("🚨 VRCX Plugin System", "Emergency shutdown complete. Reload to restart.");
+    }
+    
+    return {
+      success: true,
+      message: "System completely disabled. Reload page to restart.",
+      modulesUnloaded: modules.length
+    };
+  } catch (error) {
+    console.error("%c[CJS] 🚨 PANIC FAILED:", "color: #ff0000; font-weight: bold", error);
+    return {
+      success: false,
+      message: `Panic failed: ${error instanceof Error ? error.message : String(error)}`,
+      modulesUnloaded: 0
+    };
+  }
+};
 
 // Initialize ConfigManager
 window.customjs.configManager = new ConfigManager();

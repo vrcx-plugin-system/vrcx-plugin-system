@@ -145,6 +145,7 @@ declare global {
       reloadModule?: (idOrUrl: string) => Promise<{success: boolean; message?: string}>;
       addRepository?: (url: string, saveConfig?: boolean) => Promise<{success: boolean; message: string; repo?: any}>;
       removeRepository?: (url: string) => boolean;
+      panic?: () => Promise<{success: boolean; message: string; modulesUnloaded: number}>;
       __currentPluginUrl?: string;
       __LAST_PLUGIN_CLASS__?: any;
     };
