@@ -252,4 +252,263 @@ export const utils = {
         .slice(1)
     );
   },
+
+  /**
+   * Downloads a file from URL using multiple fallback methods
+   * Tries: Fetch API + Blob, Hidden Anchor, iFrame, window.location
+   */
+  async downloadFile(url: string, filename: string, mimeType?: string): Promise<{success: boolean; method?: string; error?: string}> {
+    // Method 1: Fetch API + Blob (most reliable for cross-origin)
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.style.display = 'none';
+      anchor.href = blobUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(anchor);
+        window.URL.revokeObjectURL(blobUrl);
+      }, 100);
+      
+      return { success: true, method: 'fetch-blob' };
+    } catch (fetchError) {
+      console.warn('Fetch + Blob download failed:', fetchError);
+    }
+
+    // Method 2: Direct anchor tag with download attribute
+    try {
+      const anchor = document.createElement('a');
+      anchor.style.display = 'none';
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.target = '_blank';
+      document.body.appendChild(anchor);
+      anchor.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(anchor);
+      }, 100);
+      
+      return { success: true, method: 'anchor-download' };
+    } catch (anchorError) {
+      console.warn('Anchor download failed:', anchorError);
+    }
+
+    // Method 3: Hidden iframe
+    try {
+      const iframeId = 'download-iframe-' + Date.now();
+      let iframe = document.getElementById(iframeId) as HTMLIFrameElement;
+      
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.id = iframeId;
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+      }
+      
+      iframe.src = url;
+      
+      // Cleanup after delay
+      setTimeout(() => {
+        if (iframe.parentNode) {
+          iframe.parentNode.removeChild(iframe);
+        }
+      }, 5000);
+      
+      return { success: true, method: 'iframe' };
+    } catch (iframeError) {
+      console.warn('iFrame download failed:', iframeError);
+    }
+
+    // Method 4: window.location assignment (last resort)
+    try {
+      window.location.href = url;
+      return { success: true, method: 'window-location' };
+    } catch (locationError) {
+      return { 
+        success: false, 
+        error: `All download methods failed. Last error: ${locationError}` 
+      };
+    }
+  },
+
+  /**
+   * Downloads text/data content as a file
+   * Used for generated content (JSON, CSV, text, etc)
+   */
+  downloadDataAsFile(content: string, filename: string, mimeType: string = 'text/plain'): {success: boolean; method?: string; error?: string} {
+    try {
+      const blob = new Blob([content], { type: mimeType });
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.style.display = 'none';
+      anchor.href = url;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      
+      // Cleanup
+      setTimeout(() => {
+        document.body.removeChild(anchor);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+      
+      return { success: true, method: 'blob-data' };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      return { success: false, error: errorMsg };
+    }
+  },
+
+  /**
+   * Parse GitHub/GitLab repository URL and extract components
+   * Supports various URL formats and extracts owner, repo, branch, filepath
+   * 
+   * @param url - GitHub/GitLab URL (raw, blob, tree, release, etc.)
+   * @returns Repository info object or null if parsing fails
+   * 
+   * @example
+   * parseRepositoryUrl('https://github.com/owner/repo/raw/refs/heads/main/src/index.ts')
+   * // { platform: 'github', owner: 'owner', repo: 'repo', branch: 'main', filepath: 'src/index.ts', ... }
+   */
+  parseRepositoryUrl(url: string): {
+    platform: 'github' | 'gitlab' | 'unknown';
+    owner: string;
+    repo: string;
+    branch?: string;
+    filepath?: string;
+    isRaw?: boolean;
+    isRelease?: boolean;
+    tag?: string;
+    rawUrl?: string;
+    apiUrl?: string;
+    repoUrl?: string;
+    releaseUrl?: string;
+  } | null {
+    if (!url) return null;
+
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.toLowerCase();
+      const pathParts = urlObj.pathname.split('/').filter(p => p);
+
+      // Determine platform
+      let platform: 'github' | 'gitlab' | 'unknown' = 'unknown';
+      if (hostname.includes('github')) {
+        platform = 'github';
+      } else if (hostname.includes('gitlab')) {
+        platform = 'gitlab';
+      } else {
+        console.error('Unknown repository platform:', hostname);
+        return null;
+      }
+
+      // Need at least owner/repo
+      if (pathParts.length < 2) return null;
+
+      const owner = pathParts[0];
+      const repo = pathParts[1];
+      const repoUrl = `https://${hostname}/${owner}/${repo}`;
+
+      const result: any = {
+        platform,
+        owner,
+        repo,
+        repoUrl,
+      };
+
+      // Parse GitHub URLs
+      if (platform === 'github') {
+        // Format: /owner/repo/raw/refs/heads/branch/path/to/file
+        // Format: /owner/repo/blob/branch/path/to/file
+        // Format: /owner/repo/tree/branch/path/to/file
+        // Format: /owner/repo/releases/tag/tagname
+        // Format: /owner/repo/releases/latest/download/file
+
+        if (pathParts.length > 2) {
+          const action = pathParts[2]; // raw, blob, tree, releases, etc.
+
+          if (action === 'raw') {
+            result.isRaw = true;
+            
+            // /raw/refs/heads/branch/filepath or /raw/branch/filepath
+            if (pathParts[3] === 'refs' && pathParts[4] === 'heads') {
+              result.branch = pathParts[5];
+              result.filepath = pathParts.slice(6).join('/');
+            } else {
+              result.branch = pathParts[3];
+              result.filepath = pathParts.slice(4).join('/');
+            }
+          } else if (action === 'blob' || action === 'tree') {
+            result.branch = pathParts[3];
+            result.filepath = pathParts.slice(4).join('/');
+            
+            // Construct raw URL
+            if (result.filepath) {
+              result.rawUrl = `https://${hostname}/${owner}/${repo}/raw/${result.branch}/${result.filepath}`;
+            }
+          } else if (action === 'releases') {
+            result.isRelease = true;
+            
+            if (pathParts[3] === 'tag') {
+              result.tag = pathParts[4];
+            } else if (pathParts[3] === 'latest') {
+              result.tag = 'latest';
+              if (pathParts[4] === 'download') {
+                result.filepath = pathParts.slice(5).join('/');
+              }
+            }
+            
+            result.releaseUrl = `${repoUrl}/releases/${result.tag || 'latest'}`;
+          }
+        }
+
+        // Construct API URL
+        result.apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+      }
+
+      // Parse GitLab URLs
+      if (platform === 'gitlab') {
+        // Format: /owner/repo/-/raw/branch/path/to/file
+        // Format: /owner/repo/-/blob/branch/path/to/file
+        // Format: /owner/repo/-/releases/tag
+
+        if (pathParts.length > 3 && pathParts[2] === '-') {
+          const action = pathParts[3]; // raw, blob, releases, etc.
+
+          if (action === 'raw' || action === 'blob') {
+            result.branch = pathParts[4];
+            result.filepath = pathParts.slice(5).join('/');
+            result.isRaw = action === 'raw';
+            
+            if (action === 'blob' && result.filepath) {
+              result.rawUrl = `https://${hostname}/${owner}/${repo}/-/raw/${result.branch}/${result.filepath}`;
+            }
+          } else if (action === 'releases') {
+            result.isRelease = true;
+            result.tag = pathParts[4];
+            result.releaseUrl = `${repoUrl}/-/releases/${result.tag}`;
+          }
+        }
+
+        // GitLab API URL
+        result.apiUrl = `https://${hostname}/api/v4/projects/${encodeURIComponent(owner + '/' + repo)}`;
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Failed to parse repository URL:', error);
+      return null;
+    }
+  },
 };

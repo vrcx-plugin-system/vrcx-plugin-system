@@ -133,3 +133,7 @@ Utility,sync,void,AppApi.OpenLink,string url,Opens http:// or https:// URL in de
 Utility,sync,string,AppApi.MD5File,string blob,⚠️ Calculates MD5 hash of file (deprecated - for legacy upload)
 Utility,sync,string,AppApi.SignFile,string blob,⚠️ Signs file with HMAC-SHA256 (deprecated - for legacy upload)
 Utility,sync,string,AppApi.FileLength,string blob,Returns file size in bytes
+Plugin System - Utils,async,object,window.customjs.utils.downloadFile,"string url, string filename, string mimeType","Downloads file from URL using multiple methods (fetch+blob, anchor, iframe, window.location)"
+Plugin System - Utils,sync,object,window.customjs.utils.downloadDataAsFile,"string content, string filename, string mimeType",Downloads generated text/data content as file (JSON/CSV/text)
+Plugin System - Utils,async,bool,window.customjs.utils.copyToClipboard,"string text, string description",Copies text to clipboard with fallback methods
+Plugin System - Utils,sync,object,window.customjs.utils.parseRepositoryUrl,string url,"Parses GitHub/GitLab URL and extracts: platform, owner, repo, branch, filepath, rawUrl, apiUrl, repoUrl, releaseUrl"
