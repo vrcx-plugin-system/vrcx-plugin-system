@@ -1,6 +1,5 @@
 import { ModuleMetadata } from '../types';
 import { Module } from './module';
-import { PluginEventAPI } from './events';
 
 export const customModuleMetadata: ModuleMetadata = {
   id: "custom-module",
@@ -46,7 +45,6 @@ export class CustomActionButton {
 export class CustomModule extends Module {
   required_dependencies: string[] = [];
   optional_dependencies: string[] = [];
-  events!: PluginEventAPI;
   actionButtons: CustomActionButton[] = [];
   settings?: any;
   categories?: any;
@@ -99,12 +97,75 @@ export class CustomModule extends Module {
     if (!window.customjs.subscriptions.has(this.metadata.id)) {
       window.customjs.subscriptions.set(this.metadata.id, new Set());
     }
+  }
 
-    // Initialize event API
+  /**
+   * Register an event that this plugin can emit
+   */
+  registerEvent(eventName: string, options: any): void {
     const eventRegistry = (window as any).customjs?.eventRegistry;
     if (eventRegistry) {
-      this.events = new PluginEventAPI(this, eventRegistry);
+      eventRegistry.register(this, eventName, options);
     }
+  }
+
+  /**
+   * Emit an event
+   */
+  emit(eventName: string, payload: any): void {
+    const eventRegistry = (window as any).customjs?.eventRegistry;
+    if (eventRegistry) {
+      eventRegistry.emit(this, eventName, payload);
+    }
+  }
+
+  /**
+   * Listen to an event (from this plugin or another)
+   * @param eventName - Event name or 'pluginId:eventName' for other plugins
+   * @param callback - Event handler
+   * @returns Unsubscribe function
+   */
+  on(eventName: string, callback: Function): Function {
+    const eventRegistry = (window as any).customjs?.eventRegistry;
+    if (!eventRegistry) {
+      return () => {};
+    }
+
+    // If eventName doesn't contain ':', it's this plugin's event
+    const fullEventName = eventName.includes(':') ? eventName : `${this.metadata.id}:${eventName}`;
+    
+    const unsubscribe = eventRegistry.addListener(this, fullEventName, callback);
+    this.registerSubscription(unsubscribe);
+    return unsubscribe;
+  }
+
+  /**
+   * Remove event listener
+   */
+  off(eventName: string, callback: Function): void {
+    const eventRegistry = (window as any).customjs?.eventRegistry;
+    if (!eventRegistry) return;
+
+    const fullEventName = eventName.includes(':') ? eventName : `${this.metadata.id}:${eventName}`;
+    eventRegistry.removeListener(this, fullEventName, callback);
+  }
+
+  /**
+   * Get all registered events for this plugin
+   */
+  get events(): string[] {
+    const eventRegistry = (window as any).customjs?.eventRegistry;
+    if (!eventRegistry) return [];
+    return eventRegistry.list(this.metadata.id);
+  }
+
+  /**
+   * Get detailed event information for this plugin
+   */
+  getEvents(): any[] {
+    const eventRegistry = (window as any).customjs?.eventRegistry;
+    if (!eventRegistry) return [];
+    return eventRegistry.listAll(this.metadata.id);
   }
 
   /**

@@ -8,10 +8,8 @@ export interface EventPayloadSchema {
 }
 
 export interface EventMetadata {
-  pluginId: string;
-  pluginName: string;
   eventName: string;
-  fullEventName: string; // pluginId:eventName
+  registeredBy: Set<string>; // Plugin IDs that registered this event
   description: string;
   payload: EventPayloadSchema;
   broadcastIPC: boolean;
@@ -52,41 +50,47 @@ export class EventRegistry {
   /**
    * Register a new event
    * @param plugin - Plugin instance
-   * @param eventName - Event name (without plugin ID)
+   * @param eventName - Event name (global, no plugin prefix)
    * @param options - Event metadata and options
    */
   register(plugin: any, eventName: string, options: EventRegistrationOptions): void {
-    const fullEventName = `${plugin.metadata.id}:${eventName}`;
+    let metadata = this.events.get(eventName);
     
-    if (this.events.has(fullEventName)) {
-      console.warn(`[CJS|EventSystem] Event already registered: ${fullEventName}`);
-      return;
+    if (metadata) {
+      // Event already exists, add this plugin to the registeredBy set
+      metadata.registeredBy.add(plugin.metadata.id);
+      console.log(`[CJS|EventSystem] ✓ Plugin ${plugin.metadata.id} registered event: ${eventName}`);
+    } else {
+      // Create new event
+      metadata = {
+        eventName,
+        registeredBy: new Set([plugin.metadata.id]),
+        description: options.description,
+        payload: options.payload || {},
+        broadcastIPC: options.broadcastIPC !== undefined ? options.broadcastIPC : true,
+        logToConsole: options.logToConsole !== undefined ? options.logToConsole : true,
+        emitCount: 0,
+        lastEmitted: null,
+        listeners: new Set()
+      };
+
+      this.events.set(eventName, metadata);
+      console.log(`[CJS|EventSystem] ✓ Registered event: ${eventName}`);
     }
-
-    const metadata: EventMetadata = {
-      pluginId: plugin.metadata.id,
-      pluginName: plugin.metadata.name,
-      eventName,
-      fullEventName,
-      description: options.description,
-      payload: options.payload || {},
-      broadcastIPC: options.broadcastIPC !== undefined ? options.broadcastIPC : true,
-      logToConsole: options.logToConsole !== undefined ? options.logToConsole : true,
-      emitCount: 0,
-      lastEmitted: null,
-      listeners: new Set()
-    };
-
-    this.events.set(fullEventName, metadata);
-    console.log(`[CJS|EventSystem] ✓ Registered event: ${fullEventName}`);
   }
 
   /**
    * Unregister an event (called on plugin unload)
    */
   unregister(plugin: any, eventName: string): void {
-    const fullEventName = `${plugin.metadata.id}:${eventName}`;
-    this.events.delete(fullEventName);
+    const metadata = this.events.get(eventName);
+    if (metadata) {
+      metadata.registeredBy.delete(plugin.metadata.id);
+      // If no plugins registered this event anymore, remove it
+      if (metadata.registeredBy.size === 0) {
+        this.events.delete(eventName);
+      }
+    }
   }
 
   /**
@@ -94,47 +98,49 @@ export class EventRegistry {
    */
   unregisterAll(pluginId: string): void {
     const toDelete: string[] = [];
-    this.events.forEach((metadata, fullEventName) => {
-      if (metadata.pluginId === pluginId) {
-        toDelete.push(fullEventName);
+    this.events.forEach((metadata, eventName) => {
+      metadata.registeredBy.delete(pluginId);
+      if (metadata.registeredBy.size === 0) {
+        toDelete.push(eventName);
       }
     });
     toDelete.forEach(key => this.events.delete(key));
   }
 
   /**
-   * Emit an event with automatic IPC and logging
+   * Emit an event with automatic plugin injection and IPC/logging
    */
   emit(plugin: any, eventName: string, payload: any): void {
-    const fullEventName = `${plugin.metadata.id}:${eventName}`;
-    const metadata = this.events.get(fullEventName);
+    const metadata = this.events.get(eventName);
 
     if (!metadata) {
-      console.error(`[CJS|EventSystem] Event "${fullEventName}" not registered! `);
+      console.error(`[CJS|EventSystem] Event "${eventName}" not registered!`);
       return;
     }
 
+    // Auto-inject plugin object into payload
+    const enrichedPayload = {
+      plugin: plugin,
+      ...payload
+    };
+
     // Update statistics
-    if (metadata) {
-      metadata.emitCount++;
-      metadata.lastEmitted = Date.now();
-    }
+    metadata.emitCount++;
+    metadata.lastEmitted = Date.now();
 
     // Console logging
-    if (!metadata || metadata.logToConsole) {
+    if (metadata.logToConsole) {
       const pluginName = plugin.metadata.name || plugin.metadata.id;
       console.groupCollapsed(`[CJS|${plugin.metadata.id}] Event: ${eventName}`);
       console.log('Plugin:', pluginName);
       console.log('Payload:', payload);
-      if (metadata) {
-        console.log('Emit Count:', metadata.emitCount);
-        console.log('Listeners:', metadata.listeners.size);
-      }
+      console.log('Emit Count:', metadata.emitCount);
+      console.log('Listeners:', metadata.listeners.size);
       console.groupEnd();
     }
 
     // IPC broadcasting
-    if (!metadata || metadata.broadcastIPC) {
+    if (metadata.broadcastIPC) {
       try {
         const AppApi = (window as any).AppApi;
         if (AppApi?.SendIpc) {
@@ -142,48 +148,32 @@ export class EventRegistry {
             pluginId: plugin.metadata.id,
             pluginName: plugin.metadata.name,
             eventName,
-            fullEventName,
-            payload,
+            payload: enrichedPayload,
             timestamp: Date.now()
           }));
         }
       } catch (error) {
-        console.error(`[CJS|EventSystem] IPC broadcast failed for ${fullEventName}:`, error);
+        console.error(`[CJS|EventSystem] IPC broadcast failed for ${eventName}:`, error);
       }
     }
 
-    // Call registered listeners
-    if (metadata) {
-      metadata.listeners.forEach(({callback}) => {
-        try {
-          callback(payload);
-        } catch (error) {
-          console.error(`[CJS|EventSystem] Error in listener for ${fullEventName}:`, error);
-        }
-      });
-    }
+    // Call registered listeners with enriched payload
+    metadata.listeners.forEach(({callback}) => {
+      try {
+        callback(enrichedPayload);
+      } catch (error) {
+        console.error(`[CJS|EventSystem] Error in listener for ${eventName}:`, error);
+      }
+    });
 
-    // Call wildcard listeners (plugin:*)
-    const wildcardKey = `${plugin.metadata.id}:*`;
-    const wildcardListeners = this.wildcardListeners.get(wildcardKey);
+    // Call wildcard listeners
+    const wildcardListeners = this.wildcardListeners.get('*');
     if (wildcardListeners) {
       wildcardListeners.forEach(({callback}) => {
         try {
-          callback(eventName, payload);
+          callback(eventName, enrichedPayload);
         } catch (error) {
-          console.error(`[CJS|EventSystem] Error in wildcard listener for ${wildcardKey}:`, error);
-        }
-      });
-    }
-
-    // Call global wildcard listeners (*:*)
-    const globalListeners = this.wildcardListeners.get('*:*');
-    if (globalListeners) {
-      globalListeners.forEach(({callback}) => {
-        try {
-          callback(fullEventName, payload);
-        } catch (error) {
-          console.error(`[CJS|EventSystem] Error in global wildcard listener:`, error);
+          console.error(`[CJS|EventSystem] Error in wildcard listener:`, error);
         }
       });
     }
