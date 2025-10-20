@@ -1,5 +1,6 @@
 import { ModuleMetadata } from '../types';
 import { Module } from './module';
+import { PluginEventAPI } from './events';
 
 export const customModuleMetadata: ModuleMetadata = {
   id: "custom-module",
@@ -45,6 +46,7 @@ export class CustomActionButton {
 export class CustomModule extends Module {
   required_dependencies: string[] = [];
   optional_dependencies: string[] = [];
+  events!: PluginEventAPI;
   actionButtons: CustomActionButton[] = [];
   settings?: any;
   categories?: any;
@@ -97,6 +99,12 @@ export class CustomModule extends Module {
     if (!window.customjs.subscriptions.has(this.metadata.id)) {
       window.customjs.subscriptions.set(this.metadata.id, new Set());
     }
+
+    // Initialize event API
+    const eventRegistry = (window as any).customjs?.eventRegistry;
+    if (eventRegistry) {
+      this.events = new PluginEventAPI(this, eventRegistry);
+    }
   }
 
   /**
@@ -133,30 +141,6 @@ export class CustomModule extends Module {
     }
   }
 
-  // Event system
-  emit(eventName: string, data: any): void {
-    const fullEventName = `${this.metadata.id}:${eventName}`;
-    if (window.customjs?.events?.[fullEventName]) {
-      window.customjs.events[fullEventName].forEach((callback) => {
-        try {
-          callback(data);
-        } catch (error) {
-          this.error(`Error in event handler for ${fullEventName}: ${error}`);
-        }
-      });
-    }
-  }
-
-  on(eventName: string, callback: Function): void {
-    const fullEventName = eventName.includes(":")
-      ? eventName
-      : `${this.metadata.id}:${eventName}`;
-
-    window.customjs = window.customjs || {} as any;
-    window.customjs.events = window.customjs.events || {};
-    window.customjs.events[fullEventName] = window.customjs.events[fullEventName] || [];
-    window.customjs.events[fullEventName].push(callback);
-  }
 
   subscribe(eventType: string, callback: Function): (() => void) | null {
     const setupSubscription = (): (() => void) | null => {
@@ -732,6 +716,12 @@ export class CustomModule extends Module {
     // Remove from loaded URLs
     if (this.metadata.url) {
       CustomModule.loadedUrls.delete(this.metadata.url);
+    }
+
+    // Unregister all events
+    if (window.customjs?.eventRegistry) {
+      window.customjs.eventRegistry.unregisterAll(this.metadata.id);
+      window.customjs.eventRegistry.removeAllListeners(this);
     }
 
     this.log("✓ Module unloaded");

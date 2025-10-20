@@ -12,11 +12,15 @@ import { Module, CoreModule, moduleMetadata } from './modules/module';
 import { CustomModule, CustomActionButton, customModuleMetadata } from './modules/custom-module';
 import { getModule, loadModule, unloadModule, reloadModule, waitForModule, getAllLoadedModules, loadAllModules, startAllModules, stopAllModules, triggerModuleLogin } from './modules/module-helpers';
 import { ModuleRepository, repositoryMetadata, loadRepositories, addRepository, removeRepository, getRepository, getAllRepositories, getEnabledRepositories, getAllModules, findModuleByUrl, findModuleById } from './modules/repository';
+import { EventRegistry, eventSystemMetadata } from './modules/events';
+
+// Initialize event registry BEFORE window.customjs
+const globalEventRegistry = new EventRegistry();
 
 // Initialize window.customjs
 window.customjs = {
   sourceUrl: 'https://github.com/vrcx-plugin-system/vrcx-plugin-system/raw/refs/heads/main/src/index.ts',
-  build: 1760968913, // AUTO-GENERATED BUILD TIMESTAMP
+  build: 1760972525, // AUTO-GENERATED BUILD TIMESTAMP
   modules: [],
   repos: [],
   subscriptions: new Map(),
@@ -27,7 +31,7 @@ window.customjs = {
     replace: {},
   },
   functions: {},
-  events: {},
+  eventRegistry: globalEventRegistry,
   coreModules: new Map(),
   classes: {} as any,
   types: {} as any,
@@ -40,6 +44,7 @@ window.customjs.coreModules!.set('config', configMetadata);
 window.customjs.coreModules!.set('module', moduleMetadata);
 window.customjs.coreModules!.set('custom-module', customModuleMetadata);
 window.customjs.coreModules!.set('repository', repositoryMetadata);
+window.customjs.coreModules!.set('event-system', eventSystemMetadata);
 
 // Create system logger
 window.customjs.systemLogger = new Logger("");
@@ -56,6 +61,7 @@ window.customjs.classes = {
   CustomModule,
   CustomActionButton,
   ModuleRepository,
+  EventRegistry,
 };
 
 // Export utilities and helpers

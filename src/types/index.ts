@@ -116,7 +116,7 @@ declare global {
         replace: Record<string, Array<{plugin: any; callback: Function}>>;
       };
       functions: Record<string, Function>;
-      events: Record<string, Array<Function>>;
+      eventRegistry: any;
       coreModules?: Map<string, any>;
       classes: {
         Logger: any;
@@ -127,6 +127,7 @@ declare global {
         CustomModule: any;
         CustomActionButton: any;
         ModuleRepository: any;
+        EventRegistry: any;
       };
       systemLogger?: any;
       configManager?: any;
