@@ -120,9 +120,9 @@ export class CustomModule extends Module {
   }
 
   /**
-   * Listen to an event (from this plugin or another)
-   * @param eventName - Event name or 'pluginId:eventName' for other plugins
-   * @param callback - Event handler
+   * Listen to an event (global event name, plugin auto-injected in data)
+   * @param eventName - Event name (global) or '*' for all events
+   * @param callback - Event handler (receives data with data.plugin injected)
    * @returns Unsubscribe function
    */
   on(eventName: string, callback: Function): Function {
@@ -130,11 +130,8 @@ export class CustomModule extends Module {
     if (!eventRegistry) {
       return () => {};
     }
-
-    // If eventName doesn't contain ':', it's this plugin's event
-    const fullEventName = eventName.includes(':') ? eventName : `${this.metadata.id}:${eventName}`;
     
-    const unsubscribe = eventRegistry.addListener(this, fullEventName, callback);
+    const unsubscribe = eventRegistry.addListener(this, eventName, callback);
     this.registerSubscription(unsubscribe);
     return unsubscribe;
   }
@@ -146,8 +143,7 @@ export class CustomModule extends Module {
     const eventRegistry = (window as any).customjs?.eventRegistry;
     if (!eventRegistry) return;
 
-    const fullEventName = eventName.includes(':') ? eventName : `${this.metadata.id}:${eventName}`;
-    eventRegistry.removeListener(this, fullEventName, callback);
+    eventRegistry.removeListener(this, eventName, callback);
   }
 
   /**
