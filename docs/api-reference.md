@@ -474,31 +474,138 @@ this.registerReplaceHook("window.API.someMethod", (original, ...args) => {
 
 ## Event System
 
+Modern event system with automatic plugin tracking and IPC broadcasting.
+
+### Register Event
+
+Register an event that your plugin can emit:
+
+```typescript
+registerEvent(eventName: string, options: {
+  description: string;
+  payload?: Record<string, string>;
+  broadcastIPC?: boolean;     // default: true
+  logToConsole?: boolean;     // default: true
+}): void
+```
+
+**Example:**
+
+```typescript
+async load() {
+  this.registerEvent('user-updated', {
+    description: 'Fired when user profile is updated',
+    payload: {
+      userId: 'string - VRChat user ID',
+      changes: 'object - Changed fields'
+    },
+    broadcastIPC: true,
+    logToConsole: false  // Disable for high-frequency events
+  });
+}
+```
+
 ### Emit Event
 
+Emit an event with automatic plugin injection:
+
 ```typescript
-emit(eventName: string, data?: any): void
+emit(eventName: string, payload: any): void
 ```
 
 **Example:**
 
 ```typescript
-this.emit("data-updated", { count: 10, timestamp: Date.now() });
+this.emit('user-updated', { userId: 'usr_123', changes: {...} });
+// System transforms to: { plugin: <this>, userId: 'usr_123', changes: {...} }
 ```
 
-### Subscribe to Events
+**Key Features:**
+
+- Plugin object automatically injected as `data.plugin`
+- Global event namespace (no plugin IDs in names)
+- Automatic IPC broadcasting (if enabled)
+- Automatic console logging (if enabled)
+- Statistics tracking (emit count, last emitted)
+
+### Listen to Events
+
+Subscribe to events from any plugin:
 
 ```typescript
-on(eventName: string, callback: (data: any) => void): void
+on(eventName: string, callback: (data: any) => void): () => void
 ```
 
 **Example:**
 
 ```typescript
-const otherPlugin = window.customjs.getModule("other-plugin");
-otherPlugin.on("data-updated", (data) => {
-  console.log("Received update:", data);
+// Listen to specific event
+this.on("bio-updated", (data) => {
+  console.log("Bio updated by:", data.plugin.metadata.name);
+  console.log("New bio:", data.bio);
 });
+
+// Listen to own events
+this.on("user-updated", (data) => {
+  console.log("Event from:", data.plugin.metadata.id);
+});
+
+// Listen to ALL events (wildcard)
+this.on("*", (eventName, data) => {
+  console.log(`Event ${eventName} from ${data.plugin.metadata.name}`);
+});
+```
+
+### Unsubscribe from Events
+
+```typescript
+off(eventName: string, callback: Function): void
+```
+
+**Example:**
+
+```typescript
+const handler = (data) => console.log(data);
+this.on("bio-updated", handler);
+// Later:
+this.off("bio-updated", handler);
+```
+
+### Get Registered Events
+
+```typescript
+// Get event names registered by this plugin
+this.events; // getter, returns string[]
+
+// Get detailed metadata
+this.getEvents(); // returns EventMetadata[]
+```
+
+**Example:**
+
+```typescript
+console.log(this.events);
+// → ['bio-updated', 'settings-changed']
+
+console.log(this.getEvents());
+// → [{ eventName: 'bio-updated', registeredBy: ['bio-updater'], emitCount: 5, ... }]
+```
+
+### Global Event Discovery
+
+```typescript
+// List all events
+window.customjs.eventRegistry.list();
+
+// List events by plugin
+window.customjs.eventRegistry.list("bio-updater");
+
+// Get event metadata
+window.customjs.eventRegistry.get("bio-updated");
+
+// Get statistics
+window.customjs.eventRegistry.getStats();
+window.customjs.eventRegistry.getStats("bio-updated");
 ```
 
 ### Store Subscriptions
@@ -626,17 +733,49 @@ Main global object exposing the plugin system.
 
 #### Properties
 
-| Property        | Type                     | Description            |
-| --------------- | ------------------------ | ---------------------- |
-| `modules`       | `CustomModule[]`         | All loaded modules     |
-| `repos`         | `ModuleRepository[]`     | All repositories       |
-| `configManager` | `ConfigManager`          | Settings manager       |
-| `types`         | `{SettingType}`          | Type enums             |
-| `classes`       | `{CustomModule, Module}` | Class references       |
-| `sourceUrl`     | `string`                 | Core system GitHub URL |
-| `build`         | `number`                 | Build timestamp        |
+| Property            | Type                         | Description                            |
+| ------------------- | ---------------------------- | -------------------------------------- |
+| `sourceUrl`         | `string`                     | Source repository URL                  |
+| `build`             | `number`                     | Build timestamp                        |
+| `modules`           | `CustomModule[]`             | All loaded modules                     |
+| `repos`             | `ModuleRepository[]`         | All repositories                       |
+| `eventRegistry`     | `EventRegistry`              | Event management system                |
+| `coreModules`       | `Map<string, any>`           | Core module metadata                   |
+| `hasTriggeredLogin` | `boolean`                    | Login trigger state                    |
+| `configManager`     | `ConfigManager`              | Settings manager                       |
+| `systemLogger`      | `Logger`                     | System-wide logger                     |
+| `utils`             | `UtilityFunctions`           | Utility functions                      |
+| `classes`           | `Object`                     | Core classes (Logger, CustomModule...) |
+| `types`             | `{SettingType}`              | Type enums                             |
+| `subscriptions`     | `Map<string, Set<Function>>` | Global subscription tracking           |
+| `hooks`             | `Object`                     | Pre/post/void/replace hooks            |
+| `functions`         | `Record<string, Function>`   | Registered global functions            |
 
 #### Methods
+
+**Module Management:**
+
+| Method                        | Returns                                 | Description                 |
+| ----------------------------- | --------------------------------------- | --------------------------- |
+| `getModule(idOrUrl)`          | `CustomModule \| undefined`             | Get loaded module by ID/URL |
+| `waitForModule(id, timeout?)` | `Promise<CustomModule>`                 | Wait for module to load     |
+| `loadModule(url)`             | `Promise<{success, message?, module?}>` | Load module from URL        |
+| `unloadModule(idOrUrl)`       | `Promise<{success, message?}>`          | Unload module by ID/URL     |
+| `reloadModule(idOrUrl)`       | `Promise<{success, message?}>`          | Reload module by ID/URL     |
+
+**Repository Management:**
+
+| Method                            | Returns                              | Description              |
+| --------------------------------- | ------------------------------------ | ------------------------ |
+| `getRepo(url)`                    | `ModuleRepository \| undefined`      | Get repository by URL    |
+| `addRepository(url, saveConfig?)` | `Promise<{success, message, repo?}>` | Add plugin repository    |
+| `removeRepository(url)`           | `boolean`                            | Remove repository by URL |
+
+**Emergency Shutdown:**
+
+| Method    | Returns                                        | Description              |
+| --------- | ---------------------------------------------- | ------------------------ |
+| `panic()` | `Promise<{success, message, modulesUnloaded}>` | Complete system shutdown |
 
 ##### getModule()
 

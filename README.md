@@ -40,13 +40,14 @@ That's it! The plugin system will load automatically.
 
 - ✅ **TypeScript-first** - Full type safety with IDE autocomplete
 - ✅ **Hot-reload** - Load/reload plugins without restarting VRCX
+- ✅ **Modern Event System** - Global events with automatic plugin tracking
 - ✅ **Repository system** - Install plugins from remote repositories
 - ✅ **Settings management** - Equicord-style settings with categories and validation
 - ✅ **Dependency resolution** - Required and optional dependencies with timeouts
 - ✅ **Hook system** - Intercept and modify any function
-- ✅ **Event system** - Publish/subscribe pattern for plugin communication
 - ✅ **Resource management** - Automatic cleanup of timers, listeners, observers
-- ✅ **Testing** - Comprehensive Jest test suite
+- ✅ **Emergency Shutdown** - Panic function for complete system disable
+- ✅ **Testing** - Comprehensive Jest test suite with 95%+ coverage
 
 ### For Developers
 
