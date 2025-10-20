@@ -336,28 +336,28 @@ export class CustomModule extends Module {
   registerPreHook(functionPath: string, callback: Function): void {
     window.customjs.hooks.pre[functionPath] = window.customjs.hooks.pre[functionPath] || [];
     window.customjs.hooks.pre[functionPath].push({ plugin: this, callback });
-    this.resources.hooks!.add({ type: "pre", functionPath, callback });
+    this.resources.hooks.add({ type: "pre", functionPath, callback });
     this.wrapFunctionWhenReady(functionPath);
   }
 
   registerPostHook(functionPath: string, callback: Function): void {
     window.customjs.hooks.post[functionPath] = window.customjs.hooks.post[functionPath] || [];
     window.customjs.hooks.post[functionPath].push({ plugin: this, callback });
-    this.resources.hooks!.add({ type: "post", functionPath, callback });
+    this.resources.hooks.add({ type: "post", functionPath, callback });
     this.wrapFunctionWhenReady(functionPath);
   }
 
   registerVoidHook(functionPath: string, callback: Function): void {
     window.customjs.hooks.void[functionPath] = window.customjs.hooks.void[functionPath] || [];
     window.customjs.hooks.void[functionPath].push({ plugin: this, callback });
-    this.resources.hooks!.add({ type: "void", functionPath, callback });
+    this.resources.hooks.add({ type: "void", functionPath, callback });
     this.wrapFunctionWhenReady(functionPath);
   }
 
   registerReplaceHook(functionPath: string, callback: Function): void {
     window.customjs.hooks.replace[functionPath] = window.customjs.hooks.replace[functionPath] || [];
     window.customjs.hooks.replace[functionPath].push({ plugin: this, callback });
-    this.resources.hooks!.add({ type: "replace", functionPath, callback });
+    this.resources.hooks.add({ type: "replace", functionPath, callback });
     this.wrapFunctionWhenReady(functionPath);
   }
 

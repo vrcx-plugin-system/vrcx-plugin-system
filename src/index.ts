@@ -14,13 +14,10 @@ import { getModule, loadModule, unloadModule, reloadModule, waitForModule, getAl
 import { ModuleRepository, repositoryMetadata, loadRepositories, addRepository, removeRepository, getRepository, getAllRepositories, getEnabledRepositories, getAllModules, findModuleByUrl, findModuleById } from './modules/repository';
 import { EventRegistry, eventSystemMetadata } from './modules/events';
 
-// Initialize event registry BEFORE window.customjs
-const globalEventRegistry = new EventRegistry();
-
 // Initialize window.customjs
 window.customjs = {
   sourceUrl: 'https://github.com/vrcx-plugin-system/vrcx-plugin-system/raw/refs/heads/main/src/index.ts',
-  build: 1760973570, // AUTO-GENERATED BUILD TIMESTAMP
+  build: 1760974853, // AUTO-GENERATED BUILD TIMESTAMP
   modules: [],
   repos: [],
   subscriptions: new Map(),
@@ -31,20 +28,21 @@ window.customjs = {
     replace: {},
   },
   functions: {},
-  eventRegistry: globalEventRegistry,
+  eventRegistry: new EventRegistry(),
   coreModules: new Map(),
+  hasTriggeredLogin: false,
   classes: {} as any,
   types: {} as any,
 };
 
 // Register core module metadata
-window.customjs.coreModules!.set('logger', loggerMetadata);
-window.customjs.coreModules!.set('utils', utilsMetadata);
-window.customjs.coreModules!.set('config', configMetadata);
-window.customjs.coreModules!.set('module', moduleMetadata);
-window.customjs.coreModules!.set('custom-module', customModuleMetadata);
-window.customjs.coreModules!.set('repository', repositoryMetadata);
-window.customjs.coreModules!.set('event-system', eventSystemMetadata);
+window.customjs.coreModules.set('logger', loggerMetadata);
+window.customjs.coreModules.set('utils', utilsMetadata);
+window.customjs.coreModules.set('config', configMetadata);
+window.customjs.coreModules.set('module', moduleMetadata);
+window.customjs.coreModules.set('custom-module', customModuleMetadata);
+window.customjs.coreModules.set('repository', repositoryMetadata);
+window.customjs.coreModules.set('event-system', eventSystemMetadata);
 
 // Create system logger
 window.customjs.systemLogger = new Logger("");
@@ -129,24 +127,22 @@ async function exposeElementPlus() {
 }
 
 // Start login monitoring
-let hasTriggeredLogin = false;
-
 function startLoginMonitoring(): void {
   const setupWatch = () => {
     if (window.$pinia?.user?.$subscribe) {
       window.$pinia.user.$subscribe(() => {
         const currentUser = (window.$pinia!.user as any).currentUser;
-        if (currentUser && currentUser.id && !hasTriggeredLogin) {
-          hasTriggeredLogin = true;
+        if (currentUser && currentUser.id && !window.customjs.hasTriggeredLogin) {
+          window.customjs.hasTriggeredLogin = true;
           triggerModuleLogin(currentUser);
         }
       });
-    } else {
-      setTimeout(setupWatch, 500);
+      console.log("%c[CJS] Login monitoring active", "color: #888888");
+      return;
     }
+    setTimeout(setupWatch, 500);
   };
-
-  setTimeout(setupWatch, 100);
+  setupWatch();
 }
 
 // Bootstrap function: Initialize core modules, then start module system

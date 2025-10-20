@@ -32,7 +32,7 @@ export interface ResourceTracking {
   observers: Set<MutationObserver | IntersectionObserver | ResizeObserver>;
   listeners: Map<EventTarget, Array<{event: string; handler: EventListener; options?: AddEventListenerOptions}>>;
   subscriptions: Set<() => void>;
-  hooks?: Set<{type: string; functionPath: string; callback: Function}>;
+  hooks: Set<{type: string; functionPath: string; callback: Function}>;
 }
 
 export interface LogOptions {
@@ -117,7 +117,8 @@ declare global {
       };
       functions: Record<string, Function>;
       eventRegistry: any;
-      coreModules?: Map<string, any>;
+      coreModules: Map<string, any>;
+      hasTriggeredLogin: boolean;
       classes: {
         Logger: any;
         ConfigManager: any;

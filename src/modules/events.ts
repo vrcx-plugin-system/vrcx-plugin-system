@@ -189,7 +189,10 @@ export class EventRegistry {
         this.wildcardListeners.set('*', new Set());
       }
       const listener = {plugin: listenerPlugin, callback};
-      this.wildcardListeners.get('*')!.add(listener);
+      const wildcardSet = this.wildcardListeners.get('*');
+      if (wildcardSet) {
+        wildcardSet.add(listener);
+      }
       
       // Return unsubscribe function
       return () => {

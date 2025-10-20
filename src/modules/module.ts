@@ -141,7 +141,10 @@ export abstract class Module {
     if (!this.resources.listeners.has(element)) {
       this.resources.listeners.set(element, []);
     }
-    this.resources.listeners.get(element)!.push({ event, handler, options });
+    const elementListeners = this.resources.listeners.get(element);
+    if (elementListeners) {
+      elementListeners.push({ event, handler, options });
+    }
     return { element, event, handler };
   }
 

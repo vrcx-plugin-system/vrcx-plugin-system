@@ -135,7 +135,10 @@ export class SettingsStore {
     if (!this.pathListeners.has(path)) {
       this.pathListeners.set(path, new Set());
     }
-    this.pathListeners.get(path)!.add(callback);
+    const listeners = this.pathListeners.get(path);
+    if (listeners) {
+      listeners.add(callback);
+    }
   }
 
   removeChangeListener(path: string, callback: Function): void {
@@ -540,7 +543,12 @@ export class ConfigManager {
         }
       });
 
-      const currentConfigJson = await window.AppApi!.ReadConfigFileSafe();
+      const AppApi = window.AppApi;
+      if (!AppApi) {
+        throw new Error("AppApi not available");
+      }
+
+      const currentConfigJson = await AppApi.ReadConfigFileSafe();
       const currentConfig = currentConfigJson ? JSON.parse(currentConfigJson) : {};
 
       if (!currentConfig.vrcx) {
@@ -548,7 +556,7 @@ export class ConfigManager {
       }
       currentConfig.vrcx.customjs = vrcxCustomjs;
 
-      await window.AppApi!.WriteConfigFile(JSON.stringify(currentConfig, null, 2));
+      await AppApi.WriteConfigFile(JSON.stringify(currentConfig, null, 2));
 
       console.log(
         `[CJS|ConfigManager] ✓ Exported ${Object.keys(customjsData).length} settings to VRChat config.json`
@@ -568,7 +576,13 @@ export class ConfigManager {
     try {
       console.log("[CJS|ConfigManager] Importing from VRChat config.json...");
 
-      const configJson = await window.AppApi!.ReadConfigFileSafe();
+      const AppApi = window.AppApi;
+      if (!AppApi) {
+        console.warn("[CJS|ConfigManager] AppApi not available");
+        return { success: false, importCount: 0 };
+      }
+
+      const configJson = await AppApi.ReadConfigFileSafe();
       if (!configJson) {
         console.warn("[CJS|ConfigManager] VRChat config.json is empty");
         return { success: false, importCount: 0 };
