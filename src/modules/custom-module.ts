@@ -513,6 +513,45 @@ export class CustomModule extends Module {
     alert(`${title}\n\n${message}`);
   }
 
+  /**
+   * Hook into VRCX IPC events
+   */
+  protected onIpc(callback: (data: { type: string; payload: any; raw: any }) => void): void {
+    const originalIpcEvent = (window as any).$pinia?.vrcx?.ipcEvent;
+    
+    if (!originalIpcEvent) {
+      this.error("Failed to hook IPC - $pinia.vrcx.ipcEvent not available");
+      return;
+    }
+    
+    const self = this;
+    (window as any).$pinia.vrcx.ipcEvent = function(json: string) {
+      // Call original handler first
+      if (originalIpcEvent) {
+        originalIpcEvent.call(this, json);
+      }
+      
+      // Parse and forward to callback
+      try {
+        const data = JSON.parse(json);
+        
+        // Forward VrcxMessage types
+        if (data.Type === 'VrcxMessage') {
+          const payload = data.Data ? JSON.parse(data.Data) : {};
+          callback({
+            type: data.MsgType,
+            payload: payload,
+            raw: data
+          });
+        }
+      } catch (e) {
+        // Ignore parse errors
+      }
+    };
+    
+    this.log("Hooked into IPC event handler");
+  }
+
   get(key: string, defaultValue: any = null): any {
     if (!window.customjs?.configManager) {
       this.warn("ConfigManager not available");
