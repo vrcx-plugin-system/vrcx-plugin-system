@@ -101,6 +101,15 @@ function Get-UnixTimestamp {
     return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End $Date).TotalSeconds)
 }
 
+function Get-FileUnixTimestamp {
+    param([string]$FilePath)
+    if (-not (Test-Path $FilePath)) {
+        Write-Warning "File not found: $FilePath"
+        return 0
+    }
+    return Get-UnixTimestamp -Date (Get-Item $FilePath).LastWriteTime
+}
+
 function Update-BuildTimestamp {
     param(
         [Parameter(Mandatory = $true)]
@@ -279,14 +288,14 @@ function Show-BuildSummary {
 # ============================================================================
 
 # Initialize timestamps for script execution
-$ScriptStartTime = Get-Date
-$ScriptTimestamp = $ScriptStartTime.ToString("yyyy-MM-dd HH:mm:ss")
-$ScriptUnixTimestamp = Get-UnixTimestamp -Date $ScriptStartTime
-
+$customjsUnixTimestamp = Get-FileUnixTimestamp -FilePath (Join-Path $ProjectDir "dist/custom.js")
+$ScriptTimestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 Write-Section "VRCX Plugin System Build & Update"
-Write-Host "Timestamp: $ScriptTimestamp" -ForegroundColor Gray
 Write-Host "Project: $ProjectDir" -ForegroundColor Gray
 Write-Host "Target: $TargetDir" -ForegroundColor Gray
+Write-Host ""
+Write-Host "Now: $ScriptTimestamp" -ForegroundColor Gray
+Write-Host "custom.js: $customjsUnixTimestamp" -ForegroundColor Gray
 Write-Host ""
 
 Set-Location $ProjectDir
@@ -394,7 +403,7 @@ else {
 # Update build timestamp
 Write-Section "Update Build Timestamp"
 $indexTsPath = Join-Path $ProjectDir "src\index.ts"
-$timestampUpdated = Update-BuildTimestamp -FilePath $indexTsPath -Timestamp $ScriptUnixTimestamp
+$timestampUpdated = Update-BuildTimestamp -FilePath $indexTsPath -Timestamp $customjsUnixTimestamp
 if (-not $timestampUpdated) {
     Write-Warning "Build timestamp not updated, continuing anyway..."
 }
@@ -577,7 +586,7 @@ if (-not $SkipGit -and $hasGit) {
     # Create GitHub release
     if ($hasGh -and $coreResult.Committed) {
         Write-Host "--- GitHub Release ---" -ForegroundColor Magenta
-        $releaseTag = $ScriptUnixTimestamp
+        $releaseTag = $customjsUnixTimestamp
         $releaseTitle = "Build $releaseTag"
         $releaseNotes = @"
 Automated build - $ScriptTimestamp
