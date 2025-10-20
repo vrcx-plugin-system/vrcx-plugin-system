@@ -289,12 +289,12 @@ function Show-BuildSummary {
 
 # Initialize timestamps for script execution
 $customjsUnixTimestamp = Get-FileUnixTimestamp -FilePath (Join-Path $ProjectDir "dist/custom.js")
-$ScriptTimestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+$scriptUnixTimestamp = Get-UnixTimestamp
 Write-Section "VRCX Plugin System Build & Update"
 Write-Host "Project: $ProjectDir" -ForegroundColor Gray
 Write-Host "Target: $TargetDir" -ForegroundColor Gray
 Write-Host ""
-Write-Host "Now: $ScriptTimestamp" -ForegroundColor Gray
+Write-Host "Now      : $scriptUnixTimestamp" -ForegroundColor Gray
 Write-Host "custom.js: $customjsUnixTimestamp" -ForegroundColor Gray
 Write-Host ""
 
@@ -567,14 +567,14 @@ if (-not $SkipGit -and $hasGit) {
     
     # Commit core system
     Write-Host "--- Core System ---" -ForegroundColor Magenta
-    $coreResult = Invoke-GitOperation -RepoPath $ProjectDir -CommitMessage "Update VRCX Plugin System - $ScriptTimestamp"
+    $coreResult = Invoke-GitOperation -RepoPath $ProjectDir -CommitMessage "Update VRCX Plugin System - $scriptUnixTimestamp"
     $BuildResults.Core.Committed = $coreResult.Committed
     $BuildResults.Core.Pushed = $coreResult.Pushed
     
     # Commit plugins
     if (Test-Path $PluginsDir) {
         Write-Host "--- Plugins Repository ---" -ForegroundColor Magenta
-        $pluginsResult = Invoke-GitOperation -RepoPath $PluginsDir -CommitMessage "Update plugins - $ScriptTimestamp"
+        $pluginsResult = Invoke-GitOperation -RepoPath $PluginsDir -CommitMessage "Update plugins - $scriptUnixTimestamp"
         
         # Update all plugin results
         foreach ($plugin in $BuildResults.Plugins) {
@@ -589,7 +589,7 @@ if (-not $SkipGit -and $hasGit) {
         $releaseTag = $customjsUnixTimestamp
         $releaseTitle = "Build $releaseTag"
         $releaseNotes = @"
-Automated build - $ScriptTimestamp
+Automated build - $scriptUnixTimestamp
 
 ## Installation
 Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in
