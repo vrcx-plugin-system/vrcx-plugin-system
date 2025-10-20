@@ -133,7 +133,119 @@ Utility,sync,void,AppApi.OpenLink,string url,Opens http:// or https:// URL in de
 Utility,sync,string,AppApi.MD5File,string blob,⚠️ Calculates MD5 hash of file (deprecated - for legacy upload)
 Utility,sync,string,AppApi.SignFile,string blob,⚠️ Signs file with HMAC-SHA256 (deprecated - for legacy upload)
 Utility,sync,string,AppApi.FileLength,string blob,Returns file size in bytes
+Plugin System - Module Management,sync,CustomModule,window.customjs.getModule,string idOrUrl,Gets a loaded module by ID or URL
+Plugin System - Module Management,async,CustomModule,window.customjs.waitForModule,"string moduleId, number timeout",Waits for module to load with timeout (default 10s)
+Plugin System - Module Management,async,object,window.customjs.loadModule,string moduleUrl,Loads a module from URL and returns success/message/module
+Plugin System - Module Management,async,object,window.customjs.unloadModule,string idOrUrl,Unloads a module and returns success/message
+Plugin System - Module Management,async,object,window.customjs.reloadModule,string idOrUrl,Reloads a module (unload + load) and returns success/message/module
+Plugin System - Repository Management,sync,ModuleRepository,window.customjs.getRepo,string url,Gets repository by URL
+Plugin System - Repository Management,async,object,window.customjs.addRepository,"string url, bool saveConfig",Adds and fetches repository returning success/message/repo
+Plugin System - Repository Management,sync,bool,window.customjs.removeRepository,string url,Removes repository and returns success status
+Plugin System - Config Management,sync,any,window.customjs.configManager.get,"string key, any defaultValue",Gets configuration value by key with optional default
+Plugin System - Config Management,sync,bool,window.customjs.configManager.set,"string key, any value",Sets configuration value by key
+Plugin System - Config Management,sync,bool,window.customjs.configManager.delete,string key,Deletes configuration key
+Plugin System - Config Management,sync,bool,window.customjs.configManager.has,string key,Checks if configuration key exists
+Plugin System - Config Management,sync,void,window.customjs.configManager.clear,string prefix,Clears all configuration keys (optionally filtered by prefix)
+Plugin System - Config Management,sync,string[],window.customjs.configManager.keys,string prefix,Returns all configuration keys (optionally filtered by prefix)
+Plugin System - Config Management,sync,any,window.customjs.configManager.getPluginConfig,string pluginId,Gets plugin-specific configuration object
+Plugin System - Config Management,sync,void,window.customjs.configManager.setPluginConfig,PluginConfig config,Sets plugin configuration
+Plugin System - Config Management,sync,string,window.customjs.configManager.export,none,Exports all configuration as JSON string
+Plugin System - Config Management,sync,bool,window.customjs.configManager.import,string jsonString,Imports configuration from JSON string
+Plugin System - Config Management,async,object,window.customjs.configManager.exportToVRChatConfig,none,Exports settings to VRChat config.json (returns success/settingsCount/filePath)
+Plugin System - Config Management,async,object,window.customjs.configManager.importFromVRChatConfig,none,Imports settings from VRChat config.json (returns success/importCount)
+Plugin System - Utils,sync,bool,window.customjs.utils.isEmpty,any value,Checks if value is null/undefined/empty string
+Plugin System - Utils,sync,string,window.customjs.utils.decodeUnicode,string str,Decodes Unicode escape sequences (\u{1F504} → 🔄)
+Plugin System - Utils,sync,string,window.customjs.utils.timeToText,number ms,Converts milliseconds to human-readable text (e.g. 1d 2h)
+Plugin System - Utils,sync,number,window.customjs.utils.parseTimespan,string|number input,Parses timespan string to milliseconds (supports 1h 20m or 00:50.100)
+Plugin System - Utils,sync,string,window.customjs.utils.formatTimespan,number ms,Formats milliseconds to timespan display
+Plugin System - Utils,sync,string,window.customjs.utils.getTimestamp,Date now,Returns formatted timestamp string
+Plugin System - Utils,sync,string,window.customjs.utils.formatDateTime,Date now,Formats date and time string
+Plugin System - Utils,async,bool,window.customjs.utils.copyToClipboard,"string text, string description",Copies text to clipboard with fallback methods
+Plugin System - Utils,async,Promise<any>,window.customjs.utils.saveBio,"string bio, any bioLinks",Saves VRChat user bio via API
+Plugin System - Utils,async,Promise<any>,window.customjs.utils.getLocationObject,any loc,Parses location string/object and fetches world name
+Plugin System - Utils,sync,string,window.customjs.utils.hexToRgba,"string hex, number alpha",Converts hex color to rgba format
+Plugin System - Utils,sync,string,window.customjs.utils.darkenColor,"string hex, number percent",Darkens a hex color by percentage
 Plugin System - Utils,async,object,window.customjs.utils.downloadFile,"string url, string filename, string mimeType","Downloads file from URL using multiple methods (fetch+blob, anchor, iframe, window.location)"
 Plugin System - Utils,sync,object,window.customjs.utils.downloadDataAsFile,"string content, string filename, string mimeType",Downloads generated text/data content as file (JSON/CSV/text)
-Plugin System - Utils,async,bool,window.customjs.utils.copyToClipboard,"string text, string description",Copies text to clipboard with fallback methods
 Plugin System - Utils,sync,object,window.customjs.utils.parseRepositoryUrl,string url,"Parses GitHub/GitLab URL and extracts: platform, owner, repo, branch, filepath, rawUrl, apiUrl, repoUrl, releaseUrl"
+Plugin System - Logger,sync,void,this.logger.log,"string msg, ...args",Logs message to console with plugin context
+Plugin System - Logger,sync,void,this.logger.info,"string msg, ...args",Alias for log()
+Plugin System - Logger,sync,void,this.logger.warn,"string msg, ...args",Logs warning to console
+Plugin System - Logger,sync,void,this.logger.error,"string msg, ...args",Logs error to console
+Plugin System - Logger,sync,void,this.logger.showInfo,"string msg, ...args",Shows info notification in VRCX UI
+Plugin System - Logger,sync,void,this.logger.showSuccess,"string msg, ...args",Shows success notification in VRCX UI
+Plugin System - Logger,sync,void,this.logger.showWarning,"string msg, ...args",Shows warning notification in VRCX UI
+Plugin System - Logger,sync,void,this.logger.showError,"string msg, ...args",Shows error notification in VRCX UI
+Plugin System - Logger,sync,void,this.logger.notifyInfo,"string msg, ...args",Shows Element Plus info notification
+Plugin System - Logger,sync,void,this.logger.notifySuccess,"string msg, ...args",Shows Element Plus success notification
+Plugin System - Logger,sync,void,this.logger.notifyWarning,"string msg, ...args",Shows Element Plus warning notification
+Plugin System - Logger,sync,void,this.logger.notifyError,"string msg, ...args",Shows Element Plus error notification
+Plugin System - Logger,sync,void,this.logger.alert,"string msg, ...args",Shows browser alert dialog
+Plugin System - Logger,sync,void,this.logger.addFeed,object entry,Adds entry to VRCX notification feed
+Plugin System - Logger,sync,void,this.logger.addGameLog,object entry,Adds entry to VRCX game log
+Plugin System - Logger,sync,void,this.logger.addFriendLog,object entry,Adds entry to VRCX friend log
+Plugin System - Logger,sync,void,this.logger.addNotificationLog,object entry,Adds entry to VRCX notification log
+Plugin System - Logger,async,void,this.logger.notifyDesktop,"string msg, string title, ...args",Shows Windows desktop notification via AppApi
+Plugin System - Logger,async,void,this.logger.notifyVR,"string msg, string title, ...args",Shows VR overlay notification (XSOverlay/OVRToolkit)
+Plugin System - Logger,async,void,this.logger.notifyAll,"string msg, ...args",Shows notifications on all channels (UI + Desktop + VR)
+Plugin System - Module Methods,sync,void,this.emit,"string eventName, any data",Emits custom event that other plugins can subscribe to
+Plugin System - Module Methods,sync,void,this.on,"string eventName, Function callback",Subscribes to custom events emitted by plugins (legacy method)
+Plugin System - Module Methods,sync,Function,this.subscribe,"string eventType, Function callback",Subscribes to plugin events with auto-cleanup (returns unsubscribe function)
+Plugin System - Module Methods,sync,void,this.registerPreHook,"string functionPath, Function callback",Intercepts function BEFORE execution (can modify args)
+Plugin System - Module Methods,sync,void,this.registerPostHook,"string functionPath, Function callback",Intercepts function AFTER execution (can modify result)
+Plugin System - Module Methods,sync,void,this.registerVoidHook,"string functionPath, Function callback",Intercepts void functions (no return value modification)
+Plugin System - Module Methods,sync,void,this.registerReplaceHook,"string functionPath, Function callback",Completely replaces function implementation
+Plugin System - Module Methods,async,bool,this.showConfirmDialog,"string title, string message, string confirmText, string cancelText",Shows confirmation dialog with fallback to native confirm()
+Plugin System - Module Methods,async,void,this.showAlertDialog,"string title, string message, string confirmText",Shows alert dialog with fallback to native alert()
+Plugin System - Module Methods,sync,SettingsStore,this.defineSettings,object definition,Defines plugin settings schema and returns SettingsStore
+Plugin System - Module Methods,sync,object,this.defineSettingsCategories,object categories,Defines setting categories for organization
+Plugin System - Module Methods,sync,any,this.get,"string key, any defaultValue",Gets value from plugin settings
+Plugin System - Module Methods,sync,bool,this.set,"string key, any value",Sets value in plugin settings
+Plugin System - Module Methods,sync,bool,this.deleteSetting,string key,Deletes key from plugin settings
+Plugin System - Module Methods,sync,bool,this.hasSetting,string key,Checks if setting key exists
+Plugin System - Module Methods,sync,string[],this.getAllSettingKeys,none,Returns all setting keys for plugin
+Plugin System - Module Methods,sync,object,this.getAllSettings,none,Returns all settings as object
+Plugin System - Module Methods,sync,void,this.clearAllSettings,none,Clears all settings for plugin
+Plugin System - Module Methods,async,void,this.unload,none,Unloads plugin (stops and cleans up resources)
+Plugin System - Module Methods,async,CustomModule,this.reload,none,Reloads plugin (unload + load from URL)
+Plugin System - Module Methods,async,bool,this.enable,none,Enables plugin and starts if not already started
+Plugin System - Module Methods,async,bool,this.disable,none,Disables plugin and stops it
+Plugin System - Module Methods,async,bool,this.toggle,none,Toggles plugin enabled/disabled state
+Plugin System - Module Methods,sync,number,this.registerTimer,number timerId,Registers timer for auto-cleanup on stop
+Plugin System - Module Methods,sync,any,this.registerObserver,any observer,Registers observer for auto-cleanup on stop
+Plugin System - Module Methods,sync,object,this.registerListener,"EventTarget element, string event, Function handler, object options",Registers event listener for auto-cleanup on stop
+Plugin System - Module Methods,sync,Function,this.registerSubscription,Function unsubscribe,Registers subscription for auto-cleanup on stop
+Plugin System - Module Methods,sync,string,this.getDisplayName,none,Returns plugin display name (with emoji)
+Plugin System - Module Methods,sync,string,this.getDisplayDescription,none,Returns plugin description
+Plugin System - Repository Methods,async,bool,repo.fetch,none,Fetches and parses repository data from URL
+Plugin System - Repository Methods,sync,PluginRepoMetadata[],repo.getModules,none,Returns all modules in repository with repo reference
+Plugin System - Repository Methods,sync,PluginRepoMetadata[],repo.getModulesByTag,string tag,Returns modules filtered by tag
+Plugin System - Repository Methods,sync,PluginRepoMetadata,repo.getModule,string id,Gets specific module by ID
+Plugin System - Repository Methods,sync,PluginRepoMetadata,repo.getModuleByUrl,string url,Gets specific module by URL
+Plugin API - Context Menu,sync,object,contextMenuApi.addUserItem,"string itemId, object item",Adds custom context menu item to user dialogs (returns item object),contextMenuApi.addUserItem('my-item'\, {text: 'Click Me'\, callback: () => {}})
+Plugin API - Context Menu,sync,object,contextMenuApi.addWorldItem,"string itemId, object item",Adds custom context menu item to world dialogs,contextMenuApi.addWorldItem('my-item'\, {text: 'Click Me'\, callback: () => {}})
+Plugin API - Context Menu,sync,bool,contextMenuApi.removeUserItem,string itemId,Removes custom user context menu item by ID,contextMenuApi.removeUserItem('my-item')
+Plugin API - Context Menu,sync,bool,contextMenuApi.removeWorldItem,string itemId,Removes custom world context menu item by ID,contextMenuApi.removeWorldItem('my-item')
+Plugin API - Nav Menu,sync,object,navMenuApi.addMenuItem,"string itemId, object item",Adds custom navigation menu tab (returns item object),navMenuApi.addMenuItem('my-tab'\, {label: 'My Tab'\, component: myComponent})
+Plugin API - Nav Menu,sync,bool,navMenuApi.removeMenuItem,string itemId,Removes custom navigation menu tab by ID,navMenuApi.removeMenuItem('my-tab')
+Plugin API - Dialog,sync,object,dialogApi.registerDialog,"string dialogId, object options",Registers a custom dialog with VRCX (returns show/hide methods),dialogApi.registerDialog('my-dialog'\, {title: 'Title'\, component: myComponent})
+Plugin API - Dialog,sync,bool,dialogApi.showDialog,string dialogId,Shows a registered custom dialog by ID,dialogApi.showDialog('my-dialog')
+Plugin API - Dialog,sync,void,dialogApi.closeDialog,string dialogId,Closes an open custom dialog by ID,dialogApi.closeDialog('my-dialog')
+Plugin API - Plugin Analyzer,async,void,pluginAnalyzer.analyzePlugin,string pluginUrl,Analyzes plugin code and shows detailed metadata dialog,await pluginAnalyzer.analyzePlugin('https://github.com/.../plugin.js')
+Plugin API - Tag Manager,async,void,tagManager.loadTags,none,Manually loads tags from all configured sources,await tagManager.loadTags()
+Plugin API - Tag Manager,async,void,tagManager.refreshTags,none,Alias for loadTags() - refreshes tags from sources,await tagManager.refreshTags()
+Plugin API - Tag Manager,async,object,tagManager.findTaggedUsers,"bool print, bool copy","Returns {friends: [], blocked: [], interactOff: []} with tagged users",const tagged = await tagManager.findTaggedUsers(false\, false)
+Plugin API - Tag Manager,sync,number,tagManager.getLoadedTagsCount,none,Returns total count of loaded tags,const count = tagManager.getLoadedTagsCount()
+Plugin API - Yoinker Detector,async,object,yoinkerDetector.checkUser,string userId,"Checks if user is a yoinker, returns {isYoinker, confidence, count}",const result = await yoinkerDetector.checkUser('usr_xxx')
+Plugin API - Yoinker Detector,sync,void,yoinkerDetector.clearCache,none,Clears processed user cache and resets statistics,yoinkerDetector.clearCache()
+Plugin API - Auto Follow,sync,void,autoFollow.addAutoFollow,"object user, string location",Adds user to auto-follow list,autoFollow.addAutoFollow(user\, 'location')
+Plugin API - Auto Follow,sync,void,autoFollow.removeAutoFollow,string userId,Removes user from auto-follow list,autoFollow.removeAutoFollow('usr_xxx')
+Plugin API - Auto Follow,sync,object[],autoFollow.getAutoFollowUsersList,none,Returns array of users in auto-follow list,const users = autoFollow.getAutoFollowUsersList()
+Plugin API - Auto Follow,async,void,autoFollow.checkUserLocation,"string userId, object data",Checks if user is in their location and requests invite,await autoFollow.checkUserLocation('usr_xxx'\, userData)
+Plugin API - Auto Invite,sync,void,autoInvite.addAutoInvite,"string userId, string displayName",Adds user to auto-invite list,autoInvite.addAutoInvite('usr_xxx'\, 'Username')
+Plugin API - Auto Invite,sync,void,autoInvite.removeAutoInvite,string userId,Removes user from auto-invite list,autoInvite.removeAutoInvite('usr_xxx')
+Plugin API - Auto Invite,sync,object[],autoInvite.getAutoInviteUsersList,none,Returns array of {userId\, displayName} in auto-invite list,const users = autoInvite.getAutoInviteUsersList()
+Plugin API - Update Checker,async,void,updateChecker.checkCoreUpdate,bool manual,Checks for core system updates,await updateChecker.checkCoreUpdate(true)
+Plugin API - Update Checker,async,void,updateChecker.checkPluginUpdates,bool manual,Checks for plugin updates,await updateChecker.checkPluginUpdates(true)
+Plugin API - Update Checker,sync,void,updateChecker.showRateLimitStatus,none,Displays GitHub API rate limit info,updateChecker.showRateLimitStatus()
+Plugin API - Update Checker,async,void,updateChecker.downloadCoreUpdate,none,Downloads latest core system update with UI,await updateChecker.downloadCoreUpdate()
