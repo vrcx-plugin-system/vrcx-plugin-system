@@ -1,0 +1,135 @@
+Category,Async,Return Type,Function Name,Parameters,Description
+Configuration & Storage,sync,void,VRCXStorage.Load,none,Loads VRCX configuration from %APPDATA%\VRCX\VRCX.json into memory
+Configuration & Storage,sync,void,VRCXStorage.Save,none,Saves dirty VRCX configuration from memory to %APPDATA%\VRCX\VRCX.json
+Configuration & Storage,sync,void,VRCXStorage.Flush,none,Forces immediate save of configuration to disk
+Configuration & Storage,sync,void,VRCXStorage.Clear,none,Clears all configuration data from memory and marks as dirty
+Configuration & Storage,sync,bool,VRCXStorage.Remove,string key,Removes a specific key from configuration storage
+Configuration & Storage,sync,string,VRCXStorage.Get,string key,Retrieves the value for a specific configuration key (returns empty string if not found)
+Configuration & Storage,sync,void,VRCXStorage.Set,"string key, string value",Sets a configuration key-value pair and marks storage as dirty
+Configuration & Storage,sync,string,VRCXStorage.GetAll,none,Returns all configuration data as JSON string
+Configuration & Storage,sync,string,AppApi.CustomCss,none,Reads and returns contents of %APPDATA%\VRCX\custom.css file
+Configuration & Storage,sync,string,AppApi.CustomScript,none,Reads and returns contents of %APPDATA%\VRCX\custom.js file (SECURITY: Executed as code)
+Configuration & Storage,sync,string,AppApi.ReadConfigFile,none,Reads VRChat's config.json from LocalApplicationData\Low\VRChat\VRChat\
+Configuration & Storage,sync,string,AppApi.ReadConfigFileSafe,none,Reads and validates VRChat's config.json with error handling
+Configuration & Storage,sync,void,AppApi.WriteConfigFile,string json,Writes JSON string to VRChat's config.json (SECURITY: Can corrupt VRChat settings)
+VRChat Configuration,sync,string,AppApi.GetVRChatAppDataLocation,none,Returns path to VRChat's AppData folder (LocalApplicationData\Low\VRChat\VRChat)
+VRChat Configuration,sync,string,AppApi.GetVRChatPhotosLocation,none,Returns path to VRChat photos folder (reads from config.json picture_output_folder)
+VRChat Configuration,sync,string,AppApi.GetUGCPhotoLocation,string path,Returns or creates UGC photo location path
+VRChat Configuration,sync,string,AppApi.GetVRChatScreenshotsLocation,none,Returns path to VRChat Steam screenshots folder
+VRChat Configuration,sync,string,AppApi.GetVRChatCacheLocation,none,Returns path to VRChat cache folder (reads from config.json cache_directory)
+File System - Folder Operations,sync,bool,AppApi.OpenVrcxAppDataFolder,none,Opens Windows Explorer at %APPDATA%\VRCX\ folder
+File System - Folder Operations,sync,bool,AppApi.OpenVrcAppDataFolder,none,Opens Windows Explorer at VRChat's AppData folder
+File System - Folder Operations,sync,bool,AppApi.OpenVrcPhotosFolder,none,Opens Windows Explorer at VRChat photos folder
+File System - Folder Operations,sync,bool,AppApi.OpenUGCPhotosFolder,string ugcPath,Opens Windows Explorer at UGC photos folder
+File System - Folder Operations,sync,bool,AppApi.OpenVrcScreenshotsFolder,none,Opens Windows Explorer at VRChat Steam screenshots folder
+File System - Folder Operations,sync,bool,AppApi.OpenCrashVrcCrashDumps,none,Opens Windows Explorer at VRChat crash dumps folder (%TEMP%\VRChat\VRChat\Crashes)
+File System - Folder Operations,sync,void,AppApi.OpenShortcutFolder,none,Opens Windows Explorer at AutoAppLauncher shortcuts folder
+File System - Folder Operations,sync,void,AppApi.OpenFolderAndSelectItem,"string path, bool isFolder",Opens Windows Explorer and selects a specific file or folder
+File System - Folder Operations,async,string,AppApi.OpenFolderSelectorDialog,string defaultPath,Opens folder selection dialog and returns selected path
+File System - Folder Operations,async,string,AppApi.OpenFileSelectorDialog,"string defaultPath, string defaultExt, string defaultFilter",Opens file selection dialog and returns selected file path
+File System - Read Operations,sync,string,AppApi.GetFileBase64,string path,⚠️ SECURITY RISK: Reads ANY file on system and returns as base64 (no validation)
+File System - Read Operations,sync,string,AppApi.ReadVrcRegJsonFile,string filepath,⚠️ SECURITY RISK: Reads ANY text file on system (intended for registry backups)
+File System - Write Operations,sync,string,AppApi.AddScreenshotMetadata,"string path, string metadataString, string worldId, bool changeFilename",Adds metadata to VRChat PNG screenshot and optionally renames with worldId
+File System - Write Operations,async,string,AppApi.SavePrintToFile,"string url, string ugcFolderPath, string monthFolder, string fileName",Downloads and saves print image from URL to Prints subfolder
+File System - Write Operations,async,string,AppApi.SaveStickerToFile,"string url, string ugcFolderPath, string monthFolder, string fileName",Downloads and saves sticker image from URL to Stickers subfolder
+File System - Write Operations,async,string,AppApi.SaveEmojiToFile,"string url, string ugcFolderPath, string monthFolder, string fileName",Downloads and saves emoji image from URL to Emoji subfolder
+File System - Write Operations,async,bool,AppApi.CropPrintImage,string path,Crops a print image and preserves iTXt metadata chunks
+File System - Write Operations,async,void,AppApi.CropAllPrints,string ugcFolderPath,Crops all print images in the specified UGC folder
+Windows Registry,sync,object,AppApi.GetVRChatRegistryKey,string key,Gets a value from HKCU\SOFTWARE\VRChat\VRChat registry (with Unity hash)
+Windows Registry,sync,string,AppApi.GetVRChatRegistryKeyString,string key,Gets a value from VRChat registry as string
+Windows Registry,sync,bool,AppApi.SetVRChatRegistryKey,"string key, object value, int typeInt",Sets a value in VRChat registry (Binary=0 or DWord=4)
+Windows Registry,sync,void,AppApi.SetVRChatRegistryKey,"string key, byte[] value",Sets a binary value in VRChat registry
+Windows Registry,sync,Dictionary<string\,Dictionary<string\,object>>,AppApi.GetVRChatRegistry,none,Gets all VRChat registry keys and values as nested dictionary
+Windows Registry,sync,void,AppApi.SetVRChatRegistry,string json,Restores VRChat registry from JSON backup
+Windows Registry,sync,bool,AppApi.HasVRChatRegistryFolder,none,Checks if HKCU\SOFTWARE\VRChat\VRChat registry folder exists
+Windows Registry,sync,void,AppApi.DeleteVRChatRegistryFolder,none,⚠️ WARNING: Deletes entire VRChat registry tree
+Screenshot & Images,sync,string,AppApi.GetExtraScreenshotData,"string path, bool carouselCache",Returns metadata for screenshot including resolution and carousel navigation paths
+Screenshot & Images,sync,string,AppApi.GetScreenshotMetadata,string path,Extracts and returns VRCX metadata from PNG screenshot
+Screenshot & Images,sync,string,AppApi.FindScreenshotsBySearch,"string searchQuery, int searchType",Searches for screenshots matching query (0=world, returns JSON array of paths)
+Screenshot & Images,sync,string,AppApi.GetLastScreenshot,none,Returns path to most recently created VRChat screenshot
+Screenshot & Images,sync,bool,AppApi.DeleteScreenshotMetadata,string path,Removes VRCX metadata from a PNG screenshot file
+Screenshot & Images,sync,void,AppApi.DeleteAllScreenshotMetadata,none,Removes VRCX metadata from all screenshots in photos folder
+Screenshot & Images,sync,string,AppApi.ResizeImageToFitLimits,string base64data,Resizes base64 image to fit within size limits (2000x2000, 10MB) and returns base64
+Screenshot & Images,async,string,AppApi.GetImage,"string url, string fileId, string version",Downloads and caches image from URL using ImageCache system
+Screenshot & Images,sync,void,AppApi.PopulateImageHosts,string json,Populates list of trusted image hosts for ImageCache
+VRChat Local Moderations,sync,Dictionary<string\,short>,AppApi.GetVRChatModerations,string currentUserId,Gets all show/hide user moderations for current user (004=hide, 005=show)
+VRChat Local Moderations,sync,short,AppApi.GetVRChatUserModeration,"string currentUserId, string userId",Gets moderation status for specific user (0=none, 4=hideAvatar, 5=showAvatar)
+VRChat Local Moderations,sync,bool,AppApi.SetVRChatUserModeration,"string currentUserId, string userId, int type",Sets moderation status for specific user (0=remove, 4=hide, 5=show)
+Game/Process Control,sync,void,AppApi.CheckGameRunning,none,Updates JavaScript with VRChat and SteamVR running status
+Game/Process Control,sync,bool,AppApi.IsGameRunning,none,Returns true if VRChat process is running
+Game/Process Control,sync,bool,AppApi.IsSteamVRRunning,none,Returns true if vrserver process is running
+Game/Process Control,sync,int,AppApi.QuitGame,none,Kills VRChat process if exactly one instance is running (returns count)
+Game/Process Control,sync,bool,AppApi.StartGame,string arguments,Starts VRChat via Steam with arguments (tries steam.exe then launch.exe)
+Game/Process Control,sync,bool,AppApi.StartGameFromPath,"string path, string arguments",⚠️ Starts game from path (PATCHED: only allows launch.exe for security)
+Game/Process Control,async,bool,AppApi.TryOpenInstanceInVrc,string launchUrl,Sends VRChat protocol URL to running VRChat instance via IPC
+Game/Process Control,sync,void,AppApi.SetAppLauncherSettings,"bool enabled, bool killOnExit, bool runProcessOnce",Configures AutoAppLauncher behavior for companion apps
+Network & API,async,string,WebApi.ExecuteJson,string options,Executes HTTP request from JSON options and returns JSON response
+Network & API,async,Tuple<int\,string>,WebApi.Execute,IDictionary<string\,object> options,Executes HTTP request with status code and response body
+Network & API,sync,string,WebApi.GetCookies,none,Returns all stored cookies as JSON string
+Network & API,sync,void,WebApi.SetCookies,string cookies,Loads cookies from JSON string into cookie container
+Network & API,sync,void,WebApi.ClearCookies,none,Clears all cookies from cookie container
+Network & API,sync,void,WebApi.SaveCookies,none,Saves cookies to disk (called automatically by timer)
+Network & API,sync,void,WebApi.Init,none,Initializes WebApi with proxy settings and loads cookies
+Network & API,sync,void,WebApi.Exit,none,Stops cookie save timer and cleans up
+Database,sync,void,SQLite.Init,none,Opens SQLite database connection (VRCX.db in AppData or custom location)
+Database,sync,void,SQLite.Exit,none,Closes and disposes SQLite database connection
+Database,sync,string,SQLite.ExecuteJson,"string sql, IDictionary<string\,object> args",Executes SQL query and returns results as JSON with status
+Database,sync,Tuple<string\,object[]>,SQLite.Execute,"string sql, IDictionary<string\,object> args",Executes SQL query and returns error message and result rows
+Database,sync,int,SQLite.ExecuteNonQuery,"string sql, IDictionary<string\,object> args",Executes SQL non-query (INSERT/UPDATE/DELETE) and returns rows affected
+VR Overlay Integration,sync,void,AppApi.ExecuteVrFeedFunction,"string function, string json",⚠️ SECURITY RISK: Executes arbitrary JavaScript in VR wrist overlay ($vr.{function})
+VR Overlay Integration,sync,void,AppApi.ExecuteVrOverlayFunction,"string function, string json",⚠️ SECURITY RISK: Executes arbitrary JavaScript in VR HMD overlay ($vr.{function})
+VR Overlay,sync,void,AppApi.SetVR,"bool active, bool hmdOverlay, bool wristOverlay, bool menuButton, int overlayHand",Enables/disables VR overlay with specified settings
+VR Overlay,sync,void,AppApi.RefreshVR,none,Refreshes VR overlay instances
+VR Overlay,sync,void,AppApi.RestartVR,none,Restarts VR overlay system
+VR Notifications,sync,void,AppApi.XSNotification,"string title, string content, int timeout, double opacity, string image",Sends notification to XSOverlay via UDP (localhost:42069)
+VR Notifications,sync,void,AppApi.OVRTNotification,"bool hudNotification, bool wristNotification, string title, string body, int timeout, double opacity, string image",Sends notification to OVRToolkit via WebSocket (ws://127.0.0.1:11450/api)
+UI & Window,sync,void,AppApi.ShowDevTools,none,Opens browser DevTools window
+UI & Window,sync,void,AppApi.SetZoom,double zoomLevel,Sets browser zoom level
+UI & Window,async,double,AppApi.GetZoom,none,Gets current browser zoom level
+UI & Window,sync,void,AppApi.FocusWindow,none,Brings VRCX window to foreground
+UI & Window,sync,void,AppApi.FlashWindow,none,Flashes VRCX window in taskbar for attention
+UI & Window,sync,void,AppApi.ChangeTheme,int value,Changes VRCX color theme (0=dark, 1=light, etc)
+UI & Window,sync,string,AppApi.GetClipboard,none,Returns current clipboard text content
+UI & Window,sync,void,AppApi.CopyImageToClipboard,string path,Copies image file to Windows clipboard
+UI & Window,sync,void,AppApi.DesktopNotification,"string BoldText, string Text, string Image",Shows Windows desktop notification
+Application,sync,void,AppApi.Init,none,Initializes AppApi (empty method - implemented per platform)
+Application,sync,string,AppApi.GetVersion,none,Returns VRCX version string
+Application,sync,string,AppApi.GetLaunchCommand,none,Gets and clears launch command argument
+Application,sync,void,AppApi.RestartApplication,bool isUpgrade,Restarts VRCX application (isUpgrade indicates update install)
+Application,sync,bool,AppApi.CheckForUpdateExe,none,Checks if VRCX-Update.exe exists for installing updates
+Application,async,void,AppApi.DownloadUpdate,"string fileUrl, string hashString, int downloadSize",Downloads VRCX update from URL and validates hash
+Application,sync,void,AppApi.CancelUpdate,none,Cancels ongoing update download
+Application,sync,int,AppApi.CheckUpdateProgress,none,Returns update download progress percentage (0-100)
+Application,sync,void,AppApi.SetStartup,bool enabled,Enables/disables VRCX startup with Windows
+Application,sync,void,AppApi.SetUserAgent,none,Sets custom user agent for browser
+Application,sync,void,AppApi.DoFunny,none,Easter egg function (implementation varies per platform)
+Discord Rich Presence,sync,void,Discord.Init,none,Initializes Discord Rich Presence timer
+Discord Rich Presence,sync,void,Discord.Exit,none,Stops Discord Rich Presence and disposes client
+Discord Rich Presence,sync,bool,Discord.SetActive,bool active,Enables/disables Discord Rich Presence
+Discord Rich Presence,sync,void,Discord.SetAssets,"string largeImageKey, string largeImageText, string smallImageKey, string smallImageText",Sets Discord Rich Presence image assets and hover text
+AssetBundle Cache,sync,string,AssetBundleManager.GetAssetId,"string id, string variant",Generates AssetBundle cache ID from SHA256 hash (first 16 hex chars uppercase)
+AssetBundle Cache,sync,string,AssetBundleManager.GetAssetVersion,"int version, int variantVersion",Converts version integers to 32-character hex string for cache path
+AssetBundle Cache,sync,(int\,int),AssetBundleManager.ReverseHexToDecimal,string hexString,Converts 32-char hex string back to version and variantVersion integers
+AssetBundle Cache,sync,string,AssetBundleManager.GetVRChatCacheLocation,none,Returns VRChat cache folder location
+AssetBundle Cache,sync,string,AssetBundleManager.GetVRChatCacheFullLocation,"string id, int version, string variant, int variantVersion",Returns full path to specific AssetBundle in VRChat cache
+AssetBundle Cache,sync,Tuple<long\,bool\,string>,AssetBundleManager.CheckVRChatCache,"string id, int version, string variant, int variantVersion",Checks if AssetBundle exists in cache (returns size, exists, path)
+AssetBundle Cache,sync,void,AssetBundleManager.DeleteCache,"string id, int version, string variant, int variantVersion",Deletes specific AssetBundle from cache
+AssetBundle Cache,sync,void,AssetBundleManager.DeleteAllCache,none,⚠️ WARNING: Deletes entire VRChat __data cache folder
+AssetBundle Cache,sync,List<string>,AssetBundleManager.SweepCache,none,Removes invalid/orphaned cache files and returns list of deleted paths
+LogWatcher,sync,void,LogWatcher.Init,none,Initializes VRChat log file watcher
+LogWatcher,sync,void,LogWatcher.Exit,none,Stops log file watcher
+LogWatcher,sync,void,LogWatcher.Reset,none,Resets log watcher state and re-initializes
+LogWatcher,sync,void,LogWatcher.SetDateTill,string date,Sets log parsing end date filter
+LogWatcher,sync,List<string>,LogWatcher.GetLogLines,none,Returns list of VRChat log line objects
+LogWatcher,sync,string[][],LogWatcher.Get,none,Returns processed log data as 2D array (video errors, audio device, etc)
+LogWatcher,sync,bool,AppApi.VrcClosedGracefully,none,Returns true if VRChat closed gracefully (detected from log)
+IPC Operations,sync,void,AppApi.IPCAnnounceStart,none,Broadcasts VRCXLaunch message to IPC clients
+IPC Operations,sync,void,AppApi.SendIpc,"string type, string data",Sends custom IPC message to connected clients
+Utility,sync,int,AppApi.GetColourFromUserID,string userId,Generates deterministic color integer from userId MD5 hash
+Utility,sync,Dictionary<string\,int>,AppApi.GetColourBulk,List<object> userIds,Generates color integers for list of user IDs (bulk operation)
+Utility,sync,string,AppApi.CurrentCulture,none,Returns current system culture code (e.g. en-US)
+Utility,sync,string,AppApi.CurrentLanguage,none,Returns installed UI culture name
+Utility,sync,void,AppApi.OpenLink,string url,Opens http:// or https:// URL in default browser (UseShellExecute=true)
+Utility,sync,string,AppApi.MD5File,string blob,⚠️ Calculates MD5 hash of file (deprecated - for legacy upload)
+Utility,sync,string,AppApi.SignFile,string blob,⚠️ Signs file with HMAC-SHA256 (deprecated - for legacy upload)
+Utility,sync,string,AppApi.FileLength,string blob,Returns file size in bytes
