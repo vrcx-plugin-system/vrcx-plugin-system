@@ -594,6 +594,7 @@ export class CustomModule extends Module {
       const sourceCode = await response.text();
       const metadata: any = {
         url: moduleUrl,
+        sourceCode: sourceCode,
         size: sourceCode.length,
         lineCount: sourceCode.split('\n').length,
       };
