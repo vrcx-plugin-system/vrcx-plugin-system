@@ -271,10 +271,7 @@ export class CustomModule extends Module {
         case "USER":
           if (window.$pinia?.user?.$subscribe) {
             storeSubscription = window.$pinia.user.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks({
-                currentUser: state.currentUser,
-                isLogin: state.isLogin,
-              });
+              callAllCallbacks(state);  // Pass full state so callbacks can access userDialog, etc.
             });
           }
           break;
