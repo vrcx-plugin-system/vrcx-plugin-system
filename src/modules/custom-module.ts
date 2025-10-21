@@ -52,6 +52,12 @@ export class CustomModule extends Module {
   static loadedUrls: Set<string> = new Set();
   static failedUrls: Set<string> = new Set();
   private static scriptExecutionLock: Promise<void> = Promise.resolve();
+  
+  // Shared subscription pool - reuses Pinia subscriptions across all callbacks
+  private static sharedSubscriptions: Map<string, {
+    piniaUnsubscribe: Function;
+    callbacks: Set<Function>;
+  }> = new Map();
 
   constructor(metadata: Partial<ModuleMetadata> = {}) {
     const moduleUrl = metadata.url || window.customjs?.__currentPluginUrl || null;
@@ -201,22 +207,63 @@ export class CustomModule extends Module {
 
   subscribe(eventType: string, callback: Function): (() => void) | null {
     const setupSubscription = (): (() => void) | null => {
+      const storeKey = eventType.toUpperCase();
+      
+      // Check if we already have a shared subscription for this store
+      let shared = CustomModule.sharedSubscriptions.get(storeKey);
+      
+      if (shared) {
+        // Reuse existing subscription, just add our callback
+        shared.callbacks.add(callback);
+        
+        // Return unsubscribe function
+        const unsubscribe = () => {
+          if (shared) {
+            shared.callbacks.delete(callback);
+            // If no callbacks remain, clean up the Pinia subscription
+            if (shared.callbacks.size === 0) {
+              shared.piniaUnsubscribe();
+              CustomModule.sharedSubscriptions.delete(storeKey);
+            }
+          }
+        };
+        
+        this.registerSubscription(unsubscribe);
+        
+        if (window.customjs?.subscriptions) {
+          const moduleSubscriptions = window.customjs.subscriptions.get(this.metadata.id);
+          if (moduleSubscriptions) {
+            moduleSubscriptions.add(unsubscribe);
+          }
+        }
+        
+        return unsubscribe;
+      }
+      
+      // Create new shared subscription
       let storeSubscription: any = null;
-      let unsubscribe: (() => void) | null = null;
+      const callbacks = new Set<Function>([callback]);
+      
+      // Helper to call all callbacks with state
+      const callAllCallbacks = (state: any) => {
+        for (const cb of callbacks) {
+          try {
+            cb(state);
+          } catch (error) {
+            this.error(`Error in ${storeKey} subscription callback: ${error}`);
+          }
+        }
+      };
 
-      switch (eventType.toUpperCase()) {
+      switch (storeKey) {
         case "LOCATION":
           if (window.$pinia?.location?.$subscribe) {
             storeSubscription = window.$pinia.location.$subscribe((mutation: any, state: any) => {
-              try {
-                callback({
-                  location: state.location,
-                  lastLocation: state.lastLocation,
-                  lastLocationDestination: state.lastLocationDestination,
-                });
-              } catch (error) {
-                this.error(`Error in LOCATION subscription: ${error}`);
-              }
+              callAllCallbacks({
+                location: state.location,
+                lastLocation: state.lastLocation,
+                lastLocationDestination: state.lastLocationDestination,
+              });
             });
           }
           break;
@@ -224,14 +271,10 @@ export class CustomModule extends Module {
         case "USER":
           if (window.$pinia?.user?.$subscribe) {
             storeSubscription = window.$pinia.user.$subscribe((mutation: any, state: any) => {
-              try {
-                callback({
-                  currentUser: state.currentUser,
-                  isLogin: state.isLogin,
-                });
-              } catch (error) {
-                this.error(`Error in USER subscription: ${error}`);
-              }
+              callAllCallbacks({
+                currentUser: state.currentUser,
+                isLogin: state.isLogin,
+              });
             });
           }
           break;
@@ -239,14 +282,10 @@ export class CustomModule extends Module {
         case "GAME":
           if (window.$pinia?.game?.$subscribe) {
             storeSubscription = window.$pinia.game.$subscribe((mutation: any, state: any) => {
-              try {
-                callback({
-                  isGameRunning: state.isGameRunning,
-                  isGameNoVR: state.isGameNoVR,
-                });
-              } catch (error) {
-                this.error(`Error in GAME subscription: ${error}`);
-              }
+              callAllCallbacks({
+                isGameRunning: state.isGameRunning,
+                isGameNoVR: state.isGameNoVR,
+              });
             });
           }
           break;
@@ -254,14 +293,10 @@ export class CustomModule extends Module {
         case "GAMELOG":
           if (window.$pinia?.gameLog?.$subscribe) {
             storeSubscription = window.$pinia.gameLog.$subscribe((mutation: any, state: any) => {
-              try {
-                callback({
-                  gameLogSessionTable: state.gameLogSessionTable,
-                  gameLogTable: state.gameLogTable,
-                });
-              } catch (error) {
-                this.error(`Error in GAMELOG subscription: ${error}`);
-              }
+              callAllCallbacks({
+                gameLogSessionTable: state.gameLogSessionTable,
+                gameLogTable: state.gameLogTable,
+              });
             });
           }
           break;
@@ -269,14 +304,10 @@ export class CustomModule extends Module {
         case "FRIENDS":
           if (window.$pinia?.friends?.$subscribe) {
             storeSubscription = window.$pinia.friends.$subscribe((mutation: any, state: any) => {
-              try {
-                callback({
-                  friends: state.friends,
-                  offlineFriends: state.offlineFriends,
-                });
-              } catch (error) {
-                this.error(`Error in FRIENDS subscription: ${error}`);
-              }
+              callAllCallbacks({
+                friends: state.friends,
+                offlineFriends: state.offlineFriends,
+              });
             });
           }
           break;
@@ -284,13 +315,9 @@ export class CustomModule extends Module {
         case "UI":
           if (window.$pinia?.ui?.$subscribe) {
             storeSubscription = window.$pinia.ui.$subscribe((mutation: any, state: any) => {
-              try {
-                callback({
-                  menuActiveIndex: state?.menuActiveIndex || window.$pinia?.ui?.menuActiveIndex,
-                });
-              } catch (error) {
-                this.error(`Error in UI subscription: ${error}`);
-              }
+              callAllCallbacks({
+                menuActiveIndex: state?.menuActiveIndex || window.$pinia?.ui?.menuActiveIndex,
+              });
             });
           }
           break;
@@ -298,11 +325,7 @@ export class CustomModule extends Module {
         case "WORLD":
           if (window.$pinia?.world?.$subscribe) {
             storeSubscription = window.$pinia.world.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in WORLD subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -310,11 +333,7 @@ export class CustomModule extends Module {
         case "AVATAR":
           if (window.$pinia?.avatar?.$subscribe) {
             storeSubscription = window.$pinia.avatar.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in AVATAR subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -322,11 +341,7 @@ export class CustomModule extends Module {
         case "GROUP":
           if (window.$pinia?.group?.$subscribe) {
             storeSubscription = window.$pinia.group.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in GROUP subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -334,11 +349,7 @@ export class CustomModule extends Module {
         case "LAUNCH":
           if (window.$pinia?.launch?.$subscribe) {
             storeSubscription = window.$pinia.launch.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in LAUNCH subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -346,11 +357,7 @@ export class CustomModule extends Module {
         case "GALLERY":
           if (window.$pinia?.gallery?.$subscribe) {
             storeSubscription = window.$pinia.gallery.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in GALLERY subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -358,11 +365,7 @@ export class CustomModule extends Module {
         case "FAVORITE":
           if (window.$pinia?.favorite?.$subscribe) {
             storeSubscription = window.$pinia.favorite.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in FAVORITE subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -370,11 +373,7 @@ export class CustomModule extends Module {
         case "INSTANCE":
           if (window.$pinia?.instance?.$subscribe) {
             storeSubscription = window.$pinia.instance.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in INSTANCE subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -382,11 +381,7 @@ export class CustomModule extends Module {
         case "VRCX":
           if (window.$pinia?.vrcx?.$subscribe) {
             storeSubscription = window.$pinia.vrcx.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in VRCX subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -394,11 +389,7 @@ export class CustomModule extends Module {
         case "VRCXUPDATER":
           if (window.$pinia?.vrcxUpdater?.$subscribe) {
             storeSubscription = window.$pinia.vrcxUpdater.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in VRCXUPDATER subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -406,11 +397,7 @@ export class CustomModule extends Module {
         case "INVITE":
           if (window.$pinia?.invite?.$subscribe) {
             storeSubscription = window.$pinia.invite.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in INVITE subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -418,11 +405,7 @@ export class CustomModule extends Module {
         case "AVATARPROVIDER":
           if (window.$pinia?.avatarProvider?.$subscribe) {
             storeSubscription = window.$pinia.avatarProvider.$subscribe((mutation: any, state: any) => {
-              try {
-                callback(state);
-              } catch (error) {
-                this.error(`Error in AVATARPROVIDER subscription: ${error}`);
-              }
+              callAllCallbacks(state);
             });
           }
           break;
@@ -433,9 +416,22 @@ export class CustomModule extends Module {
       }
 
       if (storeSubscription) {
-        unsubscribe = () => {
-          if (storeSubscription && typeof storeSubscription === "function") {
-            storeSubscription();
+        // Store the shared subscription
+        CustomModule.sharedSubscriptions.set(storeKey, {
+          piniaUnsubscribe: storeSubscription,
+          callbacks: callbacks
+        });
+        
+        // Return unsubscribe function for this specific callback
+        const unsubscribe = () => {
+          const shared = CustomModule.sharedSubscriptions.get(storeKey);
+          if (shared) {
+            shared.callbacks.delete(callback);
+            // If no callbacks remain, clean up the Pinia subscription
+            if (shared.callbacks.size === 0) {
+              shared.piniaUnsubscribe();
+              CustomModule.sharedSubscriptions.delete(storeKey);
+            }
           }
         };
 
