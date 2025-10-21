@@ -271,10 +271,7 @@ export class CustomModule extends Module {
         case "USER":
           if (window.$pinia?.user?.$subscribe) {
             storeSubscription = window.$pinia.user.$subscribe(() => {
-              // Access store directly, not from subscription params
-              if (window.$pinia?.user) {
-                callAllCallbacks(window.$pinia.user);
-              }
+              callAllCallbacks(window.$pinia?.user || null);
             });
           }
           break;
@@ -282,7 +279,7 @@ export class CustomModule extends Module {
         case "GAME":
           if (window.$pinia?.game?.$subscribe) {
             storeSubscription = window.$pinia.game.$subscribe(() => {
-              if (window.$pinia?.game) callAllCallbacks(window.$pinia.game);
+              callAllCallbacks(window.$pinia?.game || null);
             });
           }
           break;
@@ -290,7 +287,7 @@ export class CustomModule extends Module {
         case "GAMELOG":
           if (window.$pinia?.gameLog?.$subscribe) {
             storeSubscription = window.$pinia.gameLog.$subscribe(() => {
-              if (window.$pinia?.gameLog) callAllCallbacks(window.$pinia.gameLog);
+              callAllCallbacks(window.$pinia?.gameLog || null);
             });
           }
           break;
@@ -298,7 +295,7 @@ export class CustomModule extends Module {
         case "FRIENDS":
           if (window.$pinia?.friends?.$subscribe) {
             storeSubscription = window.$pinia.friends.$subscribe(() => {
-              if (window.$pinia?.friends) callAllCallbacks(window.$pinia.friends);
+              callAllCallbacks(window.$pinia?.friends || null);
             });
           }
           break;
@@ -306,7 +303,7 @@ export class CustomModule extends Module {
         case "UI":
           if (window.$pinia?.ui?.$subscribe) {
             storeSubscription = window.$pinia.ui.$subscribe(() => {
-              if (window.$pinia?.ui) callAllCallbacks(window.$pinia.ui);
+              callAllCallbacks(window.$pinia?.ui || null);
             });
           }
           break;
@@ -314,7 +311,7 @@ export class CustomModule extends Module {
         case "WORLD":
           if (window.$pinia?.world?.$subscribe) {
             storeSubscription = window.$pinia.world.$subscribe(() => {
-              if (window.$pinia?.world) callAllCallbacks(window.$pinia.world);
+              callAllCallbacks(window.$pinia?.world || null);
             });
           }
           break;
@@ -322,7 +319,7 @@ export class CustomModule extends Module {
         case "AVATAR":
           if (window.$pinia?.avatar?.$subscribe) {
             storeSubscription = window.$pinia.avatar.$subscribe(() => {
-              if (window.$pinia?.avatar) callAllCallbacks(window.$pinia.avatar);
+              callAllCallbacks(window.$pinia?.avatar || null);
             });
           }
           break;
@@ -330,7 +327,7 @@ export class CustomModule extends Module {
         case "GROUP":
           if (window.$pinia?.group?.$subscribe) {
             storeSubscription = window.$pinia.group.$subscribe(() => {
-              if (window.$pinia?.group) callAllCallbacks(window.$pinia.group);
+              callAllCallbacks(window.$pinia?.group || null);
             });
           }
           break;
@@ -338,7 +335,7 @@ export class CustomModule extends Module {
         case "LAUNCH":
           if (window.$pinia?.launch?.$subscribe) {
             storeSubscription = window.$pinia.launch.$subscribe(() => {
-              if (window.$pinia?.launch) callAllCallbacks(window.$pinia.launch);
+              callAllCallbacks(window.$pinia?.launch || null);
             });
           }
           break;
@@ -346,7 +343,7 @@ export class CustomModule extends Module {
         case "GALLERY":
           if (window.$pinia?.gallery?.$subscribe) {
             storeSubscription = window.$pinia.gallery.$subscribe(() => {
-              if (window.$pinia?.gallery) callAllCallbacks(window.$pinia.gallery);
+              callAllCallbacks(window.$pinia?.gallery || null);
             });
           }
           break;
@@ -354,7 +351,7 @@ export class CustomModule extends Module {
         case "FAVORITE":
           if (window.$pinia?.favorite?.$subscribe) {
             storeSubscription = window.$pinia.favorite.$subscribe(() => {
-              if (window.$pinia?.favorite) callAllCallbacks(window.$pinia.favorite);
+              callAllCallbacks(window.$pinia?.favorite || null);
             });
           }
           break;
@@ -362,7 +359,7 @@ export class CustomModule extends Module {
         case "INSTANCE":
           if (window.$pinia?.instance?.$subscribe) {
             storeSubscription = window.$pinia.instance.$subscribe(() => {
-              if (window.$pinia?.instance) callAllCallbacks(window.$pinia.instance);
+              callAllCallbacks(window.$pinia?.instance || null);
             });
           }
           break;
@@ -370,7 +367,7 @@ export class CustomModule extends Module {
         case "VRCX":
           if (window.$pinia?.vrcx?.$subscribe) {
             storeSubscription = window.$pinia.vrcx.$subscribe(() => {
-              if (window.$pinia?.vrcx) callAllCallbacks(window.$pinia.vrcx);
+              callAllCallbacks(window.$pinia?.vrcx || null);
             });
           }
           break;
@@ -378,7 +375,7 @@ export class CustomModule extends Module {
         case "VRCXUPDATER":
           if (window.$pinia?.vrcxUpdater?.$subscribe) {
             storeSubscription = window.$pinia.vrcxUpdater.$subscribe(() => {
-              if (window.$pinia?.vrcxUpdater) callAllCallbacks(window.$pinia.vrcxUpdater);
+              callAllCallbacks(window.$pinia?.vrcxUpdater || null);
             });
           }
           break;
@@ -386,7 +383,7 @@ export class CustomModule extends Module {
         case "INVITE":
           if (window.$pinia?.invite?.$subscribe) {
             storeSubscription = window.$pinia.invite.$subscribe(() => {
-              if (window.$pinia?.invite) callAllCallbacks(window.$pinia.invite);
+              callAllCallbacks(window.$pinia?.invite || null);
             });
           }
           break;
@@ -394,7 +391,7 @@ export class CustomModule extends Module {
         case "AVATARPROVIDER":
           if (window.$pinia?.avatarProvider?.$subscribe) {
             storeSubscription = window.$pinia.avatarProvider.$subscribe(() => {
-              if (window.$pinia?.avatarProvider) callAllCallbacks(window.$pinia.avatarProvider);
+              callAllCallbacks(window.$pinia?.avatarProvider || null);
             });
           }
           break;
@@ -402,7 +399,7 @@ export class CustomModule extends Module {
         case "VRCSTATUS":
           if (window.$pinia?.vrcStatus?.$subscribe) {
             storeSubscription = window.$pinia.vrcStatus.$subscribe(() => {
-              if (window.$pinia?.vrcStatus) callAllCallbacks(window.$pinia.vrcStatus);
+              callAllCallbacks(window.$pinia?.vrcStatus || null);
             });
           }
           break;
