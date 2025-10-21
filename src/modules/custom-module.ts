@@ -356,7 +356,7 @@ export class CustomModule extends Module {
               const store = window.$pinia?.group;
               callAllCallbacks(store ? {
                 groupDialog: store.groupDialog,
-                groupMemberModerateDialog: store.groupMemberModerateDialog
+                groupMemberModeration: store.groupMemberModeration
               } : null);
             });
           }
@@ -367,7 +367,7 @@ export class CustomModule extends Module {
             storeSubscription = window.$pinia.launch.$subscribe(() => {
               const store = window.$pinia?.launch;
               callAllCallbacks(store ? {
-                launchDialog: store.launchDialog
+                launchDialogData: store.launchDialogData
               } : null);
             });
           }
@@ -378,7 +378,8 @@ export class CustomModule extends Module {
             storeSubscription = window.$pinia.gallery.$subscribe(() => {
               const store = window.$pinia?.gallery;
               callAllCallbacks(store ? {
-                galleryDialog: store.galleryDialog
+                galleryDialogVisible: store.galleryDialogVisible,
+                fullscreenImageDialog: store.fullscreenImageDialog
               } : null);
             });
           }
@@ -389,7 +390,10 @@ export class CustomModule extends Module {
             storeSubscription = window.$pinia.favorite.$subscribe(() => {
               const store = window.$pinia?.favorite;
               callAllCallbacks(store ? {
-                favoriteDialog: store.favoriteDialog
+                favoriteDialog: store.favoriteDialog,
+                worldImportDialogVisible: store.worldImportDialogVisible,
+                avatarImportDialogVisible: store.avatarImportDialogVisible,
+                friendImportDialogVisible: store.friendImportDialogVisible
               } : null);
             });
           }
@@ -400,7 +404,8 @@ export class CustomModule extends Module {
             storeSubscription = window.$pinia.instance.$subscribe(() => {
               const store = window.$pinia?.instance;
               callAllCallbacks(store ? {
-                instanceDialog: store.instanceDialog
+                previousInstancesInfoDialogVisible: store.previousInstancesInfoDialogVisible,
+                previousInstancesInfoDialogInstanceId: store.previousInstancesInfoDialogInstanceId
               } : null);
             });
           }
@@ -411,8 +416,7 @@ export class CustomModule extends Module {
             storeSubscription = window.$pinia.vrcx.$subscribe(() => {
               const store = window.$pinia?.vrcx;
               callAllCallbacks(store ? {
-                languageDialog: store.languageDialog,
-                notificationDialog: store.notificationDialog
+                isRegistryBackupDialogVisible: store.isRegistryBackupDialogVisible
               } : null);
             });
           }
@@ -423,7 +427,8 @@ export class CustomModule extends Module {
             storeSubscription = window.$pinia.vrcxUpdater.$subscribe(() => {
               const store = window.$pinia?.vrcxUpdater;
               callAllCallbacks(store ? {
-                updateDialog: store.updateDialog
+                VRCXUpdateDialog: store.VRCXUpdateDialog,
+                changeLogDialog: store.changeLogDialog
               } : null);
             });
           }
@@ -434,8 +439,7 @@ export class CustomModule extends Module {
             storeSubscription = window.$pinia.invite.$subscribe(() => {
               const store = window.$pinia?.invite;
               callAllCallbacks(store ? {
-                inviteDialog: store.inviteDialog,
-                inviteResponseDialog: store.inviteResponseDialog
+                editInviteMessageDialog: store.editInviteMessageDialog
               } : null);
             });
           }
@@ -446,7 +450,7 @@ export class CustomModule extends Module {
             storeSubscription = window.$pinia.avatarProvider.$subscribe(() => {
               const store = window.$pinia?.avatarProvider;
               callAllCallbacks(store ? {
-                avatarProviderDialog: store.avatarProviderDialog
+                isAvatarProviderDialogVisible: store.isAvatarProviderDialogVisible
               } : null);
             });
           }
