@@ -52,7 +52,7 @@ export class CustomModule extends Module {
   static loadedUrls: Set<string> = new Set();
   static failedUrls: Set<string> = new Set();
   private static scriptExecutionLock: Promise<void> = Promise.resolve();
-  
+
   // Shared subscription pool - reuses Pinia subscriptions across all callbacks
   private static sharedSubscriptions: Map<string, {
     piniaUnsubscribe: Function;
@@ -260,10 +260,10 @@ export class CustomModule extends Module {
           if (window.$pinia?.location?.$subscribe) {
             storeSubscription = window.$pinia.location.$subscribe((mutation: any, state: any) => {
               callAllCallbacks({
-                location: state.location,
-                lastLocation: state.lastLocation,
-                lastLocationDestination: state.lastLocationDestination,
-              });
+                  location: state.location,
+                  lastLocation: state.lastLocation,
+                  lastLocationDestination: state.lastLocationDestination,
+                });
             });
           }
           break;
