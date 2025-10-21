@@ -410,6 +410,14 @@ export class CustomModule extends Module {
           }
           break;
 
+        case "VRCSTATUS":
+          if (window.$pinia?.vrcStatus?.$subscribe) {
+            storeSubscription = window.$pinia.vrcStatus.$subscribe((mutation: any, state: any) => {
+              callAllCallbacks(state);
+            });
+          }
+          break;
+
         default:
           this.error(`Unknown event type: ${eventType}`);
           return null;

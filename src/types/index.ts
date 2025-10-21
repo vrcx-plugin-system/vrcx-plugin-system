@@ -176,6 +176,7 @@ declare global {
       vrcxUpdater?: any;
       invite?: any;
       avatarProvider?: any;
+      vrcStatus?: any;
     };
     $app?: any;
     request?: any;
