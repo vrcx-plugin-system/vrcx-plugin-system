@@ -270,147 +270,139 @@ export class CustomModule extends Module {
 
         case "USER":
           if (window.$pinia?.user?.$subscribe) {
-            storeSubscription = window.$pinia.user.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);  // Pass full state so callbacks can access userDialog, etc.
+            storeSubscription = window.$pinia.user.$subscribe(() => {
+              // Access store directly, not from subscription params
+              if (window.$pinia?.user) {
+                callAllCallbacks(window.$pinia.user);
+              }
             });
           }
           break;
 
         case "GAME":
           if (window.$pinia?.game?.$subscribe) {
-            storeSubscription = window.$pinia.game.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks({
-                isGameRunning: state.isGameRunning,
-                isGameNoVR: state.isGameNoVR,
-              });
+            storeSubscription = window.$pinia.game.$subscribe(() => {
+              if (window.$pinia?.game) callAllCallbacks(window.$pinia.game);
             });
           }
           break;
 
         case "GAMELOG":
           if (window.$pinia?.gameLog?.$subscribe) {
-            storeSubscription = window.$pinia.gameLog.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks({
-                gameLogSessionTable: state.gameLogSessionTable,
-                gameLogTable: state.gameLogTable,
-              });
+            storeSubscription = window.$pinia.gameLog.$subscribe(() => {
+              if (window.$pinia?.gameLog) callAllCallbacks(window.$pinia.gameLog);
             });
           }
           break;
 
         case "FRIENDS":
           if (window.$pinia?.friends?.$subscribe) {
-            storeSubscription = window.$pinia.friends.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks({
-                friends: state.friends,
-                offlineFriends: state.offlineFriends,
-              });
+            storeSubscription = window.$pinia.friends.$subscribe(() => {
+              if (window.$pinia?.friends) callAllCallbacks(window.$pinia.friends);
             });
           }
           break;
 
         case "UI":
           if (window.$pinia?.ui?.$subscribe) {
-            storeSubscription = window.$pinia.ui.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks({
-                menuActiveIndex: state?.menuActiveIndex || window.$pinia?.ui?.menuActiveIndex,
-              });
+            storeSubscription = window.$pinia.ui.$subscribe(() => {
+              if (window.$pinia?.ui) callAllCallbacks(window.$pinia.ui);
             });
           }
           break;
 
         case "WORLD":
           if (window.$pinia?.world?.$subscribe) {
-            storeSubscription = window.$pinia.world.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.world.$subscribe(() => {
+              if (window.$pinia?.world) callAllCallbacks(window.$pinia.world);
             });
           }
           break;
 
         case "AVATAR":
           if (window.$pinia?.avatar?.$subscribe) {
-            storeSubscription = window.$pinia.avatar.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.avatar.$subscribe(() => {
+              if (window.$pinia?.avatar) callAllCallbacks(window.$pinia.avatar);
             });
           }
           break;
 
         case "GROUP":
           if (window.$pinia?.group?.$subscribe) {
-            storeSubscription = window.$pinia.group.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.group.$subscribe(() => {
+              if (window.$pinia?.group) callAllCallbacks(window.$pinia.group);
             });
           }
           break;
 
         case "LAUNCH":
           if (window.$pinia?.launch?.$subscribe) {
-            storeSubscription = window.$pinia.launch.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.launch.$subscribe(() => {
+              if (window.$pinia?.launch) callAllCallbacks(window.$pinia.launch);
             });
           }
           break;
 
         case "GALLERY":
           if (window.$pinia?.gallery?.$subscribe) {
-            storeSubscription = window.$pinia.gallery.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.gallery.$subscribe(() => {
+              if (window.$pinia?.gallery) callAllCallbacks(window.$pinia.gallery);
             });
           }
           break;
 
         case "FAVORITE":
           if (window.$pinia?.favorite?.$subscribe) {
-            storeSubscription = window.$pinia.favorite.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.favorite.$subscribe(() => {
+              if (window.$pinia?.favorite) callAllCallbacks(window.$pinia.favorite);
             });
           }
           break;
 
         case "INSTANCE":
           if (window.$pinia?.instance?.$subscribe) {
-            storeSubscription = window.$pinia.instance.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.instance.$subscribe(() => {
+              if (window.$pinia?.instance) callAllCallbacks(window.$pinia.instance);
             });
           }
           break;
 
         case "VRCX":
           if (window.$pinia?.vrcx?.$subscribe) {
-            storeSubscription = window.$pinia.vrcx.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.vrcx.$subscribe(() => {
+              if (window.$pinia?.vrcx) callAllCallbacks(window.$pinia.vrcx);
             });
           }
           break;
 
         case "VRCXUPDATER":
           if (window.$pinia?.vrcxUpdater?.$subscribe) {
-            storeSubscription = window.$pinia.vrcxUpdater.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.vrcxUpdater.$subscribe(() => {
+              if (window.$pinia?.vrcxUpdater) callAllCallbacks(window.$pinia.vrcxUpdater);
             });
           }
           break;
 
         case "INVITE":
           if (window.$pinia?.invite?.$subscribe) {
-            storeSubscription = window.$pinia.invite.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.invite.$subscribe(() => {
+              if (window.$pinia?.invite) callAllCallbacks(window.$pinia.invite);
             });
           }
           break;
 
         case "AVATARPROVIDER":
           if (window.$pinia?.avatarProvider?.$subscribe) {
-            storeSubscription = window.$pinia.avatarProvider.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.avatarProvider.$subscribe(() => {
+              if (window.$pinia?.avatarProvider) callAllCallbacks(window.$pinia.avatarProvider);
             });
           }
           break;
 
         case "VRCSTATUS":
           if (window.$pinia?.vrcStatus?.$subscribe) {
-            storeSubscription = window.$pinia.vrcStatus.$subscribe((mutation: any, state: any) => {
-              callAllCallbacks(state);
+            storeSubscription = window.$pinia.vrcStatus.$subscribe(() => {
+              if (window.$pinia?.vrcStatus) callAllCallbacks(window.$pinia.vrcStatus);
             });
           }
           break;
