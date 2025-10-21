@@ -295,6 +295,138 @@ export class CustomModule extends Module {
           }
           break;
 
+        case "WORLD":
+          if (window.$pinia?.world?.$subscribe) {
+            storeSubscription = window.$pinia.world.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in WORLD subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "AVATAR":
+          if (window.$pinia?.avatar?.$subscribe) {
+            storeSubscription = window.$pinia.avatar.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in AVATAR subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "GROUP":
+          if (window.$pinia?.group?.$subscribe) {
+            storeSubscription = window.$pinia.group.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in GROUP subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "LAUNCH":
+          if (window.$pinia?.launch?.$subscribe) {
+            storeSubscription = window.$pinia.launch.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in LAUNCH subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "GALLERY":
+          if (window.$pinia?.gallery?.$subscribe) {
+            storeSubscription = window.$pinia.gallery.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in GALLERY subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "FAVORITE":
+          if (window.$pinia?.favorite?.$subscribe) {
+            storeSubscription = window.$pinia.favorite.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in FAVORITE subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "INSTANCE":
+          if (window.$pinia?.instance?.$subscribe) {
+            storeSubscription = window.$pinia.instance.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in INSTANCE subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "VRCX":
+          if (window.$pinia?.vrcx?.$subscribe) {
+            storeSubscription = window.$pinia.vrcx.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in VRCX subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "VRCXUPDATER":
+          if (window.$pinia?.vrcxUpdater?.$subscribe) {
+            storeSubscription = window.$pinia.vrcxUpdater.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in VRCXUPDATER subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "INVITE":
+          if (window.$pinia?.invite?.$subscribe) {
+            storeSubscription = window.$pinia.invite.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in INVITE subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
+        case "AVATARPROVIDER":
+          if (window.$pinia?.avatarProvider?.$subscribe) {
+            storeSubscription = window.$pinia.avatarProvider.$subscribe((mutation: any, state: any) => {
+              try {
+                callback(state);
+              } catch (error) {
+                this.error(`Error in AVATARPROVIDER subscription: ${error}`);
+              }
+            });
+          }
+          break;
+
         default:
           this.error(`Unknown event type: ${eventType}`);
           return null;

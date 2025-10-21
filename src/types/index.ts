@@ -165,6 +165,17 @@ declare global {
       gameLog?: any;
       friends?: any;
       ui?: any;
+      world?: any;
+      avatar?: any;
+      group?: any;
+      launch?: any;
+      gallery?: any;
+      favorite?: any;
+      instance?: any;
+      vrcx?: any;
+      vrcxUpdater?: any;
+      invite?: any;
+      avatarProvider?: any;
     };
     $app?: any;
     request?: any;
