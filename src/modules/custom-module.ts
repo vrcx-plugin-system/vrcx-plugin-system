@@ -272,11 +272,11 @@ export class CustomModule extends Module {
           if (window.$pinia?.user?.$subscribe) {
             storeSubscription = window.$pinia.user.$subscribe(() => {
               const store = window.$pinia?.user;
-              callAllCallbacks(store ? {
-                currentUser: store.currentUser,
-                isLogin: store.isLogin,
-                userDialog: store.userDialog
-              } : null);
+              callAllCallbacks({
+                currentUser: store?.currentUser,
+                isLogin: store?.isLogin,
+                userDialog: store?.userDialog
+              });
             });
           }
           break;
@@ -285,10 +285,10 @@ export class CustomModule extends Module {
           if (window.$pinia?.game?.$subscribe) {
             storeSubscription = window.$pinia.game.$subscribe(() => {
               const store = window.$pinia?.game;
-              callAllCallbacks(store ? {
-                isGameRunning: store.isGameRunning,
-                isGameNoVR: store.isGameNoVR,
-              } : null);
+              callAllCallbacks({
+                isGameRunning: store?.isGameRunning,
+                isGameNoVR: store?.isGameNoVR,
+              });
             });
           }
           break;
@@ -297,10 +297,10 @@ export class CustomModule extends Module {
           if (window.$pinia?.gameLog?.$subscribe) {
             storeSubscription = window.$pinia.gameLog.$subscribe(() => {
               const store = window.$pinia?.gameLog;
-              callAllCallbacks(store ? {
-                gameLogSessionTable: store.gameLogSessionTable,
-                gameLogTable: store.gameLogTable,
-              } : null);
+              callAllCallbacks({
+                gameLogSessionTable: store?.gameLogSessionTable,
+                gameLogTable: store?.gameLogTable,
+              });
             });
           }
           break;
@@ -309,10 +309,10 @@ export class CustomModule extends Module {
           if (window.$pinia?.friends?.$subscribe) {
             storeSubscription = window.$pinia.friends.$subscribe(() => {
               const store = window.$pinia?.friends;
-              callAllCallbacks(store ? {
-                friends: store.friends,
-                offlineFriends: store.offlineFriends,
-              } : null);
+              callAllCallbacks({
+                friends: store?.friends,
+                offlineFriends: store?.offlineFriends,
+              });
             });
           }
           break;
@@ -321,9 +321,9 @@ export class CustomModule extends Module {
           if (window.$pinia?.ui?.$subscribe) {
             storeSubscription = window.$pinia.ui.$subscribe(() => {
               const store = window.$pinia?.ui;
-              callAllCallbacks(store ? {
-                menuActiveIndex: store.menuActiveIndex,
-              } : null);
+              callAllCallbacks({
+                menuActiveIndex: store?.menuActiveIndex,
+              });
             });
           }
           break;
@@ -332,9 +332,9 @@ export class CustomModule extends Module {
           if (window.$pinia?.world?.$subscribe) {
             storeSubscription = window.$pinia.world.$subscribe(() => {
               const store = window.$pinia?.world;
-              callAllCallbacks(store ? {
-                worldDialog: store.worldDialog
-              } : null);
+              callAllCallbacks({
+                worldDialog: store?.worldDialog
+              });
             });
           }
           break;
@@ -343,9 +343,9 @@ export class CustomModule extends Module {
           if (window.$pinia?.avatar?.$subscribe) {
             storeSubscription = window.$pinia.avatar.$subscribe(() => {
               const store = window.$pinia?.avatar;
-              callAllCallbacks(store ? {
-                avatarDialog: store.avatarDialog
-              } : null);
+              callAllCallbacks({
+                avatarDialog: store?.avatarDialog
+              });
             });
           }
           break;
@@ -354,10 +354,10 @@ export class CustomModule extends Module {
           if (window.$pinia?.group?.$subscribe) {
             storeSubscription = window.$pinia.group.$subscribe(() => {
               const store = window.$pinia?.group;
-              callAllCallbacks(store ? {
-                groupDialog: store.groupDialog,
-                groupMemberModeration: store.groupMemberModeration
-              } : null);
+              callAllCallbacks({
+                groupDialog: store?.groupDialog,
+                groupMemberModeration: store?.groupMemberModeration
+              });
             });
           }
           break;
@@ -366,9 +366,9 @@ export class CustomModule extends Module {
           if (window.$pinia?.launch?.$subscribe) {
             storeSubscription = window.$pinia.launch.$subscribe(() => {
               const store = window.$pinia?.launch;
-              callAllCallbacks(store ? {
-                launchDialogData: store.launchDialogData
-              } : null);
+              callAllCallbacks({
+                launchDialogData: store?.launchDialogData
+              });
             });
           }
           break;
@@ -377,10 +377,10 @@ export class CustomModule extends Module {
           if (window.$pinia?.gallery?.$subscribe) {
             storeSubscription = window.$pinia.gallery.$subscribe(() => {
               const store = window.$pinia?.gallery;
-              callAllCallbacks(store ? {
-                galleryDialogVisible: store.galleryDialogVisible,
-                fullscreenImageDialog: store.fullscreenImageDialog
-              } : null);
+              callAllCallbacks({
+                galleryDialogVisible: store?.galleryDialogVisible,
+                fullscreenImageDialog: store?.fullscreenImageDialog
+              });
             });
           }
           break;
@@ -389,12 +389,12 @@ export class CustomModule extends Module {
           if (window.$pinia?.favorite?.$subscribe) {
             storeSubscription = window.$pinia.favorite.$subscribe(() => {
               const store = window.$pinia?.favorite;
-              callAllCallbacks(store ? {
-                favoriteDialog: store.favoriteDialog,
-                worldImportDialogVisible: store.worldImportDialogVisible,
-                avatarImportDialogVisible: store.avatarImportDialogVisible,
-                friendImportDialogVisible: store.friendImportDialogVisible
-              } : null);
+              callAllCallbacks({
+                favoriteDialog: store?.favoriteDialog,
+                worldImportDialogVisible: store?.worldImportDialogVisible,
+                avatarImportDialogVisible: store?.avatarImportDialogVisible,
+                friendImportDialogVisible: store?.friendImportDialogVisible
+              });
             });
           }
           break;
@@ -403,10 +403,10 @@ export class CustomModule extends Module {
           if (window.$pinia?.instance?.$subscribe) {
             storeSubscription = window.$pinia.instance.$subscribe(() => {
               const store = window.$pinia?.instance;
-              callAllCallbacks(store ? {
-                previousInstancesInfoDialogVisible: store.previousInstancesInfoDialogVisible,
-                previousInstancesInfoDialogInstanceId: store.previousInstancesInfoDialogInstanceId
-              } : null);
+              callAllCallbacks({
+                previousInstancesInfoDialogVisible: store?.previousInstancesInfoDialogVisible,
+                previousInstancesInfoDialogInstanceId: store?.previousInstancesInfoDialogInstanceId
+              });
             });
           }
           break;
@@ -415,9 +415,9 @@ export class CustomModule extends Module {
           if (window.$pinia?.vrcx?.$subscribe) {
             storeSubscription = window.$pinia.vrcx.$subscribe(() => {
               const store = window.$pinia?.vrcx;
-              callAllCallbacks(store ? {
-                isRegistryBackupDialogVisible: store.isRegistryBackupDialogVisible
-              } : null);
+              callAllCallbacks({
+                isRegistryBackupDialogVisible: store?.isRegistryBackupDialogVisible
+              });
             });
           }
           break;
@@ -426,10 +426,10 @@ export class CustomModule extends Module {
           if (window.$pinia?.vrcxUpdater?.$subscribe) {
             storeSubscription = window.$pinia.vrcxUpdater.$subscribe(() => {
               const store = window.$pinia?.vrcxUpdater;
-              callAllCallbacks(store ? {
-                VRCXUpdateDialog: store.VRCXUpdateDialog,
-                changeLogDialog: store.changeLogDialog
-              } : null);
+              callAllCallbacks({
+                VRCXUpdateDialog: store?.VRCXUpdateDialog,
+                changeLogDialog: store?.changeLogDialog
+              });
             });
           }
           break;
@@ -438,9 +438,9 @@ export class CustomModule extends Module {
           if (window.$pinia?.invite?.$subscribe) {
             storeSubscription = window.$pinia.invite.$subscribe(() => {
               const store = window.$pinia?.invite;
-              callAllCallbacks(store ? {
-                editInviteMessageDialog: store.editInviteMessageDialog
-              } : null);
+              callAllCallbacks({
+                editInviteMessageDialog: store?.editInviteMessageDialog
+              });
             });
           }
           break;
@@ -449,9 +449,9 @@ export class CustomModule extends Module {
           if (window.$pinia?.avatarProvider?.$subscribe) {
             storeSubscription = window.$pinia.avatarProvider.$subscribe(() => {
               const store = window.$pinia?.avatarProvider;
-              callAllCallbacks(store ? {
-                isAvatarProviderDialogVisible: store.isAvatarProviderDialogVisible
-              } : null);
+              callAllCallbacks({
+                isAvatarProviderDialogVisible: store?.isAvatarProviderDialogVisible
+              });
             });
           }
           break;
@@ -460,9 +460,10 @@ export class CustomModule extends Module {
           if (window.$pinia?.vrcStatus?.$subscribe) {
             storeSubscription = window.$pinia.vrcStatus.$subscribe(() => {
               const store = window.$pinia?.vrcStatus;
-              callAllCallbacks(store ? {
-                vrcStatusDialog: store.vrcStatusDialog
-              } : null);
+              callAllCallbacks({
+                vrcStatusDialog: store?.vrcStatusDialog,
+                statusText: store?.statusText
+              });
             });
           }
           break;
