@@ -194,6 +194,13 @@ function Invoke-GitOperation {
             return @{ Committed = $false; Pushed = $false }
         }
         
+        # Pull and rebase remote changes before pushing
+        Write-Info "Syncing with remote..."
+        git pull --rebase origin $BranchName 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Warning "Failed to sync with remote, trying to push anyway..."
+        }
+        
         git push origin $BranchName 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Failed to push changes"
