@@ -17,7 +17,7 @@ import { EventRegistry, eventSystemMetadata } from './modules/events';
 // Initialize window.customjs
 window.customjs = {
   sourceUrl: 'https://github.com/vrcx-plugin-system/vrcx-plugin-system/raw/refs/heads/main/src/index.ts',
-  build: 1761068443, // AUTO-GENERATED BUILD TIMESTAMP
+  build: 1761068780, // AUTO-GENERATED BUILD TIMESTAMP
   modules: [],
   repos: [],
   subscriptions: new Map(),
