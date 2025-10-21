@@ -1,0 +1,36 @@
+Category,Function Name,Parameters,Description,Status,Event Tracked
+User & Social,showUserDialog,userId,Opens user profile dialog,✓ Exists,ShowUserDialog
+User & Social,showGroupDialog,groupId,Opens group dialog,✓ Exists,ShowGroupDialog
+User & Social,showModerateGroupDialog,userId,Opens group moderation dialog,✓ Exists,ShowModerateGroupDialog
+User & Social,showGroupMemberModerationDialog,"groupId, userId",Opens group member moderation dialog,✓ Exists,ShowGroupMemberModerationDialog
+Content,showWorldDialog,"tag, shortName",Opens world dialog,✓ Exists,ShowWorldDialog
+Content,showAvatarDialog,avatarId,Opens avatar dialog,✓ Exists,ShowAvatarDialog
+Content,showAvatarAuthorDialog,"refUserId, ownerUserId, avatarImageUrl",Opens avatar author's dialog,✓ Exists,ShowAvatarAuthorDialog
+Content,showLaunchDialog,"tag, shortName",Opens VRChat launch dialog,✓ Exists,ShowLaunchDialog
+Import/Export,showWorldImportDialog,,Opens world favorites import dialog,✓ Exists,ShowWorldImportDialog
+Import/Export,showAvatarImportDialog,,Opens avatar favorites import dialog,✓ Exists,ShowAvatarImportDialog
+Import/Export,showFriendImportDialog,,Opens friend import dialog,✓ Exists,ShowFriendImportDialog
+Import/Export,showFavoriteDialog,"type, objectId",Opens favorite management dialog,✓ Exists,ShowFavoriteDialog
+Import/Export,showNoteExportDialog,,Opens note export dialog,❌ Not Implemented,N/A
+Import/Export,showExportDiscordNamesDialog,,Opens Discord names export,❌ Not Implemented,N/A
+Import/Export,showExportFriendsListDialog,,Opens friends list export,❌ Not Implemented,N/A
+Import/Export,showExportAvatarsListDialog,,Opens avatars list export,❌ Not Implemented,N/A
+Notification/Message,showEditInviteMessageDialog,"messageType, inviteMessage",Opens invite message editor,✓ Exists,ShowEditInviteMessageDialog
+Notification/Message,showSendInviteResponseDialog,row,Opens send invite response dialog,❌ Not Implemented,N/A
+Notification/Message,showSendInviteResponseConfirmDialog,row,Opens confirmation for invite response,❌ Not Implemented,N/A
+Notification/Message,showEditAndSendInviteResponseDialog,row,Opens edit and send invite response,❌ Not Implemented,N/A
+Notification/Message,showSendInviteRequestResponseDialog,row,Opens send invite request response,❌ Not Implemented,N/A
+Media/Gallery,showFullscreenImageDialog,"imageUrl, fileName",Opens fullscreen image viewer,✓ Exists,ShowFullscreenImageDialog
+Media/Gallery,showGalleryDialog,,Opens gallery dialog,✓ Exists,ShowGalleryDialog
+Media/Gallery,showScreenshotMetadataDialog,,Opens screenshot metadata dialog,❌ Not Implemented,N/A
+Settings/System,showRegistryBackupDialog,,Opens registry backup dialog,✓ Exists,ShowRegistryBackupDialog
+Settings/System,showVRCXUpdateDialog,,Opens VRCX update dialog,✓ Exists,ShowVRCXUpdateDialog
+Settings/System,showChangeLogDialog,,Opens changelog dialog,✓ Exists,ShowChangeLogDialog
+Settings/System,showNotyFeedFiltersDialog,,Opens notification feed filters,❌ Not Implemented,N/A
+Settings/System,showWristFeedFiltersDialog,,Opens wrist overlay feed filters,❌ Not Implemented,N/A
+Settings/System,showNotificationPositionDialog,,Opens notification position settings,❌ Not Implemented,N/A
+Settings/System,showAvatarProviderDialog,,Opens avatar provider dialog,✓ Exists,ShowAvatarProviderDialog
+Settings/System,showYouTubeApiDialog,,Opens YouTube API settings,❌ Not Implemented,N/A
+Settings/System,showChatboxBlacklistDialog,,Opens chatbox blacklist dialog,❌ Not Implemented,N/A
+Settings/System,showGroupCalendarDialog,,Opens group calendar dialog,❌ Not Implemented,N/A
+Settings/System,showPreviousInstancesInfoDialog,instanceId,Opens previous instances info,✓ Exists,ShowPreviousInstancesInfoDialog
