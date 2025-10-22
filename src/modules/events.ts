@@ -131,12 +131,7 @@ export class EventRegistry {
     // Console logging
     if (metadata.logToConsole) {
       const pluginName = plugin.metadata.name || plugin.metadata.id;
-      console.groupCollapsed(`[CJS|${plugin.metadata.id}] Event: ${eventName}`);
-      console.log('Plugin:', pluginName);
-      console.log('Payload:', payload);
-      console.log('Emit Count:', metadata.emitCount);
-      console.log('Listeners:', metadata.listeners.size);
-      console.groupEnd();
+      console.log(`[CJS|${plugin.metadata.id}] Event: ${eventName} [${metadata.emitCount}|${metadata.listeners.size}] (${JSON.stringify(payload)})`, payload);
     }
 
     // IPC broadcasting

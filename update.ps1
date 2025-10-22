@@ -1,13 +1,23 @@
 # VRCX Plugin System Update Script
 # Builds, tests, and deploys the plugin system with detailed reporting
-# Usage: .\update.ps1 [--no-timestamp] [--skip-tests] [--skip-deploy] [--skip-git]
+# Usage: .\update.ps1 [--no-timestamp] [--skip-tests] [--skip-deploy] [--no-commit] [--no-push] [--no-release] [--skip-git]
 
 param(
     [switch]$NoTimestamp,
     [switch]$SkipTests,
     [switch]$SkipDeploy,
+    [switch]$NoCommit,
+    [switch]$NoPush,
+    [switch]$NoRelease,
     [switch]$SkipGit
 )
+
+# For backward compatibility, SkipGit sets all git-related flags
+if ($SkipGit) {
+    $NoCommit = $true
+    $NoPush = $true
+    $NoRelease = $true
+}
 
 $ErrorActionPreference = "Stop"
 
@@ -149,7 +159,9 @@ function Invoke-GitOperation {
     param(
         [string]$RepoPath,
         [string]$CommitMessage,
-        [string]$BranchName = $Branch
+        [string]$BranchName = $Branch,
+        [bool]$SkipCommit = $false,
+        [bool]$SkipPush = $false
     )
     
     $originalLocation = Get-Location
@@ -181,7 +193,12 @@ function Invoke-GitOperation {
             return @{ Committed = $false; Pushed = $false }
         }
         
-        # Stage, commit, push
+        if ($SkipCommit) {
+            Write-Warning "Commit skipped by flag"
+            return @{ Committed = $false; Pushed = $false }
+        }
+        
+        # Stage and commit
         git add -A 2>&1 | Out-Null
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Failed to stage changes"
@@ -192,6 +209,12 @@ function Invoke-GitOperation {
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Failed to commit changes"
             return @{ Committed = $false; Pushed = $false }
+        }
+        Write-Success "Changes committed"
+        
+        if ($SkipPush) {
+            Write-Warning "Push skipped by flag"
+            return @{ Committed = $true; Pushed = $false }
         }
         
         # Pull and rebase remote changes before pushing
@@ -207,7 +230,7 @@ function Invoke-GitOperation {
             return @{ Committed = $true; Pushed = $false }
         }
         
-        Write-Success "Changes committed and pushed"
+        Write-Success "Changes pushed"
         return @{ Committed = $true; Pushed = $true }
     }
     finally {
@@ -229,9 +252,9 @@ function Show-BuildSummary {
     
     $tableData += [PSCustomObject]@{
         Component = "Core System"
-        Built     = if ($BuildResults.Core.Built) { "✓" } else { "✗" }
-        Committed = if ($BuildResults.Core.Committed) { "✓" } else { "✗" }
-        Pushed    = if ($BuildResults.Core.Pushed) { "✓" } else { "✗" }
+        Built     = if ($BuildResults.Core.Built) { "[+]" } else { "[-]" }
+        Committed = if ($BuildResults.Core.Committed) { "[+]" } else { "[-]" }
+        Pushed    = if ($BuildResults.Core.Pushed) { "[+]" } else { "[-]" }
         TS        = "$($BuildResults.Core.TsSize) KB"
         JS        = "$($BuildResults.Core.JsSize) KB"
         Result    = "-$coreReduction%"
@@ -253,9 +276,9 @@ function Show-BuildSummary {
     
     $tableData += [PSCustomObject]@{
         Component = "Plugins ($($pluginStats.Built)/$($pluginStats.Total))"
-        Built     = if ($pluginStats.Built -gt 0) { "✓" } else { "✗" }
-        Committed = if ($BuildResults.Core.Committed) { "✓" } else { "✗" }
-        Pushed    = if ($BuildResults.Core.Pushed) { "✓" } else { "✗" }
+        Built     = if ($pluginStats.Built -gt 0) { "[+]" } else { "[-]" }
+        Committed = if ($BuildResults.Core.Committed) { "[+]" } else { "[-]" }
+        Pushed    = if ($BuildResults.Core.Pushed) { "[+]" } else { "[-]" }
         TS        = "$([math]::Round($totalTsSize, 2)) KB"
         JS        = "$([math]::Round($totalJsSize, 2)) KB"
         Result    = "-$pluginReduction%"
@@ -266,7 +289,7 @@ function Show-BuildSummary {
         $testResult = if ($BuildResults.Tests.Failed -eq 0) { "PASS" } else { "FAIL" }
         $tableData += [PSCustomObject]@{
             Component = "Tests ($($BuildResults.Tests.Passed)/$($BuildResults.Tests.Total))"
-            Built     = if ($BuildResults.Tests.Failed -eq 0) { "✓" } else { "✗" }
+            Built     = if ($BuildResults.Tests.Failed -eq 0) { "[+]" } else { "[-]" }
             Committed = "-"
             Pushed    = "-"
             TS        = "-"
@@ -445,7 +468,7 @@ if (Test-Path $distFile) {
     $BuildResults.Core.JsSize = Get-FileSize $distFile
     
     $reduction = [math]::Round((1 - ($BuildResults.Core.JsSize / $BuildResults.Core.TsSize)) * 100, 1)
-    Write-Success "Core built successfully ($($BuildResults.Core.TsSize) KB → $($BuildResults.Core.JsSize) KB, -$reduction%)"
+    Write-Success "Core built successfully ($($BuildResults.Core.TsSize) KB ? $($BuildResults.Core.JsSize) KB, -$reduction%)"
 }
 else {
     Write-Failure "Build output not found"
@@ -569,29 +592,34 @@ else {
 }
 
 # Git operations
-if (-not $SkipGit -and $hasGit) {
-    Write-Section "Git Operations"
-    
-    # Commit core system
-    Write-Host "--- Core System ---" -ForegroundColor Magenta
-    $coreResult = Invoke-GitOperation -RepoPath $ProjectDir -CommitMessage "Update VRCX Plugin System - $scriptUnixTimestamp"
-    $BuildResults.Core.Committed = $coreResult.Committed
-    $BuildResults.Core.Pushed = $coreResult.Pushed
-    
-    # Commit plugins
-    if (Test-Path $PluginsDir) {
-        Write-Host "--- Plugins Repository ---" -ForegroundColor Magenta
-        $pluginsResult = Invoke-GitOperation -RepoPath $PluginsDir -CommitMessage "Update plugins - $scriptUnixTimestamp"
+if ($hasGit) {
+    if (-not $NoCommit -or -not $NoPush) {
+        Write-Section "Git Operations"
         
-        # Update all plugin results
-        foreach ($plugin in $BuildResults.Plugins) {
-            $plugin.Committed = $pluginsResult.Committed
-            $plugin.Pushed = $pluginsResult.Pushed
+        # Commit core system
+        Write-Host "--- Core System ---" -ForegroundColor Magenta
+        $coreResult = Invoke-GitOperation -RepoPath $ProjectDir -CommitMessage "Update VRCX Plugin System - $scriptUnixTimestamp" -SkipCommit $NoCommit -SkipPush $NoPush
+        $BuildResults.Core.Committed = $coreResult.Committed
+        $BuildResults.Core.Pushed = $coreResult.Pushed
+        
+        # Commit plugins
+        if (Test-Path $PluginsDir) {
+            Write-Host "--- Plugins Repository ---" -ForegroundColor Magenta
+            $pluginsResult = Invoke-GitOperation -RepoPath $PluginsDir -CommitMessage "Update plugins - $scriptUnixTimestamp" -SkipCommit $NoCommit -SkipPush $NoPush
+            
+            # Update all plugin results
+            foreach ($plugin in $BuildResults.Plugins) {
+                $plugin.Committed = $pluginsResult.Committed
+                $plugin.Pushed = $pluginsResult.Pushed
+            }
         }
+    }
+    else {
+        Write-Warning "Git operations skipped (NoCommit and NoPush flags set)"
     }
     
     # Create GitHub release
-    if ($hasGh -and $coreResult.Committed) {
+    if (-not $NoRelease -and $hasGh -and $BuildResults.Core.Committed) {
         Write-Host "--- GitHub Release ---" -ForegroundColor Magenta
         $releaseTag = $customjsUnixTimestamp
         $releaseTitle = "Build $releaseTag"
@@ -621,14 +649,12 @@ Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/re
             }
         }
     }
+    elseif ($NoRelease) {
+        Write-Warning "GitHub release skipped by flag"
+    }
 }
 else {
-    if ($SkipGit) {
-        Write-Warning "Git operations skipped"
-    }
-    else {
-        Write-Warning "Git not available, skipping version control"
-    }
+    Write-Warning "Git not available, skipping version control"
 }
 
 # Show final summary
