@@ -117,7 +117,8 @@ declare global {
         getCachedGroup(params: { groupId: string }): Promise<{ json: any; params: any }>;
         getGroups(params: { userId: string }): Promise<{ json: any; params: any }>;
         getRepresentedGroup(params: { userId: string }): Promise<{ json: any; params: any }>;
-        joinGroup(params: { groupId: string }): Promise<{ json: any; params: any }>;
+        getGroupMember(params: { groupId: string; userId: string }): Promise<{ json: any; params: any }>;
+        joinGroup(params: { groupId: string }): Promise<{ json: { membershipStatus: 'member' | 'requested' | string }; params: any }>;
         leaveGroup(params: { groupId: string }): Promise<{ json: any; params: any }>;
         sendGroupInvite(params: { groupId: string; userId: string }): Promise<{ json: any; params: any }>;
         [key: string]: any;
