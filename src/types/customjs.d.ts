@@ -2,6 +2,8 @@
  * Custom.js Plugin System Type Declarations
  */
 
+import type { CustomModule as CustomModuleClass } from '../modules/custom-module';
+
 declare global {
   interface Window {
     customjs: {
@@ -26,7 +28,7 @@ declare global {
         SettingsStore: any;
         Module: any;
         CoreModule: any;
-        CustomModule: any;
+        CustomModule: typeof CustomModuleClass;
         CustomActionButton: any;
         ModuleRepository: any;
         EventRegistry: any;
@@ -51,6 +53,9 @@ declare global {
       __LAST_PLUGIN_CLASS__?: any;
     };
   }
+
+  // Make CustomModule available globally for plugins
+  const CustomModule: typeof CustomModuleClass;
 }
 
 export {};
