@@ -212,16 +212,20 @@ if ($Publish) {
         $releaseAssets += $releasePackage.ArchivePath
     }
     
-    # Create release notes
-    $releaseNotes = "VRCX Plugin System $versionTag`n`nChanges:`n- Update VRCX Plugin System $versionTag`n`nFiles included:`n$($releaseAssets | ForEach-Object { "- $(Split-Path $_ -Leaf)" } | Out-String)"
+    # Create release notes with download links
+    $fileList = $releaseAssets | ForEach-Object { 
+        $fileName = Split-Path $_ -Leaf
+        "- [$fileName](https://github.com/Bluscream/vrcx-plugin-system/releases/latest/download/$fileName)"
+    } | Out-String
+    $releaseNotes = "VRCX Plugin System $versionTag`n`nChanges:`n- Update VRCX Plugin System $versionTag`n`nFiles included:`n$fileList"
     
-    $releaseResult = GitHub-CreateRelease -Repository "https://github.com/Bluscream/vrcx-plugin-system" -Tag $versionTag -Title "VRCX Plugin System $versionTag" -Body $releaseNotes -Prerelease -AssetPath $releaseAssets
+    $releaseResult = GitHub-CreateRelease -Repository "https://github.com/Bluscream/vrcx-plugin-system" -Tag $versionTag -Title "VRCX Plugin System $versionTag" -Notes $releaseNotes -Prerelease -Assets $releaseAssets
     
-    if (-not $releaseResult -or -not $releaseResult.Success) {
-        throw "Release creation failed: $($releaseResult.ErrorMessage)"
+    if (-not $releaseResult) {
+        throw "Release creation failed"
     }
     
-    Write-Host "✓ Release created using Bluscream-BuildTools: $($releaseResult.ReleaseUrl)" -ForegroundColor Green
+    Write-Host "✓ Release created using Bluscream-BuildTools: https://github.com/Bluscream/vrcx-plugin-system/releases/tag/$versionTag" -ForegroundColor Green
 }
 else {
     Write-Host "⏭️  Skipping release (use -Publish to create release)" -ForegroundColor Yellow
