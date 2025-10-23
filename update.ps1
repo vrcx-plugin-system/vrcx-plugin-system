@@ -212,17 +212,17 @@ if ($Publish) {
         $releaseAssets += $releasePackage.ArchivePath
     }
     
-    # Create release notes with download links
+    # Create release notes with download links matching existing format
     $fileList = $releaseAssets | ForEach-Object { 
         $fileName = Split-Path $_ -Leaf
-        "- [$fileName](https://github.com/Bluscream/vrcx-plugin-system/releases/latest/download/$fileName)"
+        "- [$fileName](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/$fileName)"
     } | Out-String
-    $releaseNotes = "VRCX Plugin System $versionTag`n`nChanges:`n- Update VRCX Plugin System $versionTag`n`nFiles included:`n$fileList"
+    $releaseNotes = "Automated build - $versionTag`n`n## Installation`nDownload custom.js and place it in  `n`%APPDATA%\VRCX\``n`n## Files included:`n$fileList"
     
-    $releaseResult = GitHub-CreateRelease -Repository "https://github.com/Bluscream/vrcx-plugin-system" -Tag $versionTag -Title "VRCX Plugin System $versionTag" -Notes $releaseNotes -Prerelease -Assets $releaseAssets
+    $releaseResult = GitHub-CreateRelease -Repository "vrcx-plugin-system/vrcx-plugin-system" -Tag $versionTag -Title "Build $versionTag" -Notes $releaseNotes -Prerelease -Assets $releaseAssets
     
     if ($releaseResult) {
-        Write-Host "✓ Release created using Bluscream-BuildTools: https://github.com/Bluscream/vrcx-plugin-system/releases/tag/$versionTag" -ForegroundColor Green
+        Write-Host "✓ Release created using Bluscream-BuildTools: https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/tag/$versionTag" -ForegroundColor Green
     }
     else {
         Write-Host "⚠️  Release creation failed - fallback actions should have been triggered" -ForegroundColor Yellow
@@ -258,7 +258,7 @@ Write-Host "  Main File: $($mainJsFile.Name)" -ForegroundColor Gray
 Write-Host "  File Size: $([math]::Round($mainJsFile.Length / 1KB, 2)) KB" -ForegroundColor Gray
 
 if ($Publish) {
-    Write-Host "📦 Release: https://github.com/Bluscream/vrcx-plugin-system/releases/tag/$versionTag" -ForegroundColor Magenta
+    Write-Host "📦 Release: https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/tag/$versionTag" -ForegroundColor Magenta
     if ($releasePackage.ArchivePath) {
         Write-Host "📁 Release Package: $($releasePackage.ArchivePath)" -ForegroundColor Magenta
     }
