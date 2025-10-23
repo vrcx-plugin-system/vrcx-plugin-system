@@ -1,669 +1,265 @@
-# VRCX Plugin System Update Script
-# Builds, tests, and deploys the plugin system with detailed reporting
-# Usage: .\update.ps1 [--no-timestamp] [--skip-tests] [--skip-deploy] [--no-commit] [--no-push] [--no-release] [--skip-git]
+#!/usr/bin/env pwsh
+# VRCX Plugin System - Complete Build & Release Script using Bluscream-BuildTools
+# Builds, tests, and optionally publishes the plugin system with full automation
 
 param(
-    [switch]$NoTimestamp,
-    [switch]$SkipTests,
-    [switch]$SkipDeploy,
-    [switch]$NoCommit,
-    [switch]$NoPush,
-    [switch]$NoRelease,
-    [switch]$SkipGit
+    [switch]$Publish
 )
-
-# For backward compatibility, SkipGit sets all git-related flags
-if ($SkipGit) {
-    $NoCommit = $true
-    $NoPush = $true
-    $NoRelease = $true
-}
 
 $ErrorActionPreference = "Stop"
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
+# Install and import Bluscream-BuildTools module
+Write-Host "📦 Installing Bluscream-BuildTools module..." -ForegroundColor Cyan
+if (-not (Get-Module -ListAvailable -Name Bluscream-BuildTools)) {
+    Install-Module -Name Bluscream-BuildTools -Scope CurrentUser -Force -Repository PSGallery
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to install Bluscream-BuildTools module from PowerShell Gallery"
+    }
+}
+Import-Module Bluscream-BuildTools -Force
+if (-not (Get-Module Bluscream-BuildTools)) {
+    throw "Failed to import Bluscream-BuildTools module"
+}
+Write-Host "✓ Bluscream-BuildTools module loaded" -ForegroundColor Green
 
+# Configuration
 $ProjectDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PluginSystemRoot = Split-Path -Parent $ProjectDir
 $PluginsDir = Join-Path $PluginSystemRoot "plugins"
 $TargetDir = "$env:APPDATA\VRCX"
 $Branch = "main"
 
-# Build results tracking
-$BuildResults = @{
-    Core    = @{
-        Path      = "dist\custom.js"
-        Built     = $false
-        TsSize    = 0
-        JsSize    = 0
-        Committed = $false
-        Pushed    = $false
-    }
-    Plugins = @()
-    Tests   = @{
-        Passed   = 0
-        Failed   = 0
-        Total    = 0
-        Duration = 0
-    }
-}
-
-# ============================================================================
-# UTILITY FUNCTIONS
-# ============================================================================
-
-function Write-Section {
-    param([string]$Title)
-    Write-Host ""
-    Write-Host "=== $Title ===" -ForegroundColor Cyan
-}
-
-function Write-Success {
-    param([string]$Message)
-    Write-Host "[SUCCESS] $Message" -ForegroundColor Green
-}
-
-function Write-Failure {
-    param([string]$Message)
-    Write-Host "[FAILURE] $Message" -ForegroundColor Red
-}
-
-function Write-Warning {
-    param([string]$Message)
-    Write-Host "[WARNING] $Message" -ForegroundColor Yellow
-}
-
-function Write-Info {
-    param([string]$Message)
-    Write-Host "$Message" -ForegroundColor Yellow
-}
-
-function Test-Command {
-    param([string]$Command, [string]$Name)
-    
-    Write-Info "Checking for $Name..."
-    try {
-        $version = & $Command --version 2>$null
-        if ($LASTEXITCODE -ne 0) { throw "$Name not found" }
-        $versionLine = if ($version -is [array]) { $version[0] } else { $version }
-        Write-Success "$Name version: $versionLine"
-        return $true
-    }
-    catch {
-        Write-Failure "$Name is not installed or not in PATH"
-        return $false
-    }
-}
-
-function Get-FileSize {
-    param([string]$Path)
-    if (Test-Path $Path) {
-        $size = (Get-Item $Path).Length
-        return [math]::Round($size / 1KB, 2)
-    }
-    return 0
-}
-
-function Get-UnixTimestamp {
-    param([datetime]$Date = (Get-Date))
-    return [Math]::Floor((New-TimeSpan -Start (Get-Date "01/01/1970") -End $Date).TotalSeconds)
-}
-
-function Get-FileUnixTimestamp {
-    param([string]$FilePath)
-    if (-not (Test-Path $FilePath)) {
-        Write-Warning "File not found: $FilePath"
-        return 0
-    }
-    return Get-UnixTimestamp -Date (Get-Item $FilePath).LastWriteTime
-}
-
-function Update-BuildTimestamp {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$FilePath,
-        [Parameter(Mandatory = $true)]
-        [long]$Timestamp
-    )
-    
-    if (-not (Test-Path $FilePath)) {
-        Write-Warning "File not found: $FilePath"
-        return $false
-    }
-    
-    try {
-        $content = Get-Content $FilePath -Raw
-        $pattern = '(build:\s*)\d+'
-        $replacement = "`${1}$Timestamp"
-        
-        if ($content -match $pattern) {
-            $newContent = $content -replace $pattern, $replacement
-            Set-Content -Path $FilePath -Value $newContent -NoNewline
-            Write-Success "Updated build timestamp to $Timestamp"
-            return $true
-        }
-        else {
-            Write-Warning "Build timestamp pattern not found in $FilePath"
-            return $false
-        }
-    }
-    catch {
-        Write-Failure "Failed to update build timestamp: $_"
-        return $false
-    }
-}
-
-function Invoke-GitOperation {
-    param(
-        [string]$RepoPath,
-        [string]$CommitMessage,
-        [string]$BranchName = $Branch,
-        [bool]$SkipCommit = $false,
-        [bool]$SkipPush = $false
-    )
-    
-    $originalLocation = Get-Location
-    Set-Location $RepoPath
-    
-    try {
-        # Verify git repo
-        if (-not (Test-Path ".git")) {
-            Write-Warning "Not a git repository: $RepoPath"
-            return @{ Committed = $false; Pushed = $false }
-        }
-    
-        # Ensure on correct branch
-        $currentBranch = git rev-parse --abbrev-ref HEAD 2>$null
-        if ($currentBranch -ne $BranchName) {
-            $branchExists = git rev-parse --verify $BranchName 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                git checkout $BranchName 2>&1 | Out-Null
-            }
-            else {
-                git checkout -b $BranchName 2>&1 | Out-Null
-            }
-        }
-    
-        # Check for changes
-        $status = git status --porcelain 2>$null
-        if ([string]::IsNullOrWhiteSpace($status)) {
-            Write-Success "No changes to commit"
-            return @{ Committed = $false; Pushed = $false }
-        }
-        
-        if ($SkipCommit) {
-            Write-Warning "Commit skipped by flag"
-            return @{ Committed = $false; Pushed = $false }
-        }
-        
-        # Stage and commit
-        git add -A 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Failed to stage changes"
-            return @{ Committed = $false; Pushed = $false }
-        }
-        
-        git commit -m $CommitMessage 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Failed to commit changes"
-            return @{ Committed = $false; Pushed = $false }
-        }
-        Write-Success "Changes committed"
-        
-        if ($SkipPush) {
-            Write-Warning "Push skipped by flag"
-            return @{ Committed = $true; Pushed = $false }
-        }
-        
-        # Pull and rebase remote changes before pushing
-        Write-Info "Syncing with remote..."
-        git pull --rebase origin $BranchName 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Failed to sync with remote, trying to push anyway..."
-        }
-        
-        git push origin $BranchName 2>&1 | Out-Null
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warning "Failed to push changes"
-            return @{ Committed = $true; Pushed = $false }
-        }
-        
-        Write-Success "Changes pushed"
-        return @{ Committed = $true; Pushed = $true }
-    }
-    finally {
-        Set-Location $originalLocation
-    }
-}
-
-function Show-BuildSummary {
-    Write-Section "Build Summary"
-    
-    # Create table data
-    $tableData = @()
-    
-    # Core module
-    $coreReduction = if ($BuildResults.Core.TsSize -gt 0) {
-        [math]::Round((1 - ($BuildResults.Core.JsSize / $BuildResults.Core.TsSize)) * 100, 1)
-    }
-    else { 0 }
-    
-    $tableData += [PSCustomObject]@{
-        Component = "Core System"
-        Built     = if ($BuildResults.Core.Built) { "[+]" } else { "[-]" }
-        Committed = if ($BuildResults.Core.Committed) { "[+]" } else { "[-]" }
-        Pushed    = if ($BuildResults.Core.Pushed) { "[+]" } else { "[-]" }
-        TS        = "$($BuildResults.Core.TsSize) KB"
-        JS        = "$($BuildResults.Core.JsSize) KB"
-        Result    = "-$coreReduction%"
-    }
-    
-    # Plugins
-    $pluginStats = @{
-        Total  = $BuildResults.Plugins.Count
-        Built  = ($BuildResults.Plugins | Where-Object { $_.Built }).Count
-        Failed = ($BuildResults.Plugins | Where-Object { -not $_.Built }).Count
-    }
-    
-    $totalTsSize = ($BuildResults.Plugins | Measure-Object -Property TsSize -Sum).Sum
-    $totalJsSize = ($BuildResults.Plugins | Measure-Object -Property JsSize -Sum).Sum
-    $pluginReduction = if ($totalTsSize -gt 0) {
-        [math]::Round((1 - ($totalJsSize / $totalTsSize)) * 100, 1)
-    }
-    else { 0 }
-    
-    $tableData += [PSCustomObject]@{
-        Component = "Plugins ($($pluginStats.Built)/$($pluginStats.Total))"
-        Built     = if ($pluginStats.Built -gt 0) { "[+]" } else { "[-]" }
-        Committed = if ($BuildResults.Core.Committed) { "[+]" } else { "[-]" }
-        Pushed    = if ($BuildResults.Core.Pushed) { "[+]" } else { "[-]" }
-        TS        = "$([math]::Round($totalTsSize, 2)) KB"
-        JS        = "$([math]::Round($totalJsSize, 2)) KB"
-        Result    = "-$pluginReduction%"
-    }
-    
-    # Tests
-    if ($BuildResults.Tests.Total -gt 0) {
-        $testResult = if ($BuildResults.Tests.Failed -eq 0) { "PASS" } else { "FAIL" }
-        $tableData += [PSCustomObject]@{
-            Component = "Tests ($($BuildResults.Tests.Passed)/$($BuildResults.Tests.Total))"
-            Built     = if ($BuildResults.Tests.Failed -eq 0) { "[+]" } else { "[-]" }
-            Committed = "-"
-            Pushed    = "-"
-            TS        = "-"
-            JS        = "-"
-            Result    = "$testResult $([math]::Round($BuildResults.Tests.Duration / 1000, 1))s"
-        }
-    }
-    
-    # Display table
-    $tableData | Format-Table -AutoSize
-    
-    Write-Host ""
-    if ($BuildResults.Core.Built -and $pluginStats.Built -eq $pluginStats.Total) {
-        Write-Success "All components built successfully!"
-    }
-    elseif ($BuildResults.Core.Built) {
-        Write-Warning "Core built, but $($pluginStats.Failed) plugin(s) failed"
-    }
-    else {
-        Write-Failure "Build incomplete"
-    }
-}
-
-# ============================================================================
-# MAIN SCRIPT
-# ============================================================================
-
-# Initialize timestamps for script execution
-$customjsUnixTimestamp = Get-FileUnixTimestamp -FilePath (Join-Path $ProjectDir "dist/custom.js")
-$scriptUnixTimestamp = Get-UnixTimestamp
-Write-Section "VRCX Plugin System Build & Update"
-Write-Host "Project: $ProjectDir" -ForegroundColor Gray
-Write-Host "Target: $TargetDir" -ForegroundColor Gray
-Write-Host ""
-Write-Host "Now      : $scriptUnixTimestamp" -ForegroundColor Gray
-Write-Host "custom.js: $customjsUnixTimestamp" -ForegroundColor Gray
+Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+Write-Host "║        VRCX Plugin System - Complete Build & Release      ║" -ForegroundColor Cyan
+Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
-Set-Location $ProjectDir
+# Step 1: Check prerequisites using Bluscream-BuildTools
+Write-Host "🔍 Checking prerequisites..." -ForegroundColor Green
 
-# Check prerequisites
-Write-Section "Prerequisites"
-if (-not (Test-Command "node" "Node.js")) { exit 1 }
-if (-not (Test-Command "npm" "npm")) { exit 1 }
-$hasGit = Test-Command "git" "Git"
-$hasGh = Test-Command "gh" "GitHub CLI"
+$prerequisites = @(
+    @{ Command = "node"; Name = "Node.js" },
+    @{ Command = "npm"; Name = "NPM" },
+    @{ Command = "git"; Name = "Git" }
+)
 
-# Install/update dependencies
-Write-Section "Dependencies"
-if (-not (Test-Path "node_modules")) {
-    Write-Info "Installing dependencies..."
-    npm install | Out-Host
-    if ($LASTEXITCODE -ne 0) {
-        Write-Failure "npm install failed"
-        exit 1
-    }
-    Write-Success "Dependencies installed"
-}
-else {
-    $packageJsonTime = (Get-Item "package.json").LastWriteTime
-    $nodeModulesTime = (Get-Item "node_modules").LastWriteTime
-    
-    if ($packageJsonTime -gt $nodeModulesTime) {
-        Write-Info "package.json is newer, reinstalling..."
-        npm install | Out-Host
-        if ($LASTEXITCODE -ne 0) {
-            Write-Failure "npm install failed"
-            exit 1
-        }
-        Write-Success "Dependencies reinstalled"
+$allPrerequisitesMet = $true
+foreach ($prereq in $prerequisites) {
+    if (-not (Get-Command $prereq.Command -ErrorAction SilentlyContinue)) {
+        Write-Host "❌ $($prereq.Name) not found" -ForegroundColor Red
+        $allPrerequisitesMet = $false
     }
     else {
-        Write-Success "Dependencies up to date"
+        Write-Host "✓ $($prereq.Name) available" -ForegroundColor Green
     }
 }
 
-# Run tests
-if (-not $SkipTests) {
-    # Check if tests directory exists
-    $testsDir = Join-Path $ProjectDir "tests"
-    if (Test-Path $testsDir) {
-        $testFiles = Get-ChildItem $testsDir -Filter "*.test.ts" -ErrorAction SilentlyContinue
-        if ($testFiles.Count -gt 0) {
-            Write-Section "Tests"
-            Write-Info "Running test suite..."
-            $testStart = Get-Date
-            
-            $testOutput = npm test 2>&1 | Out-String
-            $testDuration = ((Get-Date) - $testStart).TotalMilliseconds
-            $testExitCode = $LASTEXITCODE
-            
-            # Parse test results
-            $BuildResults.Tests.Duration = $testDuration
-            
-            if ($testOutput -match "Tests:\s+(\d+)\s+passed,\s+(\d+)\s+total") {
-                $BuildResults.Tests.Passed = [int]$matches[1]
-                $BuildResults.Tests.Total = [int]$matches[2]
-                $BuildResults.Tests.Failed = 0
-            }
-            elseif ($testOutput -match "Tests:\s+(\d+)\s+failed,\s+(\d+)\s+passed,\s+(\d+)\s+total") {
-                $BuildResults.Tests.Failed = [int]$matches[1]
-                $BuildResults.Tests.Passed = [int]$matches[2]
-                $BuildResults.Tests.Total = [int]$matches[3]
-            }
-            else {
-                # Fallback: count from output
-                $BuildResults.Tests.Passed = 0
-                $BuildResults.Tests.Total = 0
-                $BuildResults.Tests.Failed = 0
-            }
-            
-            # Check if tests actually failed (not just non-zero exit code from npm)
-            if ($BuildResults.Tests.Failed -gt 0) {
-                Write-Failure "Tests failed"
-                if ($BuildResults.Tests.Total -gt 0) {
-                    Write-Host "  Failed: $($BuildResults.Tests.Failed), Passed: $($BuildResults.Tests.Passed)" -ForegroundColor Red
-                }
-                Show-BuildSummary
-                exit 1
-            }
-            
-            if ($BuildResults.Tests.Passed -gt 0) {
-                Write-Success "All $($BuildResults.Tests.Passed) tests passed in $([math]::Round($testDuration / 1000, 1))s"
-            }
-            else {
-                Write-Warning "No tests found or executed"
-            }
-        }
-        else {
-            Write-Warning "No test files found in tests directory, skipping tests"
-        }
-    }
-    else {
-        Write-Warning "Tests directory not found, skipping tests"
-    }
-}
-else {
-    Write-Warning "Tests skipped"
+if (-not $allPrerequisitesMet) {
+    throw "Missing required prerequisites. Please install Node.js, NPM, and Git."
 }
 
-# Update build timestamp
-Write-Section "Update Build Timestamp"
-$indexTsPath = Join-Path $ProjectDir "src\index.ts"
-$timestampUpdated = Update-BuildTimestamp -FilePath $indexTsPath -Timestamp $customjsUnixTimestamp
-if (-not $timestampUpdated) {
-    Write-Warning "Build timestamp not updated, continuing anyway..."
+Write-Host ""
+
+# Step 2: Version Management using Bluscream-BuildTools
+Write-Host "🔢 Managing version..." -ForegroundColor Green
+
+# Get current timestamp for build version
+$buildTimestamp = [Math]::Floor((Get-Date).ToUniversalTime().Subtract((Get-Date "01/01/1970")).TotalSeconds)
+$versionTag = "v$(Get-Date -Format 'yyyy.MM.dd')-$buildTimestamp"
+
+Write-Host "✓ Build version: $versionTag" -ForegroundColor Green
+Write-Host ""
+
+# Step 3: Node.js Build using Bluscream-BuildTools
+Write-Host "📦 Building with Node.js..." -ForegroundColor Green
+
+if (-not (Get-Command Nodejs-Build -ErrorAction SilentlyContinue)) {
+    throw "Nodejs-Build command not found in Bluscream-BuildTools module"
 }
 
 # Build core system
-Write-Section "Build Core System"
-Write-Info "Building TypeScript project..."
-
-if ($NoTimestamp) {
-    $env:SKIP_TIMESTAMP = "true"
+$coreBuildResult = Nodejs-Build -ProjectPath $ProjectDir -Production -Script "build"
+if (-not $coreBuildResult) {
+    throw "Core build failed"
 }
 
-npm run build | Out-Host
+Write-Host "✓ Core system built successfully" -ForegroundColor Green
 
-if ($NoTimestamp) {
-    Remove-Item Env:\SKIP_TIMESTAMP -ErrorAction SilentlyContinue
-}
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Failure "Core build failed"
-    Show-BuildSummary
-    exit 1
-}
-
-$distFile = Join-Path $ProjectDir "dist\custom.js"
-if (Test-Path $distFile) {
-    # Calculate source TS size
-    $tsFiles = Get-ChildItem -Path (Join-Path $ProjectDir "src") -Recurse -Filter "*.ts"
-    $tsTotalSize = ($tsFiles | Measure-Object -Property Length -Sum).Sum
-    $BuildResults.Core.Built = $true
-    $BuildResults.Core.TsSize = [math]::Round($tsTotalSize / 1KB, 2)
-    $BuildResults.Core.JsSize = Get-FileSize $distFile
-    
-    $reduction = [math]::Round((1 - ($BuildResults.Core.JsSize / $BuildResults.Core.TsSize)) * 100, 1)
-    Write-Success "Core built successfully ($($BuildResults.Core.TsSize) KB ? $($BuildResults.Core.JsSize) KB, -$reduction%)"
-}
-else {
-    Write-Failure "Build output not found"
-    exit 1
-}
-
-# Build plugins
-Write-Section "Build Plugins"
-
+# Build plugins if they exist
 if (Test-Path $PluginsDir) {
-    $currentDir = Get-Location
-    Set-Location $PluginsDir
+    Write-Host "🔌 Building plugins..." -ForegroundColor Green
     
-    try {
-        # Install plugin dependencies if needed
-        if (-not (Test-Path "node_modules")) {
-            Write-Info "Installing plugin dependencies..."
-            npm install | Out-Host
-        }
-        
-        # Build plugins
-        Write-Info "Building plugins..."
-        $buildOutput = npm run build 2>&1 | Out-String
-        
-        if ($LASTEXITCODE -eq 0) {
-            # Parse build output for plugin stats
-            if ($buildOutput -match "Success:\s+(\d+)") {
-                $successCount = [int]$matches[1]
-                Write-Success "$successCount plugins built successfully"
-            }
+    $pluginDirs = Get-ChildItem $PluginsDir -Directory
+    foreach ($pluginDir in $pluginDirs) {
+        $pluginPackageJson = Join-Path $pluginDir.FullName "package.json"
+        if (Test-Path $pluginPackageJson) {
+            Write-Host "  Building plugin: $($pluginDir.Name)" -ForegroundColor Gray
             
-            # Check repo.json
-            $repoFile = Join-Path $PluginsDir "dist\repo.json"
-            if (Test-Path $repoFile) {
-                $repoContent = Get-Content $repoFile -Raw | ConvertFrom-Json
-                $pluginCount = $repoContent.modules.Count
-                
-                # Track each plugin
-                foreach ($module in $repoContent.modules) {
-                    $pluginTsFile = Join-Path $PluginsDir "src\plugins\$($module.id).ts"
-                    $pluginJsFile = Join-Path $PluginsDir "dist\$($module.id).js"
-                    
-                    $BuildResults.Plugins += @{
-                        Name      = $module.name
-                        Id        = $module.id
-                        Path      = "dist\$($module.id).js"
-                        Built     = (Test-Path $pluginJsFile)
-                        TsSize    = (Get-FileSize $pluginTsFile)
-                        JsSize    = (Get-FileSize $pluginJsFile)
-                        Committed = $false
-                        Pushed    = $false
-                    }
-                }
-                
-                Write-Success "Repository metadata created: $pluginCount modules"
-            }
-        }
-        else {
-            Write-Warning "Plugin build failed"
-        }
-    }
-    finally {
-        Set-Location $currentDir
-    }
-}
-else {
-    Write-Warning "Plugins directory not found, skipping..."
-}
-
-# Deploy to VRCX
-if (-not $SkipDeploy) {
-    Write-Section "Deploy to VRCX"
-    
-    if (-not (Test-Path $TargetDir)) {
-        Write-Failure "Target directory does not exist: $TargetDir"
-        Write-Warning "Please ensure VRCX is installed"
-        exit 1
-    }
-
-    $targetFile = Join-Path $TargetDir "custom.js"
-    Write-Info "Copying custom.js to VRCX directory..."
-
-    try {
-        Copy-Item $distFile $targetFile -Force
-        Write-Success "Deployed to VRCX successfully"
-    }
-    catch {
-        Write-Warning "Failed to copy directly: $($_.Exception.Message)"
-        Write-Info "Trying alternative approach..."
-    
-        $tempFile = "$targetFile.tmp"
-        try {
-            Copy-Item $distFile $tempFile -Force
-            Move-Item $tempFile $targetFile -Force
-            Write-Success "Deployed via temp file"
-        }
-        catch {
-            Write-Failure "Unable to deploy. Please close VRCX and try again."
-            if (Test-Path $tempFile) {
-                Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
-            }
-            Show-BuildSummary
-            exit 1
-        }
-    }
-
-    # Clear logs
-    $logsDir = Join-Path $TargetDir "logs"
-    if (Test-Path $logsDir) {
-        try {
-            Get-ChildItem $logsDir -Filter "*.log" | Remove-Item -Force -ErrorAction SilentlyContinue
-            Write-Success "Logs cleared"
-        }
-        catch {
-            Write-Warning "Some logs could not be cleared (in use)"
-        }
-    }
-}
-else {
-    Write-Warning "Deployment skipped"
-}
-
-# Git operations
-if ($hasGit) {
-    if (-not $NoCommit -or -not $NoPush) {
-        Write-Section "Git Operations"
-        
-        # Commit core system
-        Write-Host "--- Core System ---" -ForegroundColor Magenta
-        $coreResult = Invoke-GitOperation -RepoPath $ProjectDir -CommitMessage "Update VRCX Plugin System - $scriptUnixTimestamp" -SkipCommit $NoCommit -SkipPush $NoPush
-        $BuildResults.Core.Committed = $coreResult.Committed
-        $BuildResults.Core.Pushed = $coreResult.Pushed
-        
-        # Commit plugins
-        if (Test-Path $PluginsDir) {
-            Write-Host "--- Plugins Repository ---" -ForegroundColor Magenta
-            $pluginsResult = Invoke-GitOperation -RepoPath $PluginsDir -CommitMessage "Update plugins - $scriptUnixTimestamp" -SkipCommit $NoCommit -SkipPush $NoPush
-            
-            # Update all plugin results
-            foreach ($plugin in $BuildResults.Plugins) {
-                $plugin.Committed = $pluginsResult.Committed
-                $plugin.Pushed = $pluginsResult.Pushed
-            }
-        }
-    }
-    else {
-        Write-Warning "Git operations skipped (NoCommit and NoPush flags set)"
-    }
-    
-    # Create GitHub release
-    if (-not $NoRelease -and $hasGh -and $BuildResults.Core.Committed) {
-        Write-Host "--- GitHub Release ---" -ForegroundColor Magenta
-        $releaseTag = $customjsUnixTimestamp
-        $releaseTitle = "Build $releaseTag"
-        $releaseNotes = @"
-Automated build - $scriptUnixTimestamp
-
-## Installation
-Download [custom.js](https://github.com/vrcx-plugin-system/vrcx-plugin-system/releases/latest/download/custom.js) and place it in
-```
-%APPDATA%\VRCX\
-```
-"@
-    
-        $assetPath = Join-Path $ProjectDir "dist\custom.js"
-        if (Test-Path $assetPath) {
-            gh release create $releaseTag $assetPath `
-                --title $releaseTitle `
-                --notes $releaseNotes `
-                --target $Branch `
-                2>&1 | Out-Null
-        
-            if ($LASTEXITCODE -eq 0) {
-                Write-Success "GitHub release created: $releaseTag"
+            $pluginBuildResult = Nodejs-Build -ProjectPath $pluginDir.FullName -Production -Script "build"
+            if ($pluginBuildResult) {
+                Write-Host "  ✓ Plugin $($pluginDir.Name) built successfully" -ForegroundColor Green
             }
             else {
-                Write-Warning "Failed to create GitHub release"
+                Write-Host "  ⚠️  Plugin $($pluginDir.Name) build failed" -ForegroundColor Yellow
             }
         }
     }
-    elseif ($NoRelease) {
-        Write-Warning "GitHub release skipped by flag"
+}
+
+Write-Host ""
+
+# Step 4: Find and organize built files using Bluscream-BuildTools
+Write-Host "🔍 Finding built files..." -ForegroundColor Green
+
+if (-not (Get-Command Find-BuiltFile -ErrorAction SilentlyContinue)) {
+    throw "Find-BuiltFile command not found in Bluscream-BuildTools module"
+}
+
+# Find main JavaScript file
+$mainJsFile = Find-BuiltFile -Config "production" -Arch "any" -ProjectFramework "node" -AssemblyName "custom" -FileExtension ".js" -FileType "main JavaScript" -ProjectDir $ProjectDir
+
+if (-not $mainJsFile) {
+    # Fallback to common locations
+    $possiblePaths = @(
+        "dist/custom.js",
+        "dist/index.js",
+        "build/custom.js",
+        "build/index.js"
+    )
+    
+    foreach ($path in $possiblePaths) {
+        $fullPath = Join-Path $ProjectDir $path
+        if (Test-Path $fullPath) {
+            $mainJsFile = Get-Item $fullPath
+            break
+        }
     }
 }
-else {
-    Write-Warning "Git not available, skipping version control"
+
+if (-not $mainJsFile) {
+    throw "Main JavaScript file not found"
 }
 
-# Show final summary
-Show-BuildSummary
+Write-Host "✓ Found main file: $($mainJsFile.Name)" -ForegroundColor Green
 
-Write-Host ""
-Write-Success "Build process completed!"
-Write-Host ""
-Write-Info "You can now restart VRCX to load the updated plugin system."
+# Step 5: Create release package using Bluscream-BuildTools
+Write-Host "📦 Creating release package..." -ForegroundColor Green
+
+if (-not (Get-Command New-ReleasePackage -ErrorAction SilentlyContinue)) {
+    throw "New-ReleasePackage command not found in Bluscream-BuildTools module"
+}
+
+# Prepare build workflow info for release package
+$buildWorkflowInfo = @{
+    ProjectPath     = $ProjectDir
+    Configuration   = "production"
+    Architecture    = "any"
+    Framework       = "node"
+    AssemblyName    = "custom"
+    OutputDirectory = "./dist/"
+    BuiltFiles      = @($mainJsFile)
+    CopiedFiles     = @($mainJsFile.FullName)
+    ArchivePath     = $null
+    Success         = $true
+}
+
+$releasePackage = New-ReleasePackage -ReleaseInfo $buildWorkflowInfo -Version $versionTag -ReleaseNotes "VRCX Plugin System $versionTag - TypeScript/Node.js build" -CreateArchives
+
+if (-not $releasePackage -or -not $releasePackage.Success) {
+    throw "Release package creation failed"
+}
+
+Write-Host "✓ Release package created successfully" -ForegroundColor Green
 Write-Host ""
 
-Set-Location $ProjectDir
+# Step 6: Git operations using Bluscream-BuildTools
+Write-Host "📝 Committing changes..." -ForegroundColor Green
+
+if (-not (Get-Command Git-CommitRepository -ErrorAction SilentlyContinue)) {
+    throw "Git-CommitRepository command not found in Bluscream-BuildTools module"
+}
+
+$commitResult = Git-CommitRepository -Path $ProjectDir -Message "Update VRCX Plugin System $versionTag"
+if (-not $commitResult) {
+    throw "Git commit failed"
+}
+
+if (-not (Get-Command Git-PushRepository -ErrorAction SilentlyContinue)) {
+    throw "Git-PushRepository command not found in Bluscream-BuildTools module"
+}
+
+$pushResult = Git-PushRepository -Path $ProjectDir
+if (-not $pushResult) {
+    throw "Git push failed"
+}
+
+Write-Host "✓ Committed and pushed using Bluscream-BuildTools" -ForegroundColor Green
+Write-Host ""
+
+# Step 7: Create GitHub release (only if -Publish flag is used)
+if ($Publish) {
+    Write-Host "🚀 Creating GitHub release..." -ForegroundColor Green
+    
+    if (-not (Get-Command GitHub-CreateRelease -ErrorAction SilentlyContinue)) {
+        throw "GitHub-CreateRelease command not found in Bluscream-BuildTools module"
+    }
+    
+    # Prepare release assets
+    $releaseAssets = @($mainJsFile.FullName)
+    
+    # Add archive if it exists
+    if ($releasePackage.ArchivePath -and (Test-Path $releasePackage.ArchivePath)) {
+        $releaseAssets += $releasePackage.ArchivePath
+    }
+    
+    # Create release notes
+    $releaseNotes = "VRCX Plugin System $versionTag`n`nChanges:`n- Update VRCX Plugin System $versionTag`n`nFiles included:`n$($releaseAssets | ForEach-Object { "- $(Split-Path $_ -Leaf)" } | Out-String)"
+    
+    $releaseResult = GitHub-CreateRelease -Repository "https://github.com/Bluscream/vrcx-plugin-system" -Tag $versionTag -Title "VRCX Plugin System $versionTag" -Body $releaseNotes -Prerelease -AssetPath $releaseAssets
+    
+    if (-not $releaseResult -or -not $releaseResult.Success) {
+        throw "Release creation failed: $($releaseResult.ErrorMessage)"
+    }
+    
+    Write-Host "✓ Release created using Bluscream-BuildTools: $($releaseResult.ReleaseUrl)" -ForegroundColor Green
+}
+else {
+    Write-Host "⏭️  Skipping release (use -Publish to create release)" -ForegroundColor Yellow
+}
+
+# Step 8: Install to VRCX (if target directory exists)
+if (Test-Path $TargetDir) {
+    Write-Host "📁 Installing to VRCX..." -ForegroundColor Green
+    
+    $targetFile = Join-Path $TargetDir "custom.js"
+    Copy-Item $mainJsFile.FullName $targetFile -Force
+    
+    Write-Host "✓ Installed to VRCX: $targetFile" -ForegroundColor Green
+}
+else {
+    Write-Host "⚠️  VRCX directory not found: $TargetDir" -ForegroundColor Yellow
+}
+
+# Summary
+Write-Host ""
+Write-Host "╔════════════════════════════════════════════════════════════╗" -ForegroundColor Green
+Write-Host "║                    ✓ ALL DONE!                             ║" -ForegroundColor Green
+Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host ""
+
+Write-Host "📊 Build Summary:" -ForegroundColor Cyan
+Write-Host "  Version: $versionTag" -ForegroundColor Gray
+Write-Host "  Main File: $($mainJsFile.Name)" -ForegroundColor Gray
+Write-Host "  File Size: $([math]::Round($mainJsFile.Length / 1KB, 2)) KB" -ForegroundColor Gray
+
+if ($Publish) {
+    Write-Host "📦 Release: https://github.com/Bluscream/vrcx-plugin-system/releases/tag/$versionTag" -ForegroundColor Magenta
+    if ($releasePackage.ArchivePath) {
+        Write-Host "📁 Release Package: $($releasePackage.ArchivePath)" -ForegroundColor Magenta
+    }
+}
+
+Write-Host "📍 Built Files: $($mainJsFile.DirectoryName)" -ForegroundColor Cyan
+if (Test-Path $TargetDir) {
+    Write-Host "📍 VRCX Installation: $TargetDir" -ForegroundColor Cyan
+}
