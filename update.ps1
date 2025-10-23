@@ -221,11 +221,12 @@ if ($Publish) {
     
     $releaseResult = GitHub-CreateRelease -Repository "https://github.com/Bluscream/vrcx-plugin-system" -Tag $versionTag -Title "VRCX Plugin System $versionTag" -Notes $releaseNotes -Prerelease -Assets $releaseAssets
     
-    if (-not $releaseResult) {
-        throw "Release creation failed"
+    if ($releaseResult) {
+        Write-Host "✓ Release created using Bluscream-BuildTools: https://github.com/Bluscream/vrcx-plugin-system/releases/tag/$versionTag" -ForegroundColor Green
     }
-    
-    Write-Host "✓ Release created using Bluscream-BuildTools: https://github.com/Bluscream/vrcx-plugin-system/releases/tag/$versionTag" -ForegroundColor Green
+    else {
+        Write-Host "⚠️  Release creation failed - fallback actions should have been triggered" -ForegroundColor Yellow
+    }
 }
 else {
     Write-Host "⏭️  Skipping release (use -Publish to create release)" -ForegroundColor Yellow
