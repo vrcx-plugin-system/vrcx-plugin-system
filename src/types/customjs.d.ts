@@ -38,6 +38,7 @@ declare global {
       types: {
         SettingType: any;
       };
+      api: any;
       definePluginSettings?: Function;
       utils?: Record<string, any>;
       getModule?: (idOrUrl: string) => any;

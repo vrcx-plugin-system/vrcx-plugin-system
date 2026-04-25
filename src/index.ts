@@ -14,10 +14,14 @@ import { getModule, loadModule, unloadModule, reloadModule, waitForModule, getAl
 import { ModuleRepository, repositoryMetadata, loadRepositories, addRepository, removeRepository, getRepository, getAllRepositories, getEnabledRepositories, getAllModules, findModuleByUrl, findModuleById } from './modules/repository';
 import { EventRegistry, eventSystemMetadata } from './modules/events';
 
+import { NavigationAPI } from './api/navigation';
+import { DialogsAPI } from './api/dialogs';
+import { ContextMenuAPI } from './api/contextMenu';
+
 // Initialize window.customjs
 window.customjs = {
   sourceUrl: 'https://github.com/vrcx-plugin-system/vrcx-plugin-system/raw/refs/heads/main/src/index.ts',
-  build: 1777145599, // AUTO-GENERATED BUILD TIMESTAMP
+  build: 1777152995, // AUTO-GENERATED BUILD TIMESTAMP
   modules: [],
   repos: [],
   subscriptions: new Map(),
@@ -33,6 +37,7 @@ window.customjs = {
   hasTriggeredLogin: false,
   classes: {} as any,
   types: {} as any,
+  api: {} as any,
 };
 
 // Register core module metadata
@@ -246,7 +251,18 @@ async function bootstrapModuleSystem() {
     // Step 2: Wait for Pinia and expose notification bridge
     await exposeNotifications();
 
-    // Step 3: Initialize repository system and load repositories
+    // Step 3: Initialize APIs
+    window.customjs.systemLogger.log("Initializing APIs...");
+    window.customjs.api = {
+      navigation: new NavigationAPI(),
+      dialogs: new DialogsAPI(),
+      contextMenu: new ContextMenuAPI()
+    };
+    await window.customjs.api.navigation.init();
+    await window.customjs.api.dialogs.init();
+    await window.customjs.api.contextMenu.init();
+
+    // Step 4: Initialize repository system and load repositories
     window.customjs.systemLogger.log("Loading repositories...");
     await loadRepositories();
     
