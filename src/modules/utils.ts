@@ -197,7 +197,8 @@ export const utils = {
   async getLocationObject(loc: any): Promise<any> {
     if (typeof loc === "string") {
       if (loc.endsWith(")")) {
-        loc = (window as any).$app.parseLocation(loc);
+        // parseLocation is now exposed on window.utils (from src/shared/utils)
+        loc = (window as any).utils.parseLocation(loc);
       } else if (loc.startsWith("wrld")) {
         loc = { worldId: loc, world: { id: loc } };
       } else {
@@ -207,15 +208,15 @@ export const utils = {
       return;
     }
 
-    if (!loc && (window as any).$app.lastLocation) {
-      return utils.getLocationObject((window as any).$app.lastLocation);
+    if (!loc && (window as any).$pinia?.location?.lastLocation) {
+      return utils.getLocationObject((window as any).$pinia.location.lastLocation);
     }
-    if (!loc && (window as any).$app.lastLocationDestination) {
-      return utils.getLocationObject((window as any).$app.lastLocationDestination);
+    if (!loc && (window as any).$pinia?.location?.lastLocationDestination) {
+      return utils.getLocationObject((window as any).$pinia.location.lastLocationDestination);
     }
 
-    if (loc && (window as any).$app?.getWorldName) {
-      loc.worldName = await (window as any).$app.getWorldName(loc);
+    if (loc && (window as any).utils?.getWorldName) {
+      loc.worldName = await (window as any).utils.getWorldName(loc);
     }
 
     return loc;

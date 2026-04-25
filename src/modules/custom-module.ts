@@ -306,12 +306,13 @@ export class CustomModule extends Module {
           break;
 
         case "FRIENDS":
-          if (window.$pinia?.friends?.$subscribe) {
-            storeSubscription = window.$pinia.friends.$subscribe(() => {
-              const store = window.$pinia?.friends;
+          if (window.$pinia?.friend?.$subscribe) {
+            storeSubscription = window.$pinia.friend.$subscribe(() => {
+              const store = window.$pinia?.friend;
               callAllCallbacks({
                 friends: store?.friends,
-                offlineFriends: store?.offlineFriends,
+                friendCount: store?.friendCount,
+                onlineFriendCount: store?.onlineFriendCount,
               });
             });
           }

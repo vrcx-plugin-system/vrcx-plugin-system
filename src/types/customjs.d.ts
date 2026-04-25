@@ -49,6 +49,7 @@ declare global {
       addRepository?: (url: string, saveConfig?: boolean) => Promise<{success: boolean; message: string; repo?: any}>;
       removeRepository?: (url: string) => boolean;
       panic?: () => Promise<{success: boolean; message: string; modulesUnloaded: number}>;
+      notify?: (message: string, type?: 'success' | 'error' | 'warning' | 'info') => void;
       __currentPluginUrl?: string;
       __LAST_PLUGIN_CLASS__?: any;
     };

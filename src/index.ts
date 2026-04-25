@@ -17,7 +17,7 @@ import { EventRegistry, eventSystemMetadata } from './modules/events';
 // Initialize window.customjs
 window.customjs = {
   sourceUrl: 'https://github.com/vrcx-plugin-system/vrcx-plugin-system/raw/refs/heads/main/src/index.ts',
-  build: 1761150238, // AUTO-GENERATED BUILD TIMESTAMP
+  build: 1777145599, // AUTO-GENERATED BUILD TIMESTAMP
   modules: [],
   repos: [],
   subscriptions: new Map(),
@@ -167,8 +167,11 @@ async function initializeConfigManager() {
   window.customjs.systemLogger.log("✓ ConfigManager initialized");
 }
 
-// Expose Element Plus notification functions globally
-async function exposeElementPlus() {
+// Expose notification bridge for plugins
+// VRCX no longer uses Element Plus — uses vue-sonner toast + shadcn dialogs instead.
+// Since vue-sonner's toast() is a module import and not accessible from injected scripts,
+// we expose a simple bridge that plugins can use for notifications.
+async function exposeNotifications() {
   return new Promise<void>((resolve) => {
     let attempts = 0;
     const maxAttempts = 50;
@@ -176,26 +179,37 @@ async function exposeElementPlus() {
     const checkInterval = setInterval(() => {
       attempts++;
       
-      if ((window as any).$app?.config?.globalProperties) {
-        const globalProps = (window as any).$app.config.globalProperties;
+      if (window.$pinia) {
+        clearInterval(checkInterval);
         
-        if (globalProps.$message || globalProps.$notify) {
-          if (globalProps.$message) {
-            (window as any).ElMessage = globalProps.$message;
+        // Create notification bridge on customjs
+        window.customjs.notify = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+          // Use VRCX desktop notification as the primary toast replacement
+          if ((window as any).AppApi?.DesktopNotification) {
+            const prefix = type === 'error' ? '❌' : type === 'warning' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
+            (window as any).AppApi.DesktopNotification(`${prefix} VRCX Plugin`, message).catch(() => {});
           }
-          if (globalProps.$notify) {
-            (window as any).ElNotification = globalProps.$notify;
-          }
-          clearInterval(checkInterval);
-          window.customjs.systemLogger.log("✓ Element Plus notifications exposed globally");
-          resolve();
-          return;
-        }
+          
+          // Always log to console as well
+          const logMethod = type === 'error' ? 'error' : type === 'warning' ? 'warn' : 'info';
+          console[logMethod](`%c[CJS|Notify] ${message}`, 'color: #9c27b0');
+        };
+
+        window.customjs.systemLogger.log("✓ Notification bridge exposed");
+        resolve();
+        return;
       }
       
       if (attempts >= maxAttempts) {
         clearInterval(checkInterval);
-        window.customjs.systemLogger.logWarn("Element Plus not detected yet, will use Vue global properties fallback");
+        window.customjs.systemLogger.logWarn("Pinia not detected, notifications will use console fallback only");
+        
+        // Provide console-only fallback
+        window.customjs.notify = (message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') => {
+          const logMethod = type === 'error' ? 'error' : type === 'warning' ? 'warn' : 'info';
+          console[logMethod](`%c[CJS|Notify] ${message}`, 'color: #9c27b0');
+        };
+        
         resolve();
       }
     }, 100);
@@ -229,8 +243,8 @@ async function bootstrapModuleSystem() {
 
     window.customjs.systemLogger.log("Core modules loaded, initializing module system...");
 
-    // Step 2: Wait for Element Plus to be available
-    await exposeElementPlus();
+    // Step 2: Wait for Pinia and expose notification bridge
+    await exposeNotifications();
 
     // Step 3: Initialize repository system and load repositories
     window.customjs.systemLogger.log("Loading repositories...");

@@ -101,27 +101,16 @@ export class Logger {
     const formatted = this.formatMessage(msg, ...args);
     
     try {
-      // Try $message first (Element Plus Message - toast)
-      const $message = (window as any).$app?.config?.globalProperties?.$message;
-      if ($message && typeof $message[type] === 'function') {
-        $message[type](formatted);
-        return;
-      }
-      
-      // Try $notify second (Element Plus Notification - more prominent)
-      const $notify = (window as any).$app?.config?.globalProperties?.$notify;
-      if ($notify && typeof $notify[type] === 'function') {
-        $notify[type]({
-            title: this.context,
-          message: formatted,
-        });
+      // Use customjs notification bridge (replaces Element Plus $message)
+      if ((window as any).customjs?.notify) {
+        (window as any).customjs.notify(formatted, type);
         return;
       }
       
       // Fallback to console
       const level = type === 'warning' ? 'warn' : (type === 'error' ? 'error' : 'info');
-      this[`log${level.charAt(0).toUpperCase() + level.slice(1)}` as keyof Logger](formatted);
-      } catch (error) {
+      console[level](`%c[CJS|${this.context}] ${formatted}`, `color: ${this.logColor}`);
+    } catch (error) {
       this.logError('Failed to show message:', error);
     }
   }
@@ -180,26 +169,15 @@ export class Logger {
     const formatted = this.formatMessage(msg, ...args);
     
     try {
-      // Try $notify first (Element Plus Notification - more prominent)
-      const $notify = (window as any).$app?.config?.globalProperties?.$notify;
-      if ($notify && typeof $notify[type] === 'function') {
-        $notify[type]({
-          title: this.context,
-          message: formatted,
-        });
-        return;
-      }
-      
-      // Try $message second (Element Plus Message - toast)
-      const $message = (window as any).$app?.config?.globalProperties?.$message;
-      if ($message && typeof $message[type] === 'function') {
-        $message[type](formatted);
+      // Use customjs notification bridge (replaces Element Plus $notify)
+      if ((window as any).customjs?.notify) {
+        (window as any).customjs.notify(formatted, type);
         return;
       }
       
       // Fallback to console
       const level = type === 'warning' ? 'warn' : (type === 'error' ? 'error' : 'info');
-      this[`log${level.charAt(0).toUpperCase() + level.slice(1)}` as keyof Logger](formatted);
+      console[level](`%c[CJS|${this.context}] ${formatted}`, `color: ${this.logColor}`);
     } catch (error) {
       this.logError('Failed to notify:', error);
     }
@@ -443,19 +421,9 @@ export class Logger {
       // Console
       this.logInfo(formatted);
       
-      // UI Message
-      const $message = (window as any).$app?.config?.globalProperties?.$message;
-      if ($message?.info) {
-        $message.info(formatted);
-      }
-      
-      // UI Notification
-      const $notify = (window as any).$app?.config?.globalProperties?.$notify;
-      if ($notify?.info) {
-        $notify.info({
-          title: this.context,
-          message: formatted,
-        });
+      // UI Notification via bridge
+      if ((window as any).customjs?.notify) {
+        (window as any).customjs.notify(formatted, 'info');
       }
       
       // Desktop
